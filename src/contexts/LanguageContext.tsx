@@ -59,6 +59,33 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.welcome': 'Welcome',
     'dashboard.overview': 'Overview',
     'dashboard.recent_activity': 'Recent Activity',
+    'dashboard.quickActions': 'Quick Actions',
+    'dashboard.aiInsights': 'AI Insights',
+    'dashboard.applications': 'Applications',
+    'dashboard.interviews': 'Interviews',
+    'dashboard.matches': 'AI Matches',
+    'dashboard.candidates': 'Candidates',
+    'dashboard.openPositions': 'Open Positions',
+    'dashboard.referrals': 'Referrals',
+    'dashboard.bonus': 'Bonus',
+    
+    // Actions
+    'actions.uploadCV': 'Upload CV',
+    'actions.searchJobs': 'Search Jobs',
+    'actions.viewMatches': 'View AI Matches',
+    'actions.postJob': 'Post New Job',
+    'actions.searchCandidates': 'Search Candidates',
+    'actions.viewPipeline': 'View Pipeline',
+    'actions.referCandidate': 'Refer a Candidate',
+    'actions.viewOpenings': 'View Openings',
+    'actions.trackReferrals': 'Track Referrals',
+    
+    // Insights
+    'insights.jobSeeker': 'Based on your profile, I found 5 new positions that match your skills.',
+    'insights.hr': 'You have 12 candidates waiting for review. 3 are highly matched.',
+    'insights.employee': 'There are 4 open positions in your company that match your network.',
+    'insights.tip': 'Pro Tip',
+    'insights.tipText': 'Complete your profile to get better AI recommendations.',
     
     // Plug AI
     'plug.greeting': 'Hey there! I\'m Plug, your AI HR assistant.',
@@ -113,6 +140,33 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.welcome': 'ברוך הבא',
     'dashboard.overview': 'סקירה כללית',
     'dashboard.recent_activity': 'פעילות אחרונה',
+    'dashboard.quickActions': 'פעולות מהירות',
+    'dashboard.aiInsights': 'תובנות AI',
+    'dashboard.applications': 'מועמדויות',
+    'dashboard.interviews': 'ראיונות',
+    'dashboard.matches': 'התאמות AI',
+    'dashboard.candidates': 'מועמדים',
+    'dashboard.openPositions': 'משרות פתוחות',
+    'dashboard.referrals': 'הפניות',
+    'dashboard.bonus': 'בונוס',
+    
+    // Actions
+    'actions.uploadCV': 'העלה קו"ח',
+    'actions.searchJobs': 'חפש משרות',
+    'actions.viewMatches': 'צפה בהתאמות AI',
+    'actions.postJob': 'פרסם משרה',
+    'actions.searchCandidates': 'חפש מועמדים',
+    'actions.viewPipeline': 'צפה בצינור',
+    'actions.referCandidate': 'הפנה מועמד',
+    'actions.viewOpenings': 'צפה במשרות',
+    'actions.trackReferrals': 'עקוב אחר הפניות',
+    
+    // Insights
+    'insights.jobSeeker': 'בהתבסס על הפרופיל שלך, מצאתי 5 משרות שמתאימות לכישורים שלך.',
+    'insights.hr': 'יש לך 12 מועמדים שממתינים לבדיקה. 3 מתאימים מאוד.',
+    'insights.employee': 'יש 4 משרות פתוחות בחברה שלך שמתאימות לרשת שלך.',
+    'insights.tip': 'טיפ מקצועי',
+    'insights.tipText': 'השלם את הפרופיל שלך לקבלת המלצות AI טובות יותר.',
     
     // Plug AI
     'plug.greeting': 'היי! אני Plug, עוזר ה-AI שלך למשאבי אנוש.',
