@@ -1,134 +1,191 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-
-export default function Dashboard() {
-  const { role } = useAuth();
-  const { t } = useLanguage();
-
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Welcome section */}
-        <WelcomeCard />
-
-        {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Quick Stats - placeholder for now */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">{t('dashboard.overview')}</h2>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {role === 'job_seeker' ? (
-                <>
-                  <StatCard 
-                    title="Applications" 
-                    value="0" 
-                    subtitle="Active applications"
-                    color="primary"
-                  />
-                  <StatCard 
-                    title="Interviews" 
-                    value="0" 
-                    subtitle="Scheduled"
-                    color="accent"
-                  />
-                  <StatCard 
-                    title="Documents" 
-                    value="0" 
-                    subtitle="Uploaded"
-                    color="primary"
-                  />
-                  <StatCard 
-                    title="Profile" 
-                    value="50%" 
-                    subtitle="Completion"
-                    color="accent"
-                  />
-                </>
-              ) : role === 'freelance_hr' || role === 'inhouse_hr' ? (
-                <>
-                  <StatCard 
-                    title="Candidates" 
-                    value="0" 
-                    subtitle="In pipeline"
-                    color="primary"
-                  />
-                  <StatCard 
-                    title="Open Jobs" 
-                    value="0" 
-                    subtitle="Active positions"
-                    color="accent"
-                  />
-                  <StatCard 
-                    title="Interviews" 
-                    value="0" 
-                    subtitle="This week"
-                    color="primary"
-                  />
-                  <StatCard 
-                    title="Pending" 
-                    value="0" 
-                    subtitle="Documents to review"
-                    color="accent"
-                  />
-                </>
-              ) : (
-                <>
-                  <StatCard 
-                    title="Documents" 
-                    value="0" 
-                    subtitle="To sign"
-                    color="primary"
-                  />
-                  <StatCard 
-                    title="Requests" 
-                    value="0" 
-                    subtitle="Pending"
-                    color="accent"
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Recent Activity Placeholder */}
-            <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="font-medium mb-4">{t('dashboard.recent_activity')}</h3>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No recent activity yet.</p>
-                <p className="text-sm mt-1">Start by chatting with Plug!</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Chat with Plug */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Chat with Plug</h2>
-            <PlugChat />
-          </div>
-        </div>
-      </div>
-    </DashboardLayout>
-  );
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
   value: string;
-  subtitle: string;
-  color: 'primary' | 'accent';
+  icon: React.ComponentType<{ className?: string }>;
+  trend?: string;
 }
 
-function StatCard({ title, value, subtitle, color }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
   return (
-    <div className={`rounded-xl border border-border bg-card p-4 ${color === 'primary' ? 'plug-row-active' : 'plug-ai-highlight'}`}>
-      <p className="text-sm text-muted-foreground mb-1">{title}</p>
-      <p className={`text-2xl font-bold ${color === 'primary' ? 'text-primary' : 'text-accent'}`}>
-        {value}
-      </p>
-      <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-    </div>
+    <Card className="bg-card border-border plug-card-hover">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+            {trend && (
+              <p className="text-xs text-primary flex items-center gap-1 mt-1">
+                <TrendingUp className="w-3 h-3" />
+                {trend}
+              </p>
+            )}
+          </div>
+          <div className="p-3 rounded-lg bg-primary/10">
+            <Icon className="w-6 h-6 text-primary" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface QuickActionProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
+}
+
+function QuickAction({ title, icon: Icon, onClick }: QuickActionProps) {
+  return (
+    <Button
+      variant="outline"
+      className="w-full justify-start gap-3 h-12 bg-card/50 border-border hover:bg-primary/10 hover:border-primary/50 transition-all"
+      onClick={onClick}
+    >
+      <Icon className="w-5 h-5 text-primary" />
+      <span>{title}</span>
+    </Button>
+  );
+}
+
+export default function Dashboard() {
+  const { profile, role } = useAuth();
+  const { t } = useLanguage();
+
+  // Role-specific stats
+  const getStats = () => {
+    switch (role) {
+      case 'job_seeker':
+        return [
+          { title: t('dashboard.applications') || 'Applications', value: '12', icon: FileText, trend: '+3 this week' },
+          { title: t('dashboard.interviews') || 'Interviews', value: '4', icon: Users },
+          { title: t('dashboard.matches') || 'Matches', value: '28', icon: Zap, trend: '+8 new' },
+        ];
+      case 'freelance_hr':
+      case 'inhouse_hr':
+        return [
+          { title: t('dashboard.candidates') || 'Candidates', value: '156', icon: Users, trend: '+23 this week' },
+          { title: t('dashboard.openPositions') || 'Open Positions', value: '8', icon: Briefcase },
+          { title: t('dashboard.interviews') || 'Interviews', value: '12', icon: FileText },
+        ];
+      case 'company_employee':
+        return [
+          { title: t('dashboard.referrals') || 'Referrals', value: '5', icon: Users },
+          { title: t('dashboard.openPositions') || 'Open Positions', value: '12', icon: Briefcase },
+          { title: t('dashboard.bonus') || 'Bonus', value: '₪2,500', icon: TrendingUp },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  // Role-specific quick actions
+  const getQuickActions = () => {
+    switch (role) {
+      case 'job_seeker':
+        return [
+          { title: t('actions.uploadCV') || 'Upload CV', icon: Upload },
+          { title: t('actions.searchJobs') || 'Search Jobs', icon: Search },
+          { title: t('actions.viewMatches') || 'View Matches', icon: Zap },
+        ];
+      case 'freelance_hr':
+      case 'inhouse_hr':
+        return [
+          { title: t('actions.postJob') || 'Post Job', icon: Plus },
+          { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search },
+          { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users },
+        ];
+      case 'company_employee':
+        return [
+          { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus },
+          { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase },
+          { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const stats = getStats();
+  const quickActions = getQuickActions();
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Card */}
+        <WelcomeCard />
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {stats.map((stat, index) => (
+            <StatCard key={index} {...stat} />
+          ))}
+        </div>
+
+        {/* Main Content - Chat Centered with Actions on Sides */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Quick Actions - Left Side */}
+          <div className="lg:col-span-1 space-y-3">
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  {t('dashboard.quickActions') || 'Quick Actions'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {quickActions.map((action, index) => (
+                  <QuickAction key={index} {...action} />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* PLUG Chat - Center (Large) */}
+          <div className="lg:col-span-2">
+            <PlugChat />
+          </div>
+
+          {/* AI Insights - Right Side */}
+          <div className="lg:col-span-1">
+            <Card className="bg-card border-border plug-ai-highlight h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  {t('dashboard.aiInsights') || 'AI Insights'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
+                  <p className="text-sm text-muted-foreground">
+                    {role === 'job_seeker' 
+                      ? t('insights.jobSeeker') || 'Based on your profile, I found 5 new positions that match your skills.'
+                      : role === 'company_employee'
+                      ? t('insights.employee') || 'There are 4 open positions in your company that match your network.'
+                      : t('insights.hr') || 'You have 12 candidates waiting for review.'
+                    }
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-sm font-medium text-primary mb-1">{t('insights.tip') || 'Pro Tip'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('insights.tipText') || 'Complete your profile to get better AI recommendations.'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }
