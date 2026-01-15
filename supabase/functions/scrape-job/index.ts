@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const { url, save, user_id } = await req.json();
     
     if (!url) {
       return new Response(
@@ -37,10 +37,10 @@ serve(async (req) => {
       pageContent = await pageResponse.text();
       // Clean HTML - remove scripts and styles, keep text
       pageContent = pageContent
-        .replace(/<script[^>]*>[\\s\\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\\s\\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<[^>]+>/g, ' ')
-        .replace(/\\s+/g, ' ')
+        .replace(/\s+/g, ' ')
         .substring(0, 15000); // Limit context size
     } catch (fetchError) {
       console.error('Error fetching URL:', fetchError);
@@ -77,12 +77,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
           },
           {
             role: 'user',
-            content: `Extract job details from this job posting:\\
-\\
-URL: ${url}\\
-\\
-Content:\\
-${pageContent}`
+            content: `Extract job details from this job posting:\n\nURL: ${url}\n\nContent:\n${pageContent}`
           }
         ],
         tools: [
@@ -148,6 +143,90 @@ ${pageContent}`
       } else {
         throw new Error('Failed to parse job details from AI response');
       }
+    }
+
+    // If save is requested, save to database using service role
+    if (save && user_id) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Find or create company
+      let companyId: string | null = null;
+      
+      const { data: existingCompany } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .eq('name', jobDetails.company_name)
+        .single();
+
+      if (existingCompany) {
+        companyId = existingCompany.id;
+      } else {
+        const { data: newCompany, error: companyError } = await supabaseAdmin
+          .from('companies')
+          .insert({
+            name: jobDetails.company_name,
+            created_by: user_id,
+          })
+          .select('id')
+          .single();
+
+        if (companyError) {
+          console.error('Error creating company:', companyError);
+          throw new Error('Failed to create company');
+        }
+        companyId = newCompany.id;
+      }
+
+      // Create job
+      const { data: job, error: jobError } = await supabaseAdmin
+        .from('jobs')
+        .insert({
+          title: jobDetails.job_title,
+          company_id: companyId,
+          location: jobDetails.location,
+          job_type: jobDetails.job_type,
+          salary_range: jobDetails.salary_range,
+          description: jobDetails.description,
+          requirements: jobDetails.requirements,
+          source_url: url,
+          created_by: user_id,
+        })
+        .select('id')
+        .single();
+
+      if (jobError) {
+        console.error('Error creating job:', jobError);
+        throw new Error('Failed to create job');
+      }
+
+      // Create application
+      const { error: appError } = await supabaseAdmin
+        .from('applications')
+        .insert({
+          job_id: job.id,
+          candidate_id: user_id,
+          status: 'active',
+          current_stage: 'applied',
+        });
+
+      if (appError) {
+        console.error('Error creating application:', appError);
+        throw new Error('Failed to create application');
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          saved: true,
+          job: {
+            ...jobDetails,
+            source_url: url
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(

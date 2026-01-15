@@ -81,61 +81,20 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
     setIsSaving(true);
 
     try {
-      // First, create or find the company
-      let companyId: string | null = null;
-      
-      const { data: existingCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('name', preview.company_name)
-        .single();
+      // Call edge function with save flag - it uses service_role to bypass RLS
+      const { data, error } = await supabase.functions.invoke('scrape-job', {
+        body: { 
+          url: preview.source_url,
+          save: true,
+          user_id: user.id
+        },
+      });
 
-      if (existingCompany) {
-        companyId = existingCompany.id;
-      } else {
-        const { data: newCompany, error: companyError } = await supabase
-          .from('companies')
-          .insert({
-            name: preview.company_name,
-            created_by: user.id,
-          })
-          .select('id')
-          .single();
+      if (error) throw error;
 
-        if (companyError) throw companyError;
-        companyId = newCompany.id;
+      if (data.error) {
+        throw new Error(data.error);
       }
-
-      // Create the job
-      const { data: job, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          title: preview.job_title,
-          company_id: companyId,
-          location: preview.location,
-          job_type: preview.job_type,
-          salary_range: preview.salary_range,
-          description: preview.description,
-          requirements: preview.requirements,
-          source_url: preview.source_url,
-          created_by: user.id,
-        })
-        .select('id')
-        .single();
-
-      if (jobError) throw jobError;
-
-      // Create the application
-      const { error: appError } = await supabase
-        .from('applications')
-        .insert({
-          job_id: job.id,
-          candidate_id: user.id,
-          status: 'active',
-          current_stage: 'applied',
-        });
-
-      if (appError) throw appError;
 
       toast({
         title: isRTL ? 'המועמדות נוספה!' : 'Application added!',

@@ -45,7 +45,6 @@ export function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
@@ -242,39 +241,25 @@ export function ApplicationsPage() {
   return (
     <div className="space-y-6 pb-24" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-3">
-          <Briefcase className="w-6 h-6 text-primary" />
+      <div className="flex items-center gap-3 mb-2">
+        <Briefcase className="w-6 h-6 text-primary" />
+        <h2 className="text-2xl font-bold">
           {t('dashboard.applications') || 'My Applications'}
         </h2>
-        <Button 
-          className="gap-2" 
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          <Link2 className="w-4 h-4" />
-          {isRTL ? 'הוסף מועמדות' : 'Add Application'}
-        </Button>
       </div>
 
-      {/* Add Application Form */}
-      {showAddForm && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-accent" />
-              <span className="font-medium">
-                {isRTL ? 'הדבק לינק ופלאג יעשה את השאר' : 'Paste a link and Plug will do the rest'}
-              </span>
-            </div>
-            <AddApplicationForm 
-              onApplicationAdded={() => {
-                fetchApplications();
-                setShowAddForm(false);
-              }} 
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Add Application Form - Always Visible */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-accent" />
+            <span className="font-medium">
+              {isRTL ? 'הדבק לינק ופלאג יעשה את השאר' : 'Paste a link and Plug will do the rest'}
+            </span>
+          </div>
+          <AddApplicationForm onApplicationAdded={fetchApplications} />
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <ApplicationsStats {...stats} />
@@ -306,12 +291,6 @@ export function ApplicationsPage() {
                 ? (isRTL ? 'הדבק לינק למשרה והתחל!' : 'Paste a job link to get started!')
                 : (isRTL ? 'נסה לשנות את הסינון' : 'Try adjusting your filters')}
             </p>
-            {applications.length === 0 && (
-              <Button className="gap-2" onClick={() => setShowAddForm(true)}>
-                <Link2 className="w-4 h-4" />
-                {isRTL ? 'הוסף מועמדות ראשונה' : 'Add First Application'}
-              </Button>
-            )}
           </CardContent>
         </Card>
       ) : (
