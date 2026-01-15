@@ -151,4 +151,27 @@
     transform: translateY(-2px);
     box-shadow: 0 8px 30px hsl(156 100% 50% / 0.15);
   }
+
+  /* Urgent interview glow (Amber) */
+  .plug-urgent-glow {
+    animation: urgent-pulse 2s ease-in-out infinite;
+    border-color: hsl(45 93% 47% / 0.5) !important;
+  }
+
+  @keyframes urgent-pulse {
+    0%, 100% {
+      box-shadow: 0 0 10px hsl(45 93% 47% / 0.2),
+                  0 0 20px hsl(45 93% 47% / 0.1);
+    }
+    50% {
+      box-shadow: 0 0 15px hsl(45 93% 47% / 0.3),
+                  0 0 30px hsl(45 93% 47% / 0.15);
+    }
+  }
+
+  /* Match score glow */
+  .plug-score-glow {
+    box-shadow: 0 0 15px hsl(270 91% 65% / 0.4),
+                0 0 30px hsl(270 91% 65% / 0.2);
+  }
 }
