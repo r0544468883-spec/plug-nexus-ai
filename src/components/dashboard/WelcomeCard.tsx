@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Sparkles, Send, ArrowDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ResumeUpload } from '@/components/documents/ResumeUpload';
 
 interface WelcomeCardProps {
   onSendMessage?: (message: string) => void;
@@ -17,6 +18,7 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isRTL = language === 'he';
+  const isJobSeeker = role === 'job_seeker';
 
   const getRolePrompt = () => {
     switch (role) {
@@ -137,8 +139,8 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
           )}
         </div>
 
-        {/* Quick Prompts */}
-        <div className="flex flex-wrap gap-2 mt-4">
+        {/* Quick Prompts + Resume Upload */}
+        <div className="flex flex-wrap items-center gap-2 mt-4">
           {(isRTL ? [
             'עזור לי להתכונן לראיון',
             'חפש לי משרות מתאימות',
@@ -159,6 +161,13 @@ export function WelcomeCard({ onSendMessage }: WelcomeCardProps) {
               {prompt}
             </button>
           ))}
+          
+          {/* Resume Upload - for job seekers */}
+          {isJobSeeker && (
+            <div className="ml-auto rtl:ml-0 rtl:mr-auto">
+              <ResumeUpload compact />
+            </div>
+          )}
         </div>
       </div>
     </div>
