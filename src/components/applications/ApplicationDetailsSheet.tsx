@@ -11,7 +11,7 @@ import {
   XCircle,
   Loader2,
   Calendar,
-  History
+  FileText
 } from 'lucide-react';
 import {
   Sheet,
@@ -23,12 +23,18 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { StageProgressBar } from './StageProgressBar';
 import { InterviewScheduler } from './InterviewScheduler';
-import { ApplicationTimeline } from './ApplicationTimeline';
+import { HomeAssignmentTab } from './HomeAssignmentTab';
 import MatchScoreCircle from './MatchScoreCircle';
 
 interface ApplicationDetails {
@@ -252,7 +258,7 @@ export function ApplicationDetailsSheet({
 
           <Separator />
 
-          {/* Tabs for Interview Scheduler, Notes, Timeline */}
+          {/* Tabs for Status, Interviews, Home Assignment */}
           <Tabs defaultValue="status" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="status" className="text-xs">
@@ -262,23 +268,47 @@ export function ApplicationDetailsSheet({
                 <Calendar className="h-3 w-3 mr-1" />
                 {isRTL ? 'ראיונות' : 'Interviews'}
               </TabsTrigger>
-              <TabsTrigger value="timeline" className="text-xs">
-                <History className="h-3 w-3 mr-1" />
-                {isRTL ? 'היסטוריה' : 'Timeline'}
+              <TabsTrigger value="assignment" className="text-xs">
+                <FileText className="h-3 w-3 mr-1" />
+                {isRTL ? 'מטלה' : 'Assignment'}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="status" className="space-y-4 mt-4">
-              {/* Stage Progress */}
+              {/* Status Select */}
               <div>
                 <h3 className="text-sm font-semibold mb-2">
                   {isRTL ? 'סטטוס מועמדות' : 'Application Status'}
                 </h3>
-                <StageProgressBar
-                  currentStage={currentStage}
-                  onStageChange={handleStageChange}
+                <Select 
+                  value={currentStage} 
+                  onValueChange={handleStageChange}
                   disabled={isSaving}
-                />
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="applied">
+                      {isRTL ? 'הוגש' : 'Applied'}
+                    </SelectItem>
+                    <SelectItem value="screening">
+                      {isRTL ? 'סינון' : 'Screening'}
+                    </SelectItem>
+                    <SelectItem value="interview">
+                      {isRTL ? 'ראיון' : 'Interview'}
+                    </SelectItem>
+                    <SelectItem value="offer">
+                      {isRTL ? 'הצעה' : 'Offer'}
+                    </SelectItem>
+                    <SelectItem value="hired">
+                      {isRTL ? 'התקבל' : 'Hired'}
+                    </SelectItem>
+                    <SelectItem value="rejected">
+                      {isRTL ? 'נדחה' : 'Rejected'}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Notes */}
@@ -303,8 +333,8 @@ export function ApplicationDetailsSheet({
               />
             </TabsContent>
 
-            <TabsContent value="timeline" className="mt-4">
-              <ApplicationTimeline applicationId={application.id} />
+            <TabsContent value="assignment" className="mt-4">
+              <HomeAssignmentTab applicationId={application.id} />
             </TabsContent>
           </Tabs>
 
