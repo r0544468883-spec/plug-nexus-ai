@@ -5,9 +5,14 @@ import { DashboardLayout, DashboardSection } from '@/components/dashboard/Dashbo
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
+import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
 interface StatCardProps {
   title: string;
   value: string;
@@ -59,60 +64,106 @@ function QuickAction({ title, icon: Icon, onClick }: QuickActionProps) {
 }
 
 export default function Dashboard() {
-  const { profile, role } = useAuth();
-  const { t } = useLanguage();
+  const { profile, role, user } = useAuth();
+  const { t, language } = useLanguage();
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [showResumeDialog, setShowResumeDialog] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Role-specific stats
+  const isRTL = language === 'he';
+
+  // Fetch real statistics from database
+  const { data: dashboardData, refetch: refetchStats } = useQuery({
+    queryKey: ['dashboard-stats', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      // Get applications count
+      const { data: applications } = await supabase
+        .from('applications')
+        .select('id, status, current_stage')
+        .eq('candidate_id', user.id);
+
+      // Get upcoming interviews (interview_reminders with future dates)
+      const { data: interviews } = await supabase
+        .from('interview_reminders')
+        .select('id, application_id, interview_date')
+        .gte('interview_date', new Date().toISOString());
+
+      // Filter interviews for user's applications
+      const applicationIds = applications?.map(a => a.id) || [];
+      const userInterviews = interviews?.filter(i => applicationIds.includes(i.application_id)) || [];
+
+      return {
+        totalApplications: applications?.length || 0,
+        activeApplications: applications?.filter(a => a.status === 'active').length || 0,
+        interviews: userInterviews.length,
+      };
+    },
+    enabled: !!user?.id && role === 'job_seeker',
+  });
+
+  // Role-specific stats with real data
   const getStats = () => {
     switch (role) {
       case 'job_seeker':
         return [
-          { title: t('dashboard.applications') || 'Applications', value: '12', icon: FileText, trend: '+3 this week' },
-          { title: t('dashboard.interviews') || 'Interviews', value: '4', icon: Users },
-          { title: t('dashboard.matches') || 'Matches', value: '28', icon: Zap, trend: '+8 new' },
+          { title: t('dashboard.applications') || 'Applications', value: String(dashboardData?.totalApplications || 0), icon: FileText },
+          { title: t('dashboard.interviews') || 'Interviews', value: String(dashboardData?.interviews || 0), icon: Users },
+          { title: t('dashboard.active') || 'Active', value: String(dashboardData?.activeApplications || 0), icon: Zap },
         ];
       case 'freelance_hr':
       case 'inhouse_hr':
         return [
-          { title: t('dashboard.candidates') || 'Candidates', value: '156', icon: Users, trend: '+23 this week' },
-          { title: t('dashboard.openPositions') || 'Open Positions', value: '8', icon: Briefcase },
-          { title: t('dashboard.interviews') || 'Interviews', value: '12', icon: FileText },
+          { title: t('dashboard.candidates') || 'Candidates', value: '0', icon: Users },
+          { title: t('dashboard.openPositions') || 'Open Positions', value: '0', icon: Briefcase },
+          { title: t('dashboard.interviews') || 'Interviews', value: '0', icon: FileText },
         ];
       case 'company_employee':
         return [
-          { title: t('dashboard.referrals') || 'Referrals', value: '5', icon: Users },
-          { title: t('dashboard.openPositions') || 'Open Positions', value: '12', icon: Briefcase },
-          { title: t('dashboard.bonus') || 'Bonus', value: '₪2,500', icon: TrendingUp },
+          { title: t('dashboard.referrals') || 'Referrals', value: '0', icon: Users },
+          { title: t('dashboard.openPositions') || 'Open Positions', value: '0', icon: Briefcase },
+          { title: t('dashboard.bonus') || 'Bonus', value: '₪0', icon: TrendingUp },
         ];
       default:
         return [];
     }
   };
 
-  // Role-specific quick actions
+  // Role-specific quick actions with handlers
   const getQuickActions = () => {
     switch (role) {
       case 'job_seeker':
         return [
-          { title: t('actions.uploadCV') || 'Upload CV', icon: Upload },
-          { title: t('actions.searchJobs') || 'Search Jobs', icon: Search },
-          { title: t('actions.viewMatches') || 'View Matches', icon: Zap },
+          { 
+            title: t('actions.uploadCV') || 'Upload CV', 
+            icon: Upload,
+            onClick: () => setShowResumeDialog(true),
+          },
+          { 
+            title: isRTL ? 'המשרות שלי' : 'My Applications', 
+            icon: FileText,
+            onClick: () => setCurrentSection('applications'),
+          },
+          { 
+            title: isRTL ? 'תובנות AI' : 'AI Insights', 
+            icon: Zap,
+            onClick: () => chatRef.current?.scrollIntoView({ behavior: 'smooth' }),
+          },
         ];
       case 'freelance_hr':
       case 'inhouse_hr':
         return [
-          { title: t('actions.postJob') || 'Post Job', icon: Plus },
-          { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search },
-          { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users },
+          { title: t('actions.postJob') || 'Post Job', icon: Plus, onClick: () => {} },
+          { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search, onClick: () => {} },
+          { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users, onClick: () => {} },
         ];
       case 'company_employee':
         return [
-          { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus },
-          { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase },
-          { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp },
+          { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus, onClick: () => {} },
+          { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase, onClick: () => {} },
+          { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp, onClick: () => {} },
         ];
       default:
         return [];
@@ -295,6 +346,23 @@ export default function Dashboard() {
       onSectionChange={setCurrentSection}
     >
       {renderSectionContent()}
+
+      {/* Resume Upload Dialog */}
+      <Dialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {isRTL ? 'העלאת קורות חיים' : 'Upload Resume'}
+            </DialogTitle>
+          </DialogHeader>
+          <ResumeUpload 
+            onSuccess={() => {
+              setShowResumeDialog(false);
+              refetchStats();
+            }} 
+          />
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
