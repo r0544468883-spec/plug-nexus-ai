@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Send, Sparkles, User, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -80,11 +81,11 @@ export function PlugChat() {
     setInput('');
     setIsLoading(true);
 
-    // Save user message
-    await saveMessage(userMessage.content, 'user');
+    try {
+      // Save user message
+      await saveMessage(userMessage.content, 'user');
 
-    // Simulate AI response (will be replaced with actual AI integration)
-    setTimeout(async () => {
+      // Simulate AI response (will be replaced with actual AI integration)
       const aiResponse = generatePlugResponse(userMessage.content);
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -93,10 +94,17 @@ export function PlugChat() {
         timestamp: new Date(),
       };
       
+      // Small delay to simulate thinking
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       setMessages(prev => [...prev, aiMessage]);
       await saveMessage(aiResponse, 'ai');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error(t('plug.error') || 'Failed to send message. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const generatePlugResponse = (userInput: string): string => {
