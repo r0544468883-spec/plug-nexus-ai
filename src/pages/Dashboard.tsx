@@ -4,10 +4,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
+import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen } from 'lucide-react';
-
 interface StatCardProps {
   title: string;
   value: string;
@@ -262,7 +262,7 @@ export default function Dashboard() {
       case 'settings':
         return renderSettingsContent();
       case 'applications':
-        return renderPlaceholderContent(t('dashboard.applications') || 'My Applications', Briefcase);
+        return <ApplicationsPage />;
       case 'candidates':
         return renderPlaceholderContent(t('dashboard.candidates') || 'Candidates', Users);
       case 'jobs':

@@ -87,6 +87,21 @@ const translations: Record<Language, Record<string, string>> = {
     'insights.tip': 'Pro Tip',
     'insights.tipText': 'Complete your profile to get better AI recommendations.',
     
+    // Applications
+    'applications.total': 'Total Applications',
+    'applications.active': 'Active',
+    'applications.interviews': 'Interviews',
+    'applications.rejected': 'Rejected',
+    'applications.searchPlaceholder': 'Search by job or company...',
+    'applications.noApplications': 'No applications yet',
+    'applications.noResults': 'No matching applications',
+    'applications.startSearching': 'Start searching for jobs to apply',
+    'applications.tryDifferentFilters': 'Try adjusting your filters',
+    'applications.view': 'View',
+    'applications.note': 'Note',
+    'applications.withdraw': 'Withdraw',
+    'applications.myNote': 'Note',
+    
     // Plug AI
     'plug.greeting': 'Hey there! I\'m Plug, your AI HR assistant.',
     'plug.placeholder': 'Ask me anything...',
@@ -167,6 +182,21 @@ const translations: Record<Language, Record<string, string>> = {
     'insights.employee': 'יש 4 משרות פתוחות בחברה שלך שמתאימות לרשת שלך.',
     'insights.tip': 'טיפ מקצועי',
     'insights.tipText': 'השלם את הפרופיל שלך לקבלת המלצות AI טובות יותר.',
+    
+    // Applications
+    'applications.total': 'סה"כ מועמדויות',
+    'applications.active': 'פעיל',
+    'applications.interviews': 'ראיונות',
+    'applications.rejected': 'נדחו',
+    'applications.searchPlaceholder': 'חפש לפי משרה או חברה...',
+    'applications.noApplications': 'אין מועמדויות עדיין',
+    'applications.noResults': 'לא נמצאו מועמדויות תואמות',
+    'applications.startSearching': 'התחל לחפש משרות כדי להגיש מועמדות',
+    'applications.tryDifferentFilters': 'נסה לשנות את הסינון',
+    'applications.view': 'צפה',
+    'applications.note': 'הערה',
+    'applications.withdraw': 'בטל',
+    'applications.myNote': 'הערה',
     
     // Plug AI
     'plug.greeting': 'היי! אני Plug, עוזר ה-AI שלך למשאבי אנוש.',
