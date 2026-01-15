@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      application_timeline: {
+        Row: {
+          application_id: string
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_timeline_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           candidate_id: string
@@ -225,6 +263,50 @@ export type Database = {
             columns: ["related_job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_reminders: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          interview_date: string
+          interview_type: string | null
+          location: string | null
+          notes: string | null
+          reminder_sent: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          interview_date: string
+          interview_type?: string | null
+          location?: string | null
+          notes?: string | null
+          reminder_sent?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          interview_date?: string
+          interview_type?: string | null
+          location?: string | null
+          notes?: string | null
+          reminder_sent?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_reminders_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
             referencedColumns: ["id"]
           },
         ]

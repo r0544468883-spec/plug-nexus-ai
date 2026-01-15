@@ -9,7 +9,9 @@ import {
   ExternalLink, 
   Save, 
   XCircle,
-  Loader2
+  Loader2,
+  Calendar,
+  History
 } from 'lucide-react';
 import {
   Sheet,
@@ -20,10 +22,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { StageProgressBar } from './StageProgressBar';
+import { InterviewScheduler } from './InterviewScheduler';
+import { ApplicationTimeline } from './ApplicationTimeline';
 import MatchScoreCircle from './MatchScoreCircle';
 
 interface ApplicationDetails {
@@ -99,6 +104,9 @@ export function ApplicationDetailsSheet({
     try {
       setIsSaving(true);
 
+      const oldStage = application.current_stage;
+      const oldNotes = application.notes || '';
+
       const updateData: any = {
         current_stage: currentStage,
         notes: notes || null,
@@ -120,6 +128,30 @@ export function ApplicationDetailsSheet({
         .eq('id', application.id);
 
       if (error) throw error;
+
+      // Add timeline events for changes
+      const timelineEvents = [];
+
+      if (currentStage !== oldStage) {
+        timelineEvents.push({
+          application_id: application.id,
+          event_type: 'stage_change',
+          old_value: oldStage,
+          new_value: currentStage,
+        });
+      }
+
+      if (notes !== oldNotes && notes.trim()) {
+        timelineEvents.push({
+          application_id: application.id,
+          event_type: 'note_added',
+          new_value: notes.substring(0, 100),
+        });
+      }
+
+      if (timelineEvents.length > 0) {
+        await supabase.from('application_timeline').insert(timelineEvents);
+      }
 
       toast.success(isRTL ? 'השינויים נשמרו' : 'Changes saved');
       setHasChanges(false);
@@ -220,33 +252,61 @@ export function ApplicationDetailsSheet({
 
           <Separator />
 
-          {/* Stage Progress */}
-          <div>
-            <h3 className="text-sm font-semibold mb-2">
-              {isRTL ? 'סטטוס מועמדות' : 'Application Status'}
-            </h3>
-            <StageProgressBar
-              currentStage={currentStage}
-              onStageChange={handleStageChange}
-              disabled={isSaving}
-            />
-          </div>
+          {/* Tabs for Interview Scheduler, Notes, Timeline */}
+          <Tabs defaultValue="status" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="status" className="text-xs">
+                {isRTL ? 'סטטוס' : 'Status'}
+              </TabsTrigger>
+              <TabsTrigger value="interviews" className="text-xs">
+                <Calendar className="h-3 w-3 mr-1" />
+                {isRTL ? 'ראיונות' : 'Interviews'}
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="text-xs">
+                <History className="h-3 w-3 mr-1" />
+                {isRTL ? 'היסטוריה' : 'Timeline'}
+              </TabsTrigger>
+            </TabsList>
 
-          <Separator />
+            <TabsContent value="status" className="space-y-4 mt-4">
+              {/* Stage Progress */}
+              <div>
+                <h3 className="text-sm font-semibold mb-2">
+                  {isRTL ? 'סטטוס מועמדות' : 'Application Status'}
+                </h3>
+                <StageProgressBar
+                  currentStage={currentStage}
+                  onStageChange={handleStageChange}
+                  disabled={isSaving}
+                />
+              </div>
 
-          {/* Notes */}
-          <div>
-            <h3 className="text-sm font-semibold mb-2">
-              {isRTL ? 'הערות' : 'Notes'}
-            </h3>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={isRTL ? 'הוסף הערות על המועמדות...' : 'Add notes about this application...'}
-              className="min-h-[100px] resize-none"
-              dir={isRTL ? 'rtl' : 'ltr'}
-            />
-          </div>
+              {/* Notes */}
+              <div>
+                <h3 className="text-sm font-semibold mb-2">
+                  {isRTL ? 'הערות' : 'Notes'}
+                </h3>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={isRTL ? 'הוסף הערות על המועמדות...' : 'Add notes about this application...'}
+                  className="min-h-[100px] resize-none"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="interviews" className="mt-4">
+              <InterviewScheduler
+                applicationId={application.id}
+                onInterviewScheduled={onUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-4">
+              <ApplicationTimeline applicationId={application.id} />
+            </TabsContent>
+          </Tabs>
 
           {/* Job Description */}
           {job?.description && (
@@ -256,23 +316,8 @@ export function ApplicationDetailsSheet({
                 <h3 className="text-sm font-semibold mb-2">
                   {isRTL ? 'תיאור המשרה' : 'Job Description'}
                 </h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-6">
                   {job.description}
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* Requirements */}
-          {job?.requirements && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="text-sm font-semibold mb-2">
-                  {isRTL ? 'דרישות' : 'Requirements'}
-                </h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {job.requirements}
                 </p>
               </div>
             </>
@@ -280,18 +325,15 @@ export function ApplicationDetailsSheet({
 
           {/* Source URL */}
           {job?.source_url && (
-            <>
-              <Separator />
-              <a
-                href={job.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <ExternalLink className="h-4 w-4" />
-                {isRTL ? 'צפה במשרה המקורית' : 'View Original Job Posting'}
-              </a>
-            </>
+            <a
+              href={job.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {isRTL ? 'צפה במשרה המקורית' : 'View Original Job Posting'}
+            </a>
           )}
 
           <Separator />
