@@ -15,13 +15,20 @@ interface Message {
   timestamp: Date;
 }
 
-export function PlugChat() {
+interface PlugChatProps {
+  initialMessage?: string;
+  onMessageSent?: () => void;
+}
+
+export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) {
   const { t, direction } = useLanguage();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasProcessedInitial, setHasProcessedInitial] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Load chat history on mount
   useEffect(() => {
@@ -29,6 +36,25 @@ export function PlugChat() {
       loadChatHistory();
     }
   }, [user]);
+
+  // Handle initial message from WelcomeCard
+  useEffect(() => {
+    if (initialMessage && !hasProcessedInitial && user) {
+      setHasProcessedInitial(true);
+      // Small delay to ensure component is mounted
+      setTimeout(() => {
+        sendMessage(initialMessage);
+        onMessageSent?.();
+      }, 100);
+    }
+  }, [initialMessage, hasProcessedInitial, user]);
+
+  // Reset when initialMessage changes to a new value
+  useEffect(() => {
+    if (!initialMessage) {
+      setHasProcessedInitial(false);
+    }
+  }, [initialMessage]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -67,12 +93,12 @@ export function PlugChat() {
       });
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (content: string) => {
+    if (!content.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input.trim(),
+      content: content.trim(),
       sender: 'user',
       timestamp: new Date(),
     };
@@ -107,6 +133,10 @@ export function PlugChat() {
     }
   };
 
+  const handleSend = async () => {
+    await sendMessage(input);
+  };
+
   const generatePlugResponse = (userInput: string): string => {
     // Placeholder responses - will be replaced with Gemini AI
     const responses = [
@@ -123,7 +153,7 @@ export function PlugChat() {
   const showGreeting = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
+    <div ref={chatContainerRef} className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
