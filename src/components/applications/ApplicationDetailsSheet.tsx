@@ -11,7 +11,8 @@ import {
   XCircle,
   Loader2,
   Calendar,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import {
   Sheet,
@@ -35,6 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { InterviewScheduler } from './InterviewScheduler';
 import { HomeAssignmentTab } from './HomeAssignmentTab';
+import { ApplicationPlugChat } from './ApplicationPlugChat';
 import MatchScoreCircle from './MatchScoreCircle';
 
 interface ApplicationDetails {
@@ -258,9 +260,9 @@ export function ApplicationDetailsSheet({
 
           <Separator />
 
-          {/* Tabs for Status, Interviews, Home Assignment */}
+          {/* Tabs for Status, Interviews, Home Assignment, Plug */}
           <Tabs defaultValue="status" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="status" className="text-xs">
                 {isRTL ? 'סטטוס' : 'Status'}
               </TabsTrigger>
@@ -271,6 +273,10 @@ export function ApplicationDetailsSheet({
               <TabsTrigger value="assignment" className="text-xs">
                 <FileText className="h-3 w-3 mr-1" />
                 {isRTL ? 'מטלה' : 'Assignment'}
+              </TabsTrigger>
+              <TabsTrigger value="plug" className="text-xs">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Plug
               </TabsTrigger>
             </TabsList>
 
@@ -335,6 +341,20 @@ export function ApplicationDetailsSheet({
 
             <TabsContent value="assignment" className="mt-4">
               <HomeAssignmentTab applicationId={application.id} />
+            </TabsContent>
+
+            <TabsContent value="plug" className="mt-4">
+              <ApplicationPlugChat 
+                applicationId={application.id}
+                context={{
+                  jobTitle: job?.title || '',
+                  companyName: company?.name || '',
+                  status: currentStage,
+                  matchScore: application.match_score,
+                  location: job?.location || null,
+                  jobType: job?.job_type || null,
+                }}
+              />
             </TabsContent>
           </Tabs>
 
