@@ -1,13 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ApplicationsStats } from './ApplicationsStats';
 import { ApplicationsFilters, StatusFilter, StageFilter, SortOption } from './ApplicationsFilters';
-import { ApplicationCard } from './ApplicationCard';
+import VerticalApplicationCard from './VerticalApplicationCard';
+import AddApplicationForm from './AddApplicationForm';
+import PlugBubble from './PlugBubble';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Loader2, Search, FolderOpen } from 'lucide-react';
+import { Briefcase, Loader2, Link2, FolderOpen, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -35,6 +37,7 @@ interface Application {
 export function ApplicationsPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
+  const isRTL = language === 'he';
 
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,63 +45,64 @@ export function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [showAddForm, setShowAddForm] = useState(false);
 
   // Fetch applications
-  useEffect(() => {
-    async function fetchApplications() {
-      if (!user) return;
+  const fetchApplications = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-        const { data, error } = await supabase
-          .from('applications')
-          .select(`
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          status,
+          current_stage,
+          match_score,
+          created_at,
+          last_interaction,
+          notes,
+          job:jobs (
             id,
-            status,
-            current_stage,
-            match_score,
-            created_at,
-            last_interaction,
-            notes,
-            job:jobs (
+            title,
+            location,
+            job_type,
+            salary_range,
+            company:companies (
               id,
-              title,
-              location,
-              job_type,
-              salary_range,
-              company:companies (
-                id,
-                name,
-                logo_url
-              )
+              name,
+              logo_url
             )
-          `)
-          .eq('candidate_id', user.id)
-          .order('created_at', { ascending: false });
+          )
+        `)
+        .eq('candidate_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Transform the data to match our interface
-        const transformedData = (data || []).map((app: any) => ({
-          ...app,
-          job: app.job ? {
-            ...app.job,
-            company: Array.isArray(app.job.company) ? app.job.company[0] : app.job.company
-          } : null
-        }));
+      // Transform the data to match our interface
+      const transformedData = (data || []).map((app: any) => ({
+        ...app,
+        job: app.job ? {
+          ...app.job,
+          company: Array.isArray(app.job.company) ? app.job.company[0] : app.job.company
+        } : null
+      }));
 
-        setApplications(transformedData);
-      } catch (error) {
-        console.error('Error fetching applications:', error);
-        toast.error(t('common.error') || 'Failed to load applications');
-      } finally {
-        setIsLoading(false);
-      }
+      setApplications(transformedData);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      toast.error(t('common.error') || 'Failed to load applications');
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchApplications();
   }, [user, t]);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -137,8 +141,14 @@ export function ApplicationsPage() {
       result = result.filter((app) => app.current_stage === stageFilter);
     }
 
-    // Sort
+    // Sort - prioritize interviews first, then by selected sort
     result.sort((a, b) => {
+      // Urgent items first (interviews)
+      const aUrgent = a.current_stage === 'interview' ? 1 : 0;
+      const bUrgent = b.current_stage === 'interview' ? 1 : 0;
+      if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+
+      // Then by selected sort
       if (sortBy === 'newest') {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       } else if (sortBy === 'oldest') {
@@ -153,15 +163,15 @@ export function ApplicationsPage() {
   }, [applications, search, statusFilter, stageFilter, sortBy]);
 
   // Handlers
-  const handleViewDetails = (id: string) => {
+  const handleViewDetails = useCallback((id: string) => {
     toast.info(t('common.comingSoon') || 'Coming soon');
-  };
+  }, [t]);
 
-  const handleWithdraw = async (id: string) => {
+  const handleWithdraw = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('applications')
-        .update({ status: 'withdrawn' })
+        .update({ status: 'withdrawn', current_stage: 'withdrawn' })
         .eq('id', id)
         .eq('candidate_id', user?.id);
 
@@ -169,22 +179,57 @@ export function ApplicationsPage() {
 
       setApplications((prev) =>
         prev.map((app) =>
-          app.id === id ? { ...app, status: 'withdrawn' } : app
+          app.id === id ? { ...app, status: 'withdrawn', current_stage: 'withdrawn' } : app
         )
       );
 
-      toast.success(
-        language === 'he' ? 'המועמדות בוטלה' : 'Application withdrawn'
-      );
+      toast.success(isRTL ? 'המועמדות בוטלה' : 'Application withdrawn');
     } catch (error) {
       console.error('Error withdrawing application:', error);
       toast.error(t('common.error') || 'Failed to withdraw application');
     }
-  };
+  }, [user?.id, isRTL, t]);
 
-  const handleAddNote = (id: string) => {
-    toast.info(t('common.comingSoon') || 'Coming soon');
-  };
+  const handlePlugAction = useCallback((action: string) => {
+    if (action === 'interview_prep') {
+      toast.info(isRTL ? 'הכנה לראיון - בקרוב!' : 'Interview prep - Coming soon!');
+    } else if (action === 'update_resume') {
+      toast.info(isRTL ? 'עדכון קו"ח - בקרוב!' : 'Resume update - Coming soon!');
+    }
+  }, [isRTL]);
+
+  // Generate AI suggestions based on applications
+  const plugSuggestions = useMemo(() => {
+    const suggestions = [];
+    
+    // Find high match application
+    const highMatch = applications.find(a => (a.match_score || 0) >= 80);
+    if (highMatch) {
+      suggestions.push({
+        id: 'high-match',
+        message: isRTL 
+          ? `היי! ראיתי ${highMatch.match_score}% התאמה ל${highMatch.job?.company?.name}. רוצה שאכין אותך לראיון?`
+          : `Hey! I see ${highMatch.match_score}% match for ${highMatch.job?.company?.name}. Want me to prep you for the interview?`,
+        action: 'interview_prep',
+        priority: 'high' as const,
+      });
+    }
+
+    // Find interview stage
+    const hasInterview = applications.find(a => a.current_stage === 'interview');
+    if (hasInterview) {
+      suggestions.push({
+        id: 'interview',
+        message: isRTL
+          ? `יש לך ראיון ב-${hasInterview.job?.company?.name}! בוא נתרגל שאלות נפוצות`
+          : `You have an interview at ${hasInterview.job?.company?.name}! Let's practice common questions`,
+        action: 'interview_prep',
+        priority: 'high' as const,
+      });
+    }
+
+    return suggestions;
+  }, [applications, isRTL]);
 
   if (isLoading) {
     return (
@@ -195,18 +240,41 @@ export function ApplicationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold flex items-center gap-3">
           <Briefcase className="w-6 h-6 text-primary" />
           {t('dashboard.applications') || 'My Applications'}
         </h2>
-        <Button className="gap-2" variant="outline">
-          <Search className="w-4 h-4" />
-          {t('actions.searchJobs') || 'Find Jobs'}
+        <Button 
+          className="gap-2" 
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
+          <Link2 className="w-4 h-4" />
+          {isRTL ? 'הוסף מועמדות' : 'Add Application'}
         </Button>
       </div>
+
+      {/* Add Application Form */}
+      {showAddForm && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-5 h-5 text-accent" />
+              <span className="font-medium">
+                {isRTL ? 'הדבק לינק ופלאג יעשה את השאר' : 'Paste a link and Plug will do the rest'}
+              </span>
+            </div>
+            <AddApplicationForm 
+              onApplicationAdded={() => {
+                fetchApplications();
+                setShowAddForm(false);
+              }} 
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <ApplicationsStats {...stats} />
@@ -230,18 +298,18 @@ export function ApplicationsPage() {
             <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
               {applications.length === 0
-                ? t('applications.noApplications') || 'No applications yet'
-                : t('applications.noResults') || 'No matching applications'}
+                ? (isRTL ? 'עדיין אין מועמדויות' : 'No applications yet')
+                : (isRTL ? 'לא נמצאו תוצאות' : 'No matching applications')}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               {applications.length === 0
-                ? t('applications.startSearching') || 'Start searching for jobs to apply'
-                : t('applications.tryDifferentFilters') || 'Try adjusting your filters'}
+                ? (isRTL ? 'הדבק לינק למשרה והתחל!' : 'Paste a job link to get started!')
+                : (isRTL ? 'נסה לשנות את הסינון' : 'Try adjusting your filters')}
             </p>
             {applications.length === 0 && (
-              <Button className="gap-2">
-                <Search className="w-4 h-4" />
-                {t('actions.searchJobs') || 'Search Jobs'}
+              <Button className="gap-2" onClick={() => setShowAddForm(true)}>
+                <Link2 className="w-4 h-4" />
+                {isRTL ? 'הוסף מועמדות ראשונה' : 'Add First Application'}
               </Button>
             )}
           </CardContent>
@@ -249,16 +317,30 @@ export function ApplicationsPage() {
       ) : (
         <div className="space-y-3">
           {filteredApplications.map((application) => (
-            <ApplicationCard
-              key={application.id}
-              application={application}
-              onViewDetails={handleViewDetails}
-              onWithdraw={handleWithdraw}
-              onAddNote={handleAddNote}
-            />
+            application.job && (
+              <VerticalApplicationCard
+                key={application.id}
+                application={{
+                  ...application,
+                  job: {
+                    ...application.job,
+                    company: application.job.company || null
+                  },
+                  hasUpcomingInterview: application.current_stage === 'interview',
+                }}
+                onViewDetails={() => handleViewDetails(application.id)}
+                onWithdraw={() => handleWithdraw(application.id)}
+              />
+            )
           ))}
         </div>
       )}
+
+      {/* Plug AI Bubble */}
+      <PlugBubble 
+        suggestions={plugSuggestions}
+        onActionClick={handlePlugAction}
+      />
     </div>
   );
 }
