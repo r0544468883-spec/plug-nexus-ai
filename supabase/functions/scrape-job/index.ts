@@ -12,7 +12,107 @@ serve(async (req) => {
   }
 
   try {
-    const { url, save, user_id } = await req.json();
+    const body = await req.json();
+    const { url, save, user_id, manual } = body;
+    
+    // Handle manual application creation
+    if (manual && user_id) {
+      const { company_name, job_title, location, job_type, description, source_url } = body;
+      
+      if (!company_name || !job_title) {
+        return new Response(
+          JSON.stringify({ error: 'Company name and job title are required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Find or create company
+      let companyId: string | null = null;
+      
+      const { data: existingCompany } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .ilike('name', company_name)
+        .maybeSingle();
+
+      if (existingCompany) {
+        companyId = existingCompany.id;
+      } else {
+        const { data: newCompany, error: companyError } = await supabaseAdmin
+          .from('companies')
+          .insert({
+            name: company_name,
+            created_by: user_id,
+          })
+          .select('id')
+          .single();
+
+        if (companyError) {
+          console.error('Error creating company:', companyError);
+          throw new Error('Failed to create company');
+        }
+        companyId = newCompany.id;
+      }
+
+      // Create job
+      const { data: job, error: jobError } = await supabaseAdmin
+        .from('jobs')
+        .insert({
+          title: job_title,
+          company_id: companyId,
+          location: location || null,
+          job_type: job_type || null,
+          description: description || null,
+          source_url: source_url || null,
+          created_by: user_id,
+        })
+        .select('id')
+        .single();
+
+      if (jobError) {
+        console.error('Error creating job:', jobError);
+        throw new Error('Failed to create job');
+      }
+
+      // Create application
+      const { data: application, error: appError } = await supabaseAdmin
+        .from('applications')
+        .insert({
+          job_id: job.id,
+          candidate_id: user_id,
+          status: 'active',
+          current_stage: 'applied',
+        })
+        .select('id')
+        .single();
+
+      if (appError) {
+        console.error('Error creating application:', appError);
+        throw new Error('Failed to create application');
+      }
+
+      // Add timeline event
+      await supabaseAdmin
+        .from('application_timeline')
+        .insert({
+          application_id: application.id,
+          event_type: 'created',
+          description: 'Application created manually',
+        });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          saved: true,
+          application_id: application.id,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!url) {
       return new Response(
@@ -202,19 +302,30 @@ If you cannot extract a field, use null. Always return valid JSON.`
       }
 
       // Create application
-      const { error: appError } = await supabaseAdmin
+      const { data: application, error: appError } = await supabaseAdmin
         .from('applications')
         .insert({
           job_id: job.id,
           candidate_id: user_id,
           status: 'active',
           current_stage: 'applied',
-        });
+        })
+        .select('id')
+        .single();
 
       if (appError) {
         console.error('Error creating application:', appError);
         throw new Error('Failed to create application');
       }
+
+      // Add timeline event
+      await supabaseAdmin
+        .from('application_timeline')
+        .insert({
+          application_id: application.id,
+          event_type: 'created',
+          description: 'Application created from URL',
+        });
 
       return new Response(
         JSON.stringify({

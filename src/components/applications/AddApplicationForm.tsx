@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link2, Loader2, Sparkles, Check, X } from 'lucide-react';
+import { Link2, Loader2, Sparkles, Check, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ManualApplicationForm } from './ManualApplicationForm';
 
 interface JobPreview {
   company_name: string;
@@ -31,6 +32,7 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<JobPreview | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
 
   const isRTL = language === 'he';
 
@@ -121,6 +123,21 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
     setUrl('');
   };
 
+  const handleManualFormSuccess = () => {
+    setShowManualForm(false);
+    onApplicationAdded();
+  };
+
+  // Show manual form
+  if (showManualForm) {
+    return (
+      <ManualApplicationForm
+        onApplicationAdded={handleManualFormSuccess}
+        onCancel={() => setShowManualForm(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* URL Input */}
@@ -148,7 +165,26 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
           )}
           {isRTL ? 'נתח' : 'Analyze'}
         </Button>
+        <Button
+          variant="outline"
+          onClick={() => setShowManualForm(true)}
+          className="gap-2"
+          title={isRTL ? 'הוספה ידנית' : 'Add manually'}
+        >
+          <PenLine className="h-4 w-4" />
+        </Button>
       </div>
+
+      {/* Manual add hint */}
+      <p className="text-xs text-muted-foreground text-center">
+        {isRTL ? 'או ' : 'or '}
+        <button
+          onClick={() => setShowManualForm(true)}
+          className="text-primary hover:underline"
+        >
+          {isRTL ? 'הוסף ידנית' : 'add manually'}
+        </button>
+      </p>
 
       {/* Loading state */}
       {isLoading && (
