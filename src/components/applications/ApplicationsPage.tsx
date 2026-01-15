@@ -6,10 +6,10 @@ import { ApplicationsStats } from './ApplicationsStats';
 import { ApplicationsFilters, StatusFilter, StageFilter, SortOption } from './ApplicationsFilters';
 import VerticalApplicationCard from './VerticalApplicationCard';
 import AddApplicationForm from './AddApplicationForm';
+import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
 import PlugBubble from './PlugBubble';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Briefcase, Loader2, Link2, FolderOpen, Sparkles } from 'lucide-react';
+import { Briefcase, Loader2, FolderOpen, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -26,6 +26,9 @@ interface Application {
     location: string | null;
     job_type: string | null;
     salary_range: string | null;
+    description: string | null;
+    requirements: string | null;
+    source_url: string | null;
     company: {
       id: string;
       name: string;
@@ -45,6 +48,10 @@ export function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  
+  // Sheet state
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
@@ -69,6 +76,9 @@ export function ApplicationsPage() {
             location,
             job_type,
             salary_range,
+            description,
+            requirements,
+            source_url,
             company:companies (
               id,
               name,
@@ -162,9 +172,10 @@ export function ApplicationsPage() {
   }, [applications, search, statusFilter, stageFilter, sortBy]);
 
   // Handlers
-  const handleViewDetails = useCallback((id: string) => {
-    toast.info(t('common.comingSoon') || 'Coming soon');
-  }, [t]);
+  const handleViewDetails = useCallback((application: Application) => {
+    setSelectedApplication(application);
+    setSheetOpen(true);
+  }, []);
 
   const handleWithdraw = useCallback(async (id: string) => {
     try {
@@ -307,13 +318,21 @@ export function ApplicationsPage() {
                   },
                   hasUpcomingInterview: application.current_stage === 'interview',
                 }}
-                onViewDetails={() => handleViewDetails(application.id)}
+                onViewDetails={() => handleViewDetails(application)}
                 onWithdraw={() => handleWithdraw(application.id)}
               />
             )
           ))}
         </div>
       )}
+
+      {/* Application Details Sheet */}
+      <ApplicationDetailsSheet
+        application={selectedApplication}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onUpdate={fetchApplications}
+      />
 
       {/* Plug AI Bubble */}
       <PlugBubble 
