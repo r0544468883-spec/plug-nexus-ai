@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -60,6 +61,7 @@ function QuickAction({ title, icon: Icon, onClick }: QuickActionProps) {
 export default function Dashboard() {
   const { profile, role } = useAuth();
   const { t } = useLanguage();
+  const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
 
   // Role-specific stats
   const getStats = () => {
@@ -118,74 +120,164 @@ export default function Dashboard() {
   const stats = getStats();
   const quickActions = getQuickActions();
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Welcome Card */}
-        <WelcomeCard />
+  // Section-specific content renderers
+  const renderOverviewContent = () => (
+    <div className="space-y-6">
+      {/* Welcome Card */}
+      <WelcomeCard />
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
-          ))}
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {stats.map((stat, index) => (
+          <StatCard key={index} {...stat} />
+        ))}
+      </div>
+
+      {/* Main Content - Chat Centered with Actions on Sides */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Quick Actions - Left Side */}
+        <div className="lg:col-span-1 space-y-3">
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Zap className="w-5 h-5 text-primary" />
+                {t('dashboard.quickActions') || 'Quick Actions'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {quickActions.map((action, index) => (
+                <QuickAction key={index} {...action} />
+              ))}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Content - Chat Centered with Actions on Sides */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Quick Actions - Left Side */}
-          <div className="lg:col-span-1 space-y-3">
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  {t('dashboard.quickActions') || 'Quick Actions'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {quickActions.map((action, index) => (
-                  <QuickAction key={index} {...action} />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+        {/* PLUG Chat - Center (Large) */}
+        <div className="lg:col-span-2">
+          <PlugChat />
+        </div>
 
-          {/* PLUG Chat - Center (Large) */}
-          <div className="lg:col-span-2">
-            <PlugChat />
-          </div>
-
-          {/* AI Insights - Right Side */}
-          <div className="lg:col-span-1">
-            <Card className="bg-card border-border plug-ai-highlight h-full">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                  {t('dashboard.aiInsights') || 'AI Insights'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
-                  <p className="text-sm text-muted-foreground">
-                    {role === 'job_seeker' 
-                      ? t('insights.jobSeeker') || 'Based on your profile, I found 5 new positions that match your skills.'
-                      : role === 'company_employee'
-                      ? t('insights.employee') || 'There are 4 open positions in your company that match your network.'
-                      : t('insights.hr') || 'You have 12 candidates waiting for review.'
-                    }
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm font-medium text-primary mb-1">{t('insights.tip') || 'Pro Tip'}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('insights.tipText') || 'Complete your profile to get better AI recommendations.'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* AI Insights - Right Side */}
+        <div className="lg:col-span-1">
+          <Card className="bg-card border-border plug-ai-highlight h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                {t('dashboard.aiInsights') || 'AI Insights'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
+                <p className="text-sm text-muted-foreground">
+                  {role === 'job_seeker' 
+                    ? t('insights.jobSeeker') || 'Based on your profile, I found 5 new positions that match your skills.'
+                    : role === 'company_employee'
+                    ? t('insights.employee') || 'There are 4 open positions in your company that match your network.'
+                    : t('insights.hr') || 'You have 12 candidates waiting for review.'
+                  }
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm font-medium text-primary mb-1">{t('insights.tip') || 'Pro Tip'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('insights.tipText') || 'Complete your profile to get better AI recommendations.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+    </div>
+  );
+
+  const renderChatContent = () => (
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
+        <MessageSquare className="w-6 h-6 text-primary" />
+        {t('plug.title') || 'Chat with Plug'}
+      </h2>
+      <PlugChat />
+    </div>
+  );
+
+  const renderDocumentsContent = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <FileText className="w-6 h-6 text-primary" />
+        {t('dashboard.documents') || 'Documents'}
+      </h2>
+      <Card className="bg-card border-border">
+        <CardContent className="p-8 text-center">
+          <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground mb-4">{t('documents.empty') || 'No documents yet'}</p>
+          <Button className="gap-2">
+            <Upload className="w-4 h-4" />
+            {t('actions.uploadDocument') || 'Upload Document'}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderSettingsContent = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <Settings className="w-6 h-6 text-primary" />
+        {t('dashboard.settings') || 'Settings'}
+      </h2>
+      <Card className="bg-card border-border">
+        <CardContent className="p-6">
+          <p className="text-muted-foreground">{t('settings.comingSoon') || 'Settings panel coming soon...'}</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderPlaceholderContent = (title: string, icon: React.ComponentType<{ className?: string }>) => {
+    const Icon = icon;
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold flex items-center gap-3">
+          <Icon className="w-6 h-6 text-primary" />
+          {title}
+        </h2>
+        <Card className="bg-card border-border">
+          <CardContent className="p-8 text-center">
+            <Icon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">{t('common.comingSoon') || 'Coming soon...'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderSectionContent = () => {
+    switch (currentSection) {
+      case 'overview':
+        return renderOverviewContent();
+      case 'chat':
+        return renderChatContent();
+      case 'documents':
+        return renderDocumentsContent();
+      case 'settings':
+        return renderSettingsContent();
+      case 'applications':
+        return renderPlaceholderContent(t('dashboard.applications') || 'My Applications', Briefcase);
+      case 'candidates':
+        return renderPlaceholderContent(t('dashboard.candidates') || 'Candidates', Users);
+      case 'jobs':
+        return renderPlaceholderContent(t('dashboard.jobs') || 'Jobs', Briefcase);
+      default:
+        return renderOverviewContent();
+    }
+  };
+
+  return (
+    <DashboardLayout 
+      currentSection={currentSection} 
+      onSectionChange={setCurrentSection}
+    >
+      {renderSectionContent()}
     </DashboardLayout>
   );
 }

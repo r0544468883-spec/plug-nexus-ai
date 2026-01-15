@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PlugLogo } from '@/components/PlugLogo';
@@ -16,16 +16,24 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+
+export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'documents' | 'chat' | 'settings';
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  currentSection: DashboardSection;
+  onSectionChange: (section: DashboardSection) => void;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, currentSection, onSectionChange }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
   const { t, direction } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleNavClick = (section: DashboardSection) => {
+    onSectionChange(section);
+    setSidebarOpen(false); // Close sidebar on mobile after selection
+  };
 
   const getRoleLabel = () => {
     switch (role) {
@@ -38,32 +46,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   // Navigation items based on role
-  const getNavItems = () => {
-    const common = [
-      { icon: LayoutDashboard, label: t('dashboard.overview'), href: '#overview' },
-      { icon: FileText, label: 'Documents', href: '#documents' },
-      { icon: MessageSquare, label: 'Chat with Plug', href: '#chat' },
-      { icon: Settings, label: 'Settings', href: '#settings' },
+  const getNavItems = (): { icon: typeof LayoutDashboard; label: string; section: DashboardSection }[] => {
+    const common: { icon: typeof LayoutDashboard; label: string; section: DashboardSection }[] = [
+      { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
+      { icon: FileText, label: 'Documents', section: 'documents' },
+      { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
+      { icon: Settings, label: 'Settings', section: 'settings' },
     ];
 
     if (role === 'job_seeker') {
       return [
-        { icon: LayoutDashboard, label: t('dashboard.overview'), href: '#overview' },
-        { icon: Briefcase, label: 'My Applications', href: '#applications' },
-        { icon: FileText, label: 'My Documents', href: '#documents' },
-        { icon: MessageSquare, label: 'Chat with Plug', href: '#chat' },
-        { icon: Settings, label: 'Settings', href: '#settings' },
+        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
+        { icon: Briefcase, label: 'My Applications', section: 'applications' },
+        { icon: FileText, label: 'My Documents', section: 'documents' },
+        { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
+        { icon: Settings, label: 'Settings', section: 'settings' },
       ];
     }
 
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
       return [
-        { icon: LayoutDashboard, label: t('dashboard.overview'), href: '#overview' },
-        { icon: Users, label: 'Candidates', href: '#candidates' },
-        { icon: Briefcase, label: 'Jobs', href: '#jobs' },
-        { icon: FileText, label: 'Documents', href: '#documents' },
-        { icon: MessageSquare, label: 'Chat with Plug', href: '#chat' },
-        { icon: Settings, label: 'Settings', href: '#settings' },
+        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
+        { icon: Users, label: 'Candidates', section: 'candidates' },
+        { icon: Briefcase, label: 'Jobs', section: 'jobs' },
+        { icon: FileText, label: 'Documents', section: 'documents' },
+        { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
+        { icon: Settings, label: 'Settings', section: 'settings' },
       ];
     }
 
@@ -102,14 +110,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item, index) => (
-            <a
+            <button
               key={index}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/10 transition-colors"
+              onClick={() => handleNavClick(item.section)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-start",
+                currentSection === item.section 
+                  ? "bg-primary/10 text-primary plug-row-active" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/10"
+              )}
             >
               <item.icon className="w-5 h-5" />
               <span>{item.label}</span>
-            </a>
+            </button>
           ))}
         </nav>
 
