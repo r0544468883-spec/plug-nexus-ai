@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
@@ -62,6 +62,8 @@ export default function Dashboard() {
   const { profile, role } = useAuth();
   const { t } = useLanguage();
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   // Role-specific stats
   const getStats = () => {
@@ -120,11 +122,23 @@ export default function Dashboard() {
   const stats = getStats();
   const quickActions = getQuickActions();
 
+  const handleWelcomeMessage = (message: string) => {
+    setPendingMessage(message);
+    // Scroll to chat after a brief delay
+    setTimeout(() => {
+      chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const handleMessageSent = () => {
+    setPendingMessage(null);
+  };
+
   // Section-specific content renderers
   const renderOverviewContent = () => (
     <div className="space-y-6">
-      {/* Welcome Card */}
-      <WelcomeCard />
+      {/* Welcome Card with Plug CTA */}
+      <WelcomeCard onSendMessage={handleWelcomeMessage} />
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -153,8 +167,11 @@ export default function Dashboard() {
         </div>
 
         {/* PLUG Chat - Center (Large) */}
-        <div className="lg:col-span-2">
-          <PlugChat />
+        <div className="lg:col-span-2" ref={chatRef}>
+          <PlugChat 
+            initialMessage={pendingMessage || undefined}
+            onMessageSent={handleMessageSent}
+          />
         </div>
 
         {/* AI Insights - Right Side */}
