@@ -29,6 +29,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const [hasProcessedInitial, setHasProcessedInitial] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load chat history on mount
   useEffect(() => {
@@ -41,7 +42,6 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   useEffect(() => {
     if (initialMessage && !hasProcessedInitial && user) {
       setHasProcessedInitial(true);
-      // Small delay to ensure component is mounted
       setTimeout(() => {
         sendMessage(initialMessage);
         onMessageSent?.();
@@ -49,7 +49,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     }
   }, [initialMessage, hasProcessedInitial, user]);
 
-  // Reset when initialMessage changes to a new value
+  // Reset when initialMessage changes
   useEffect(() => {
     if (!initialMessage) {
       setHasProcessedInitial(false);
@@ -68,6 +68,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)
+      .is('context', null) // Only load general chat, not application-specific
       .order('created_at', { ascending: true })
       .limit(50);
 
@@ -93,6 +94,81 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
       });
   };
 
+  const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
+    abortControllerRef.current = new AbortController();
+    
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plug-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: userMessages }),
+      signal: abortControllerRef.current.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to get AI response');
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, newlineIndex);
+        buffer = buffer.slice(newlineIndex + 1);
+
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') break;
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            fullContent += content;
+            // Update the last message with streaming content
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.sender === 'ai') {
+                return prev.map((m, i) => 
+                  i === prev.length - 1 ? { ...m, content: fullContent } : m
+                );
+              }
+              return [...prev, {
+                id: (Date.now() + 1).toString(),
+                content: fullContent,
+                sender: 'ai' as const,
+                timestamp: new Date(),
+              }];
+            });
+          }
+        } catch {
+          // Incomplete JSON, put back and wait
+          buffer = line + '\n' + buffer;
+          break;
+        }
+      }
+    }
+
+    return fullContent;
+  };
+
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
 
@@ -108,28 +184,32 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     setIsLoading(true);
 
     try {
-      // Save user message
       await saveMessage(userMessage.content, 'user');
 
-      // Simulate AI response (will be replaced with actual AI integration)
-      const aiResponse = generatePlugResponse(userMessage.content);
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: aiResponse,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      
-      // Small delay to simulate thinking
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setMessages(prev => [...prev, aiMessage]);
+      // Build message history for context
+      const recentMessages = messages.slice(-10).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.content,
+      }));
+      recentMessages.push({ role: 'user', content: userMessage.content });
+
+      const aiResponse = await streamAIResponse(recentMessages);
       await saveMessage(aiResponse, 'ai');
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error(t('plug.error') || 'Failed to send message. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+      toast.error(errorMessage);
+      
+      // Add error message to chat
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        content: t('plug.error') || 'Sorry, I encountered an error. Please try again.',
+        sender: 'ai',
+        timestamp: new Date(),
+      }]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -137,19 +217,6 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     await sendMessage(input);
   };
 
-  const generatePlugResponse = (userInput: string): string => {
-    // Placeholder responses - will be replaced with Gemini AI
-    const responses = [
-      "Got it! I'm analyzing your request... 🔍 This will be much more powerful once we connect the AI engine!",
-      "Interesting question! Once the Gemini integration is complete, I'll be able to help you with that in detail.",
-      "I'm Plug, your AI HR assistant! Soon I'll be able to search candidates, analyze CVs, and much more.",
-      "Processing... ⚡ The full AI capabilities are coming soon. For now, I'm just learning the ropes!",
-      "That's a great question about HR! My full powers will be unlocked once we integrate the AI engine.",
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  // Show initial greeting if no messages
   const showGreeting = messages.length === 0;
 
   return (
@@ -212,7 +279,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
                 ? 'bg-primary text-primary-foreground rounded-tr-sm rtl:rounded-tr-2xl rtl:rounded-tl-sm'
                 : 'bg-muted text-foreground rounded-tl-sm rtl:rounded-tl-2xl rtl:rounded-tr-sm plug-ai-highlight'
             )}>
-              <p className="text-sm leading-relaxed">{message.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
               <p className={cn(
                 'text-[10px] mt-1',
                 message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
@@ -223,7 +290,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
           </div>
         ))}
 
-        {isLoading && (
+        {isLoading && messages[messages.length - 1]?.sender !== 'ai' && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-accent" />

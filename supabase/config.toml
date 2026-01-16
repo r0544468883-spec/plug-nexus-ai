@@ -2,3 +2,9 @@ project_id = "edkbavihyscadffdbzod"
 
 [functions.scrape-job]
 verify_jwt = false
+
+[functions.plug-chat]
+verify_jwt = false
+
+[functions.analyze-resume]
+verify_jwt = false

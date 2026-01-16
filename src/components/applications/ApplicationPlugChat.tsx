@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -37,8 +38,8 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Quick action suggestions based on context
   const suggestions = isRTL ? [
     'עזור לי להתכונן לראיון',
     'מה כדאי לשאול את המראיין?',
@@ -70,38 +71,87 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
     }
   }, [messages]);
 
-  const generateResponse = (userMessage: string): string => {
-    // Context-aware responses (placeholder - will be replaced with AI)
-    const lowerMessage = userMessage.toLowerCase();
+  const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
+    abortControllerRef.current = new AbortController();
     
-    if (lowerMessage.includes('interview') || lowerMessage.includes('ראיון')) {
-      return isRTL 
-        ? `טיפים להתכוננות לראיון ב-${context.companyName}:\n\n1. 🔍 חקור את החברה והתרבות הארגונית\n2. 📝 הכן שאלות למראיין\n3. 💼 תרגל תשובות על הניסיון שלך\n4. ⏰ הגע 10 דקות מוקדם\n\nבהצלחה! 🍀`
-        : `Tips for your ${context.companyName} interview:\n\n1. 🔍 Research the company culture\n2. 📝 Prepare questions for the interviewer\n3. 💼 Practice answers about your experience\n4. ⏰ Arrive 10 minutes early\n\nGood luck! 🍀`;
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plug-chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ 
+        messages: userMessages,
+        context: {
+          jobTitle: context.jobTitle,
+          companyName: context.companyName,
+          status: context.status,
+          matchScore: context.matchScore,
+          location: context.location,
+          jobType: context.jobType,
+        }
+      }),
+      signal: abortControllerRef.current.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to get AI response');
     }
-    
-    if (lowerMessage.includes('salary') || lowerMessage.includes('negotiate') || lowerMessage.includes('שכר') || lowerMessage.includes('משא ומתן')) {
-      return isRTL
-        ? `טיפים למשא ומתן על שכר:\n\n1. 📊 תחקור את טווח השכר בתעשייה\n2. 💪 הדגש את הערך שאתה מביא\n3. 🎯 תן מספר ספציפי, לא טווח\n4. 🤝 זכור שזה משא ומתן, לא וויכוח`
-        : `Salary negotiation tips:\n\n1. 📊 Research industry salary ranges\n2. 💪 Highlight the value you bring\n3. 🎯 Give a specific number, not a range\n4. 🤝 Remember it's a negotiation, not an argument`;
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let fullContent = '';
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, newlineIndex);
+        buffer = buffer.slice(newlineIndex + 1);
+
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') break;
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            fullContent += content;
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.sender === 'ai' && last.id !== 'greeting') {
+                return prev.map((m, i) => 
+                  i === prev.length - 1 ? { ...m, content: fullContent } : m
+                );
+              }
+              return [...prev, {
+                id: (Date.now() + 1).toString(),
+                content: fullContent,
+                sender: 'ai' as const,
+                timestamp: new Date(),
+              }];
+            });
+          }
+        } catch {
+          buffer = line + '\n' + buffer;
+          break;
+        }
+      }
     }
-    
-    if (lowerMessage.includes('summarize') || lowerMessage.includes('תסכם') || lowerMessage.includes('summary')) {
-      return isRTL
-        ? `סיכום המועמדות שלך:\n\n📌 משרה: ${context.jobTitle}\n🏢 חברה: ${context.companyName}\n📍 מיקום: ${context.location || 'לא צוין'}\n💼 סוג: ${context.jobType || 'לא צוין'}\n📊 סטטוס: ${context.status}\n${context.matchScore ? `⭐ התאמה: ${context.matchScore}%` : ''}`
-        : `Your application summary:\n\n📌 Position: ${context.jobTitle}\n🏢 Company: ${context.companyName}\n📍 Location: ${context.location || 'Not specified'}\n💼 Type: ${context.jobType || 'Not specified'}\n📊 Status: ${context.status}\n${context.matchScore ? `⭐ Match: ${context.matchScore}%` : ''}`;
-    }
-    
-    if (lowerMessage.includes('ask') || lowerMessage.includes('question') || lowerMessage.includes('שאל') || lowerMessage.includes('שאלה')) {
-      return isRTL
-        ? `שאלות מומלצות לשאול את המראיין:\n\n1. "איך נראה יום טיפוסי בתפקיד?"\n2. "מה הציפיות ל-90 הימים הראשונים?"\n3. "מה האתגרים הגדולים של הצוות?"\n4. "איך נמדדת הצלחה בתפקיד?"\n5. "מה הצעדים הבאים בתהליך?"`
-        : `Great questions to ask the interviewer:\n\n1. "What does a typical day look like?"\n2. "What are the expectations for the first 90 days?"\n3. "What are the team's biggest challenges?"\n4. "How is success measured in this role?"\n5. "What are the next steps in the process?"`;
-    }
-    
-    // Default response
-    return isRTL
-      ? `אני כאן לעזור לך עם המועמדות ל-${context.jobTitle}! אפשר לשאול אותי על:\n• הכנה לראיון\n• משא ומתן על שכר\n• שאלות למראיין\n• טיפים כלליים`
-      : `I'm here to help with your ${context.jobTitle} application! You can ask me about:\n• Interview preparation\n• Salary negotiation\n• Questions for the interviewer\n• General tips`;
+
+    return fullContent;
   };
 
   const handleSend = async () => {
@@ -128,30 +178,40 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
       });
     }
 
-    // Simulate AI response delay
-    setTimeout(async () => {
-      const response = generateResponse(input);
-      
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        sender: 'ai',
-        timestamp: new Date(),
-      };
+    try {
+      // Build message history
+      const recentMessages = messages.slice(-10).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.content,
+      }));
+      recentMessages.push({ role: 'user', content: userMessage.content });
 
-      setMessages(prev => [...prev, aiMessage]);
-      setIsLoading(false);
+      const aiResponse = await streamAIResponse(recentMessages);
 
       // Save AI response
       if (user) {
         await supabase.from('chat_history').insert({
           user_id: user.id,
-          message: response,
+          message: aiResponse,
           sender: 'ai',
           context: { applicationId, jobTitle: context.jobTitle, companyName: context.companyName },
         });
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
+      toast.error(errorMessage);
+      
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        content: isRTL ? 'מצטער, נתקלתי בשגיאה. נסה שוב.' : 'Sorry, I encountered an error. Please try again.',
+        sender: 'ai',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -187,7 +247,7 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
             </div>
           ))}
           
-          {isLoading && (
+          {isLoading && messages[messages.length - 1]?.sender !== 'ai' && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg px-3 py-2">
                 <Loader2 className="h-4 w-4 animate-spin text-accent" />
