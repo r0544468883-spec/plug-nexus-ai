@@ -4,13 +4,35 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, FileText, Trash2, Download, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Trash2, Download, RefreshCw, CheckCircle, Sparkles, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Progress } from '@/components/ui/progress';
 
 interface ResumeUploadProps {
   onSuccess?: () => void;
   compact?: boolean;
+}
+
+interface ResumeSummary {
+  skills?: {
+    technical?: string[];
+    soft?: string[];
+    languages?: string[];
+  };
+  experience?: {
+    totalYears?: number;
+    summary?: string;
+    recentRole?: string;
+  };
+  education?: {
+    highest?: string;
+    certifications?: string[];
+  };
+  strengths?: string[];
+  suggestedRoles?: string[];
+  improvementTips?: string[];
+  overallScore?: number;
 }
 
 export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) {
@@ -20,6 +42,8 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const isRTL = language === 'he';
 
@@ -44,12 +68,62 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
     enabled: !!user?.id,
   });
 
+  // Analyze resume with AI
+  const analyzeResume = async (documentId: string, filePath: string, fileName: string) => {
+    setIsAnalyzing(true);
+    try {
+      // Get signed URL for the file
+      const { data: signedData } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(filePath, 60 * 5); // 5 minutes
+
+      if (!signedData?.signedUrl) {
+        throw new Error('Failed to get file URL');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          fileUrl: signedData.signedUrl,
+          fileName,
+          documentId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Analysis error:', errorData);
+        toast.error(isRTL ? 'ניתוח הקו"ח נכשל, נסה שוב מאוחר יותר' : 'Resume analysis failed, try again later');
+        return;
+      }
+
+      const { analysis } = await response.json();
+      
+      // Refresh the resume data to get the updated AI summary
+      queryClient.invalidateQueries({ queryKey: ['resume', user?.id] });
+      
+      toast.success(isRTL ? 'ניתוח קו"ח הושלם! 🎉' : 'Resume analysis complete! 🎉');
+      
+      return analysis;
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast.error(isRTL ? 'שגיאה בניתוח הקו"ח' : 'Error analyzing resume');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       setIsUploading(true);
+      setUploadProgress(20);
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}_${file.name}`;
@@ -60,23 +134,23 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
+      setUploadProgress(50);
 
       // Delete old resume from documents table if exists
       if (existingResume) {
-        // Delete old file from storage
         await supabase.storage
           .from('resumes')
           .remove([existingResume.file_path]);
         
-        // Delete old record
         await supabase
           .from('documents')
           .delete()
           .eq('id', existingResume.id);
       }
+      setUploadProgress(70);
 
       // Save to documents table
-      const { error: dbError } = await supabase
+      const { data: newDoc, error: dbError } = await supabase
         .from('documents')
         .insert({
           owner_id: user.id,
@@ -84,23 +158,34 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
           file_path: fileName,
           file_type: fileExt,
           doc_type: 'cv',
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
+      setUploadProgress(100);
 
-      return { fileName, originalName: file.name };
+      return { fileName, originalName: file.name, documentId: newDoc.id };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['resume', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast.success(isRTL ? 'קורות החיים הועלו בהצלחה!' : 'Resume uploaded successfully!');
-      onSuccess?.();
       setIsUploading(false);
+      setUploadProgress(0);
+      
+      // Trigger AI analysis
+      if (data.documentId) {
+        await analyzeResume(data.documentId, data.fileName, data.originalName);
+      }
+      
+      onSuccess?.();
     },
     onError: (error) => {
       console.error('Upload error:', error);
       toast.error(isRTL ? 'שגיאה בהעלאת הקובץ' : 'Error uploading file');
       setIsUploading(false);
+      setUploadProgress(0);
     },
   });
 
@@ -252,6 +337,8 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
     );
   }
 
+  const resumeSummary = existingResume?.ai_summary as ResumeSummary | null;
+
   return (
     <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Existing Resume Display */}
@@ -289,6 +376,126 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
         </Card>
       )}
 
+      {/* AI Analysis Summary */}
+      {resumeSummary && (
+        <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-accent" />
+              <h4 className="font-semibold">{isRTL ? 'ניתוח AI' : 'AI Analysis'}</h4>
+              {resumeSummary.overallScore && (
+                <span className="ml-auto text-sm font-medium text-primary">
+                  {isRTL ? `ציון: ${resumeSummary.overallScore}/100` : `Score: ${resumeSummary.overallScore}/100`}
+                </span>
+              )}
+            </div>
+            
+            {/* Skills */}
+            {resumeSummary.skills && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  {isRTL ? 'מיומנויות' : 'Skills'}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {resumeSummary.skills.technical?.slice(0, 5).map((skill, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {skill}
+                    </span>
+                  ))}
+                  {resumeSummary.skills.soft?.slice(0, 3).map((skill, i) => (
+                    <span key={`soft-${i}`} className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Experience */}
+            {resumeSummary.experience?.summary && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  {isRTL ? 'ניסיון' : 'Experience'}
+                </p>
+                <p className="text-sm text-foreground">
+                  {resumeSummary.experience.recentRole && (
+                    <span className="font-medium">{resumeSummary.experience.recentRole}</span>
+                  )}
+                  {resumeSummary.experience.totalYears && (
+                    <span className="text-muted-foreground">
+                      {' · '}{resumeSummary.experience.totalYears} {isRTL ? 'שנים' : 'years'}
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Suggested Roles */}
+            {resumeSummary.suggestedRoles && resumeSummary.suggestedRoles.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  {isRTL ? 'תפקידים מומלצים' : 'Suggested Roles'}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {resumeSummary.suggestedRoles.slice(0, 3).map((role, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 rounded bg-secondary text-secondary-foreground">
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Strengths */}
+            {resumeSummary.strengths && resumeSummary.strengths.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  {isRTL ? 'נקודות חוזק' : 'Strengths'}
+                </p>
+                <ul className="text-sm space-y-0.5">
+                  {resumeSummary.strengths.slice(0, 3).map((strength, i) => (
+                    <li key={i} className="flex items-start gap-1">
+                      <Sparkles className="w-3 h-3 text-accent mt-1 flex-shrink-0" />
+                      <span>{strength}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Analyzing indicator */}
+      {isAnalyzing && (
+        <Card className="bg-accent/5 border-accent/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Brain className="w-5 h-5 text-accent animate-pulse" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {isRTL ? 'מנתח את קורות החיים...' : 'Analyzing your resume...'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isRTL ? 'זה יכול לקחת כמה שניות' : 'This may take a few seconds'}
+                </p>
+              </div>
+              <RefreshCw className="w-4 h-4 animate-spin text-accent" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Upload Progress */}
+      {isUploading && uploadProgress > 0 && (
+        <div className="space-y-2">
+          <Progress value={uploadProgress} className="h-2" />
+          <p className="text-xs text-center text-muted-foreground">
+            {isRTL ? 'מעלה...' : 'Uploading...'} {uploadProgress}%
+          </p>
+        </div>
+      )}
+
       {/* Upload Area */}
       <div
         onDragOver={handleDragOver}
@@ -301,7 +508,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
             ? 'border-primary bg-primary/5' 
             : 'border-border hover:border-primary/50 hover:bg-accent/5'
           }
-          ${isUploading ? 'pointer-events-none opacity-50' : ''}
+          ${isUploading || isAnalyzing ? 'pointer-events-none opacity-50' : ''}
         `}
       >
         <input
@@ -328,6 +535,10 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
             </p>
             <p className="text-sm text-muted-foreground mt-1">
               PDF, DOC, DOCX ({isRTL ? 'עד 10MB' : 'up to 10MB'})
+            </p>
+            <p className="text-xs text-accent mt-2 flex items-center justify-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              {isRTL ? 'ניתוח AI אוטומטי' : 'Automatic AI analysis'}
             </p>
           </div>
         </div>
