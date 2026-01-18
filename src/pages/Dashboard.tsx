@@ -415,10 +415,17 @@ export default function Dashboard() {
   };
 
   const startTour = () => {
+    console.log('startTour called, role:', role);
+    console.log('__startJobSeekerTour exists:', !!(window as any).__startJobSeekerTour);
+    
     setCurrentSection('overview');
     setTimeout(() => {
+      console.log('After timeout, __startJobSeekerTour exists:', !!(window as any).__startJobSeekerTour);
       if ((window as any).__startJobSeekerTour) {
         (window as any).__startJobSeekerTour();
+        console.log('Tour started!');
+      } else {
+        console.log('Tour function not found!');
       }
     }, 300);
   };
