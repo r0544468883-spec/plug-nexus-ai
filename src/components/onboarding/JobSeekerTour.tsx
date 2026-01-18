@@ -135,8 +135,9 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
   const [isElementFound, setIsElementFound] = useState(true);
 
   // Start tour function - can be called externally
+  // Allow starting even while role is still loading (role can be null briefly).
   const startTour = useCallback(() => {
-    if (role !== 'job_seeker') return;
+    if (role && role !== 'job_seeker') return;
     setCurrentStep(0);
     setIsActive(true);
     setShowTransition(false);
@@ -147,7 +148,8 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
 
   // Check if tour should be shown automatically
   useEffect(() => {
-    if (!user || role !== 'job_seeker') return;
+    if (!user) return;
+    if (role && role !== 'job_seeker') return;
 
     const hasCompleted = localStorage.getItem(TOUR_STORAGE_KEY);
     if (!hasCompleted) {
@@ -176,14 +178,12 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
   // This ensures the event listener is always registered even when tour is inactive
   useEffect(() => {
     const handler = () => {
-      // Check role inside handler, not as effect dependency gate
-      if (role === 'job_seeker') {
-        setCurrentStep(0);
-        setIsActive(true);
-        setShowTransition(false);
-        setPendingStep(null);
-        localStorage.removeItem(TOUR_STORAGE_KEY);
-      }
+      // Allow start even if role hasn't loaded yet; Dashboard already gates the button by role.
+      setCurrentStep(0);
+      setIsActive(true);
+      setShowTransition(false);
+      setPendingStep(null);
+      localStorage.removeItem(TOUR_STORAGE_KEY);
     };
 
     (window as any).__startJobSeekerTour = handler;
@@ -193,7 +193,7 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
       window.removeEventListener('plug:start-job-seeker-tour', handler);
       delete (window as any).__startJobSeekerTour;
     };
-  }, [role]);
+  }, []);
 
   // Early return AFTER registering event listeners
   if (!isActive || role !== 'job_seeker') return null;
