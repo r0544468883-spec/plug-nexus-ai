@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Mail, MailOpen, ChevronRight, Inbox } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MessageSquare, Mail, MailOpen, ChevronRight, Inbox, Search, Filter } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { ConversationThread } from './ConversationThread';
+import { NewMessageDialog } from './NewMessageDialog';
 
 interface Conversation {
   id: string;
@@ -28,11 +31,15 @@ interface Conversation {
   last_message?: string;
 }
 
+type FilterType = 'all' | 'unread' | 'read';
+
 export function MessageInbox() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // Fetch conversations
   const { data: conversations = [], isLoading, refetch } = useQuery({
@@ -119,6 +126,29 @@ export function MessageInbox() {
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unread_count, 0);
 
+  // Filter and search conversations
+  const filteredConversations = useMemo(() => {
+    let result = conversations;
+
+    // Apply read/unread filter
+    if (filter === 'unread') {
+      result = result.filter(c => c.unread_count > 0);
+    } else if (filter === 'read') {
+      result = result.filter(c => c.unread_count === 0);
+    }
+
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(c => 
+        c.other_user?.full_name?.toLowerCase().includes(query) ||
+        c.last_message?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [conversations, filter, searchQuery]);
+
   if (selectedConversation) {
     return (
       <ConversationThread
@@ -134,17 +164,46 @@ export function MessageInbox() {
   return (
     <Card className="bg-card border-border h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-3">
+          <CardTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
             {isHebrew ? 'הודעות' : 'Messages'}
-          </span>
-          {totalUnread > 0 && (
-            <Badge variant="default" className="bg-primary">
-              {totalUnread}
-            </Badge>
-          )}
-        </CardTitle>
+            {totalUnread > 0 && (
+              <Badge variant="default" className="bg-primary">
+                {totalUnread}
+              </Badge>
+            )}
+          </CardTitle>
+          <NewMessageDialog />
+        </div>
+
+        {/* Search and Filter */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isHebrew ? 'חפש בשיחות...' : 'Search conversations...'}
+              className="ps-9"
+              dir={isHebrew ? 'rtl' : 'ltr'}
+            />
+          </div>
+          
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="all" className="text-xs">
+                {isHebrew ? 'הכל' : 'All'}
+              </TabsTrigger>
+              <TabsTrigger value="unread" className="text-xs">
+                {isHebrew ? 'לא נקראו' : 'Unread'}
+              </TabsTrigger>
+              <TabsTrigger value="read" className="text-xs">
+                {isHebrew ? 'נקראו' : 'Read'}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -159,17 +218,24 @@ export function MessageInbox() {
               </div>
             ))}
           </div>
-        ) : conversations.length === 0 ? (
+        ) : filteredConversations.length === 0 ? (
           <div className="text-center py-12">
             <Inbox className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              {isHebrew ? 'אין הודעות עדיין' : 'No messages yet'}
+              {searchQuery || filter !== 'all' 
+                ? (isHebrew ? 'לא נמצאו תוצאות' : 'No results found')
+                : (isHebrew ? 'אין הודעות עדיין' : 'No messages yet')}
             </p>
+            {!searchQuery && filter === 'all' && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {isHebrew ? 'לחץ על "הודעה חדשה" כדי להתחיל שיחה' : 'Click "New Message" to start a conversation'}
+              </p>
+            )}
           </div>
         ) : (
-          <ScrollArea className="h-[500px]">
+          <ScrollArea className="h-[400px]">
             <div className="space-y-1">
-              {conversations.map((conversation) => (
+              {filteredConversations.map((conversation) => (
                 <button
                   key={conversation.id}
                   onClick={() => setSelectedConversation(conversation)}
