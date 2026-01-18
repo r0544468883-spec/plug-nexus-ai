@@ -5,6 +5,7 @@ import { PlugLogo } from '@/components/PlugLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { 
   LayoutDashboard, 
   Users, 
@@ -16,10 +17,13 @@ import {
   Menu,
   X,
   User,
-  Search
+  Search,
+  ArrowLeft,
+  ArrowRight,
+  Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings';
 
@@ -33,6 +37,12 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
   const { profile, role, signOut } = useAuth();
   const { t, direction } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we can go back (not at initial page)
+  const canGoBack = location.key !== 'default';
+  const BackIcon = direction === 'rtl' ? ArrowRight : ArrowLeft;
 
   const handleNavClick = (section: DashboardSection) => {
     onSectionChange(section);
@@ -162,16 +172,39 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="h-16 border-b border-border flex items-center justify-between px-4 bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-muted-foreground hover:text-foreground"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Back button */}
+            {canGoBack && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <BackIcon className="w-5 h-5" />
+              </Button>
+            )}
+            
+            {/* Mobile menu button */}
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-muted-foreground hover:text-foreground"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
           
           <div className="flex-1 lg:flex-initial" />
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Global Give Vouch button */}
+            <GiveVouchDialog 
+              trigger={
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
+                  <Heart className="h-5 w-5" />
+                </Button>
+              }
+            />
             <NotificationBell />
             <LanguageToggle />
           </div>
