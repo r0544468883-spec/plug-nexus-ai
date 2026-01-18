@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { MessageBadge } from '@/components/messaging/MessageBadge';
+import { NavTooltip } from '@/components/ui/nav-tooltip';
 import { 
   LayoutDashboard, 
   Users, 
@@ -27,6 +28,14 @@ import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job';
+
+interface NavItemConfig {
+  icon: typeof LayoutDashboard;
+  label: string;
+  section: DashboardSection;
+  tooltipHe: string;
+  tooltipEn: string;
+}
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -60,38 +69,37 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
     }
   };
 
-  // Navigation items based on role
-  const getNavItems = (): { icon: typeof LayoutDashboard; label: string; section: DashboardSection }[] => {
-    const common: { icon: typeof LayoutDashboard; label: string; section: DashboardSection }[] = [
-      { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
-      { icon: FileText, label: 'Documents', section: 'documents' },
-      { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
-      { icon: Settings, label: 'Settings', section: 'settings' },
-    ];
-
+  // Navigation items based on role with tooltips
+  const getNavItems = (): NavItemConfig[] => {
     if (role === 'job_seeker') {
       return [
-        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
-        { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search' },
-        { icon: Briefcase, label: 'My Applications', section: 'applications' },
-        { icon: MessageSquare, label: 'Messages', section: 'messages' },
-        { icon: FileText, label: 'My Documents', section: 'documents' },
-        { icon: Settings, label: 'Settings', section: 'settings' },
+        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על החשבון, סטטיסטיקות והודעות מ-Plug', tooltipEn: 'Overview of your account, stats, and Plug messages' },
+        { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
+        { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
+        { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות מקבלים ומגייסים', tooltipEn: 'Internal messages from recruiters and contacts' },
+        { icon: FileText, label: 'My Documents', section: 'documents', tooltipHe: 'קורות חיים, מסמכים וקישורים מקצועיים', tooltipEn: 'Resume, documents, and professional links' },
+        { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל, פרטיות והעדפות', tooltipEn: 'Profile settings, privacy, and preferences' },
       ];
     }
 
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
       return [
-        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
-        { icon: Users, label: 'Candidates', section: 'candidates' },
-        { icon: Briefcase, label: 'Post Job', section: 'post-job' },
-        { icon: MessageSquare, label: 'Messages', section: 'messages' },
-        { icon: FileText, label: 'Documents', section: 'documents' },
-        { icon: Settings, label: 'Settings', section: 'settings' },
+        { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על הפעילות שלך', tooltipEn: 'Overview of your activity' },
+        { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
+        { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
+        { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
+        { icon: FileText, label: 'Documents', section: 'documents', tooltipHe: 'מסמכים וקבצים', tooltipEn: 'Documents and files' },
+        { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },
       ];
     }
 
-    return common;
+    // Default for company_employee and others
+    return [
+      { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי', tooltipEn: 'Overview' },
+      { icon: FileText, label: 'Documents', section: 'documents', tooltipHe: 'מסמכים', tooltipEn: 'Documents' },
+      { icon: MessageSquare, label: 'Chat with Plug', section: 'chat', tooltipHe: 'צ\'אט עם העוזר האישי Plug', tooltipEn: 'Chat with Plug AI assistant' },
+      { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות', tooltipEn: 'Settings' },
+    ];
   };
 
   const navItems = getNavItems();
@@ -126,19 +134,24 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => handleNavClick(item.section)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-start",
-                currentSection === item.section 
-                  ? "bg-primary/10 text-primary plug-row-active" 
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/10"
-              )}
+            <NavTooltip 
+              key={index} 
+              content={direction === 'rtl' ? item.tooltipHe : item.tooltipEn}
+              side={direction === 'rtl' ? 'left' : 'right'}
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.label}</span>
-            </button>
+              <button
+                onClick={() => handleNavClick(item.section)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-start",
+                  currentSection === item.section 
+                    ? "bg-primary/10 text-primary plug-row-active" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/10"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </button>
+            </NavTooltip>
           ))}
         </nav>
 
@@ -199,18 +212,36 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
           
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Realtime Message Badge */}
-            <MessageBadge onClick={() => onSectionChange('messages')} />
+            <NavTooltip content={direction === 'rtl' ? 'תיבת הודעות - צפה בשיחות ושלח הודעות' : 'Inbox - View conversations and send messages'} side="bottom">
+              <span>
+                <MessageBadge onClick={() => onSectionChange('messages')} />
+              </span>
+            </NavTooltip>
             
             {/* Global Give Vouch button */}
-            <GiveVouchDialog 
-              trigger={
-                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-                  <Heart className="h-5 w-5" />
-                </Button>
-              }
-            />
-            <NotificationBell />
-            <LanguageToggle />
+            <NavTooltip content={direction === 'rtl' ? 'תן המלצה (Vouch) - המלץ על אנשי קשר מקצועיים' : 'Give Vouch - Recommend professional contacts'} side="bottom">
+              <span>
+                <GiveVouchDialog 
+                  trigger={
+                    <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
+                      <Heart className="h-5 w-5" />
+                    </Button>
+                  }
+                />
+              </span>
+            </NavTooltip>
+            
+            <NavTooltip content={direction === 'rtl' ? 'התראות - עדכונים חשובים ופעילות' : 'Notifications - Important updates and activity'} side="bottom">
+              <span>
+                <NotificationBell />
+              </span>
+            </NavTooltip>
+            
+            <NavTooltip content={direction === 'rtl' ? 'החלף שפה - עברית/אנגלית' : 'Language Toggle - Hebrew/English'} side="bottom">
+              <span>
+                <LanguageToggle />
+              </span>
+            </NavTooltip>
           </div>
         </header>
 

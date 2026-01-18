@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, ArrowRight, Send, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, ArrowRight, Send, Loader2, Paperclip, FileText, X, Download } from 'lucide-react';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,10 @@ interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
 }
 
 interface Conversation {
@@ -46,7 +51,10 @@ export function ConversationThread({ conversation, onBack }: ConversationThreadP
   const isHebrew = language === 'he';
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const BackIcon = isHebrew ? ArrowRight : ArrowLeft;
 
@@ -56,7 +64,7 @@ export function ConversationThread({ conversation, onBack }: ConversationThreadP
     queryFn: async () => {
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('id, conversation_id, from_user_id, to_user_id, content, is_read, created_at, attachment_url, attachment_name, attachment_type, attachment_size')
         .eq('conversation_id', conversation.id)
         .order('created_at', { ascending: true });
 
@@ -116,7 +124,10 @@ export function ConversationThread({ conversation, onBack }: ConversationThreadP
 
   // Send message mutation
   const sendMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, attachmentData }: { 
+      content: string; 
+      attachmentData?: { url: string; name: string; type: string; size: number } 
+    }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
       const toUserId = conversation.participant_1 === user.id 
@@ -128,6 +139,10 @@ export function ConversationThread({ conversation, onBack }: ConversationThreadP
         from_user_id: user.id,
         to_user_id: toUserId,
         content,
+        attachment_url: attachmentData?.url || null,
+        attachment_name: attachmentData?.name || null,
+        attachment_type: attachmentData?.type || null,
+        attachment_size: attachmentData?.size || null,
       });
 
       if (msgError) throw msgError;
@@ -140,13 +155,71 @@ export function ConversationThread({ conversation, onBack }: ConversationThreadP
     },
     onSuccess: () => {
       setNewMessage('');
+      setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ['messages', conversation.id] });
+    },
+    onError: () => {
+      toast.error(isHebrew ? 'שגיאה בשליחת ההודעה' : 'Failed to send message');
     },
   });
 
-  const handleSend = () => {
-    if (!newMessage.trim()) return;
-    sendMutation.mutate(newMessage.trim());
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Limit file size to 10MB
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(isHebrew ? 'הקובץ גדול מדי (מקסימום 10MB)' : 'File too large (max 10MB)');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!newMessage.trim() && !selectedFile) return;
+
+    let attachmentData: { url: string; name: string; type: string; size: number } | undefined;
+
+    if (selectedFile && user?.id) {
+      setUploading(true);
+      try {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('message-attachments')
+          .upload(fileName, selectedFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('message-attachments')
+          .getPublicUrl(fileName);
+
+        attachmentData = {
+          url: publicUrl,
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+        };
+      } catch (error) {
+        toast.error(isHebrew ? 'שגיאה בהעלאת הקובץ' : 'Failed to upload file');
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    sendMutation.mutate({ 
+      content: newMessage.trim() || (selectedFile ? `📎 ${selectedFile.name}` : ''),
+      attachmentData 
+    });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const formatMessageDate = (date: Date) => {
