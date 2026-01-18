@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, ArrowLeft, X, Check, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowLeft, X, Check } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface TourTooltipProps {
@@ -17,6 +17,7 @@ interface TourTooltipProps {
   isFirst: boolean;
   isLast: boolean;
   icon?: React.ElementType;
+  isElementFound?: boolean;
 }
 
 export function TourTooltip({
@@ -31,61 +32,100 @@ export function TourTooltip({
   isFirst,
   isLast,
   icon: Icon,
+  isElementFound = true,
 }: TourTooltipProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [placement, setPlacement] = useState<'top' | 'bottom'>('bottom');
   const [isVisible, setIsVisible] = useState(false);
+  const [arrowOffset, setArrowOffset] = useState(0);
+
+  const updatePosition = useCallback(() => {
+    const element = document.querySelector(targetSelector);
+    
+    // Fallback to center if element not found
+    if (!element) {
+      setPosition({
+        top: window.innerHeight / 2 - 120,
+        left: Math.max(16, (window.innerWidth - Math.min(360, window.innerWidth - 32)) / 2),
+      });
+      setPlacement('bottom');
+      setIsVisible(true);
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const tooltipHeight = 280;
+    const tooltipWidth = Math.min(360, window.innerWidth - 32);
+    const padding = 16;
+
+    // Determine placement
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let newTop: number;
+    let newPlacement: 'top' | 'bottom';
+
+    if (spaceBelow > tooltipHeight + padding) {
+      newPlacement = 'bottom';
+      newTop = rect.bottom + padding;
+    } else if (spaceAbove > tooltipHeight + padding) {
+      newPlacement = 'top';
+      newTop = rect.top - tooltipHeight - padding;
+    } else {
+      // Not enough space - show centered
+      newPlacement = 'bottom';
+      newTop = Math.max(padding, (window.innerHeight - tooltipHeight) / 2);
+    }
+
+    // Calculate horizontal position with proper boundary checks
+    const elementCenter = rect.left + rect.width / 2;
+    let newLeft = elementCenter - tooltipWidth / 2;
+    
+    // Ensure tooltip stays within viewport
+    const minLeft = padding;
+    const maxLeft = window.innerWidth - tooltipWidth - padding;
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+
+    // Calculate arrow offset to point to element center
+    const tooltipCenter = newLeft + tooltipWidth / 2;
+    const offset = elementCenter - tooltipCenter;
+    const maxOffset = tooltipWidth / 2 - 24; // Keep arrow within card bounds
+    setArrowOffset(Math.max(-maxOffset, Math.min(offset, maxOffset)));
+
+    setPlacement(newPlacement);
+    setPosition({ top: newTop, left: newLeft });
+    setIsVisible(true);
+  }, [targetSelector]);
 
   useEffect(() => {
     setIsVisible(false);
-    
-    const updatePosition = () => {
-      const element = document.querySelector(targetSelector);
-      if (!element) return;
-
-      const rect = element.getBoundingClientRect();
-      const tooltipHeight = 240;
-      const tooltipWidth = 360;
-      const padding = 20;
-
-      // Determine placement
-      const spaceBelow = window.innerHeight - rect.bottom;
-
-      if (spaceBelow > tooltipHeight + padding) {
-        setPlacement('bottom');
-        setPosition({
-          top: rect.bottom + padding,
-          left: Math.max(padding, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding)),
-        });
-      } else {
-        setPlacement('top');
-        setPosition({
-          top: rect.top - tooltipHeight - padding,
-          left: Math.max(padding, Math.min(rect.left + rect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding)),
-        });
-      }
-      
-      setIsVisible(true);
-    };
 
     const timer = setTimeout(updatePosition, 400);
     window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [targetSelector]);
+  }, [targetSelector, updatePosition]);
+
+  const tooltipWidth = Math.min(360, typeof window !== 'undefined' ? window.innerWidth - 32 : 360);
 
   return (
     <AnimatePresence mode="wait">
       {isVisible && (
         <motion.div
           key={currentStep}
-          className="fixed z-[9999] w-[360px]"
-          style={{ top: position.top, left: position.left }}
+          className="fixed z-[9999]"
+          style={{ 
+            top: position.top, 
+            left: position.left,
+            width: tooltipWidth,
+          }}
           dir={isHebrew ? 'rtl' : 'ltr'}
           initial={{ opacity: 0, y: placement === 'bottom' ? -20 : 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -209,17 +249,22 @@ export function TourTooltip({
           </Card>
 
           {/* Arrow pointing to element */}
-          <motion.div
-            className={`absolute w-4 h-4 bg-card/95 border-primary/40 transform rotate-45 ${
-              placement === 'bottom'
-                ? '-top-2 border-t border-s'
-                : '-bottom-2 border-b border-e'
-            }`}
-            style={{ left: '50%', marginLeft: '-8px' }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          />
+          {isElementFound && (
+            <motion.div
+              className={`absolute w-4 h-4 bg-card/95 border-primary/40 transform rotate-45 ${
+                placement === 'bottom'
+                  ? '-top-2 border-t border-s'
+                  : '-bottom-2 border-b border-e'
+              }`}
+              style={{ 
+                left: '50%', 
+                marginLeft: arrowOffset - 8,
+              }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>

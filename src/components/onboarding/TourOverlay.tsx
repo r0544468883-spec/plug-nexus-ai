@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpotlightRect {
@@ -11,36 +11,65 @@ interface SpotlightRect {
 interface TourOverlayProps {
   targetSelector: string;
   isActive: boolean;
+  onElementFound?: (found: boolean) => void;
 }
 
-export function TourOverlay({ targetSelector, isActive }: TourOverlayProps) {
+export function TourOverlay({ targetSelector, isActive, onElementFound }: TourOverlayProps) {
   const [spotlightRect, setSpotlightRect] = useState<SpotlightRect | null>(null);
+  const [searchAttempts, setSearchAttempts] = useState(0);
+
+  const updateSpotlight = useCallback(() => {
+    const element = document.querySelector(targetSelector);
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      const padding = 12;
+      setSpotlightRect({
+        top: rect.top - padding,
+        left: rect.left - padding,
+        width: rect.width + padding * 2,
+        height: rect.height + padding * 2,
+      });
+
+      // Scroll element into view if needed
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onElementFound?.(true);
+      setSearchAttempts(0);
+    } else {
+      setSpotlightRect(null);
+      onElementFound?.(false);
+    }
+  }, [targetSelector, onElementFound]);
 
   useEffect(() => {
     if (!isActive || !targetSelector) {
       setSpotlightRect(null);
+      setSearchAttempts(0);
       return;
     }
 
-    const updateSpotlight = () => {
+    // Retry finding element with exponential backoff
+    let attempts = 0;
+    const maxAttempts = 8;
+    
+    const tryFindElement = () => {
       const element = document.querySelector(targetSelector);
       if (element) {
-        const rect = element.getBoundingClientRect();
-        const padding = 12;
-        setSpotlightRect({
-          top: rect.top - padding,
-          left: rect.left - padding,
-          width: rect.width + padding * 2,
-          height: rect.height + padding * 2,
-        });
-
-        // Scroll element into view if needed
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        updateSpotlight();
+        setSearchAttempts(0);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setSearchAttempts(attempts);
+        // Exponential backoff: 200, 400, 600, 800...
+        setTimeout(tryFindElement, 200 + attempts * 100);
+      } else {
+        // Element not found after max attempts - proceed anyway
+        onElementFound?.(false);
+        setSearchAttempts(0);
       }
     };
 
-    // Initial update with delay for animations
-    const timer = setTimeout(updateSpotlight, 350);
+    // Initial attempt with delay for page transitions
+    const timer = setTimeout(tryFindElement, 350);
 
     // Update on resize/scroll
     window.addEventListener('resize', updateSpotlight);
@@ -51,7 +80,7 @@ export function TourOverlay({ targetSelector, isActive }: TourOverlayProps) {
       window.removeEventListener('resize', updateSpotlight);
       window.removeEventListener('scroll', updateSpotlight, true);
     };
-  }, [targetSelector, isActive]);
+  }, [targetSelector, isActive, updateSpotlight, onElementFound]);
 
   return (
     <AnimatePresence>
