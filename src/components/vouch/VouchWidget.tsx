@@ -46,7 +46,7 @@ export function VouchWidget() {
   const total = vouchStats?.total || 0;
 
   return (
-    <Card className="bg-card border-border plug-card-hover">
+    <Card className="bg-card border-border plug-card-hover" data-tour="vouch-widget">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">

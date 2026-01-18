@@ -9,13 +9,27 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Globe, Palette, Bell, Loader2, Save } from 'lucide-react';
+import { Settings, Globe, Palette, Bell, Loader2, Save, PlayCircle } from 'lucide-react';
+import { TOUR_STORAGE_KEY } from '@/components/onboarding/JobSeekerTour';
 
 export function PreferencesSettings() {
-  const { user, profile } = useAuth();
+  const { user, profile, role } = useAuth();
   const { language, setLanguage } = useLanguage();
   const queryClient = useQueryClient();
   const isHebrew = language === 'he';
+  const isJobSeeker = role === 'job_seeker';
+
+  const handleStartTour = () => {
+    // Remove the completed flag and trigger the tour
+    localStorage.removeItem(TOUR_STORAGE_KEY);
+    // Call the global function exposed by JobSeekerTour
+    if ((window as any).__startJobSeekerTour) {
+      (window as any).__startJobSeekerTour();
+    } else {
+      // If function not available, reload to trigger tour
+      window.location.reload();
+    }
+  };
 
   const [theme, setTheme] = useState((profile as any)?.theme || 'system');
   const [emailNotifications, setEmailNotifications] = useState(
@@ -126,6 +140,30 @@ export function PreferencesSettings() {
             onCheckedChange={setEmailNotifications}
           />
         </div>
+
+        {/* Start Tour */}
+        {isJobSeeker && (
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="space-y-0.5">
+              <Label className="flex items-center gap-2">
+                <PlayCircle className="w-4 h-4" />
+                {isHebrew ? 'סיור הדרכה' : 'Guided Tour'}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {isHebrew ? 'צפה שוב בסיור ההדרכה' : 'Watch the onboarding tour again'}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleStartTour}
+              className="gap-2"
+            >
+              <PlayCircle className="w-4 h-4" />
+              {isHebrew ? 'התחל סיור' : 'Start Tour'}
+            </Button>
+          </div>
+        )}
 
         <Button
           onClick={() => updateMutation.mutate()}

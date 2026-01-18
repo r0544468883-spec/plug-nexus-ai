@@ -173,7 +173,7 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button className="gap-2 bg-primary hover:bg-primary/90">
+          <Button className="gap-2 bg-primary hover:bg-primary/90" data-tour="share-job">
             <Share2 className="h-4 w-4" />
             {isHebrew ? 'שתף משרה' : 'Share Job'}
           </Button>

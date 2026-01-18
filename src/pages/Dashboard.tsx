@@ -214,7 +214,7 @@ export default function Dashboard() {
       <WelcomeCard onSendMessage={handleWelcomeMessage} />
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-tour="stats-row">
         {stats.map((stat, index) => (
           <StatCard key={index} {...stat} />
         ))}
@@ -223,7 +223,7 @@ export default function Dashboard() {
       {/* Main Content - Chat Centered with Actions on Sides */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Quick Actions - Left Side */}
-        <div className="lg:col-span-1 space-y-3">
+        <div className="lg:col-span-1 space-y-3" data-tour="quick-actions">
           <Card className="bg-card border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
