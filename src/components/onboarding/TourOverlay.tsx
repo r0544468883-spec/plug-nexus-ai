@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpotlightRect {
   top: number;
@@ -25,7 +26,7 @@ export function TourOverlay({ targetSelector, isActive }: TourOverlayProps) {
       const element = document.querySelector(targetSelector);
       if (element) {
         const rect = element.getBoundingClientRect();
-        const padding = 8;
+        const padding = 12;
         setSpotlightRect({
           top: rect.top - padding,
           left: rect.left - padding,
@@ -38,8 +39,8 @@ export function TourOverlay({ targetSelector, isActive }: TourOverlayProps) {
       }
     };
 
-    // Initial update
-    const timer = setTimeout(updateSpotlight, 300);
+    // Initial update with delay for animations
+    const timer = setTimeout(updateSpotlight, 350);
 
     // Update on resize/scroll
     window.addEventListener('resize', updateSpotlight);
@@ -52,45 +53,74 @@ export function TourOverlay({ targetSelector, isActive }: TourOverlayProps) {
     };
   }, [targetSelector, isActive]);
 
-  if (!isActive || !spotlightRect) return null;
-
   return (
-    <div className="fixed inset-0 z-[9998] pointer-events-none">
-      {/* Dark overlay with hole */}
-      <svg className="absolute inset-0 w-full h-full">
-        <defs>
-          <mask id="spotlight-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+    <AnimatePresence>
+      {isActive && spotlightRect && (
+        <motion.div 
+          className="fixed inset-0 z-[9998] pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Dark overlay with hole */}
+          <svg className="absolute inset-0 w-full h-full">
+            <defs>
+              <mask id="spotlight-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <motion.rect
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    x: spotlightRect.left,
+                    y: spotlightRect.top,
+                    width: spotlightRect.width,
+                    height: spotlightRect.height,
+                  }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  rx="12"
+                  fill="black"
+                />
+              </mask>
+            </defs>
             <rect
-              x={spotlightRect.left}
-              y={spotlightRect.top}
-              width={spotlightRect.width}
-              height={spotlightRect.height}
-              rx="12"
-              fill="black"
+              x="0"
+              y="0"
+              width="100%"
+              height="100%"
+              fill="rgba(0, 0, 0, 0.7)"
+              mask="url(#spotlight-mask)"
             />
-          </mask>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="rgba(0, 0, 0, 0.6)"
-          mask="url(#spotlight-mask)"
-        />
-      </svg>
+          </svg>
 
-      {/* Spotlight border/glow */}
-      <div
-        className="absolute border-2 border-primary rounded-xl shadow-[0_0_20px_rgba(var(--primary),0.5)] transition-all duration-300"
-        style={{
-          top: spotlightRect.top,
-          left: spotlightRect.left,
-          width: spotlightRect.width,
-          height: spotlightRect.height,
-        }}
-      />
-    </div>
+          {/* Spotlight border/glow with pulse animation */}
+          <motion.div
+            className="absolute border-2 border-primary rounded-xl"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1,
+              boxShadow: [
+                '0 0 20px hsl(var(--primary) / 0.4)',
+                '0 0 40px hsl(var(--primary) / 0.6)',
+                '0 0 20px hsl(var(--primary) / 0.4)',
+              ],
+            }}
+            transition={{ 
+              opacity: { duration: 0.3 },
+              scale: { duration: 0.3 },
+              boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+            }}
+            style={{
+              top: spotlightRect.top,
+              left: spotlightRect.left,
+              width: spotlightRect.width,
+              height: spotlightRect.height,
+            }}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
