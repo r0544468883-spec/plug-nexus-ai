@@ -33,7 +33,7 @@ const JOB_TYPES = [
 ];
 
 const SALARY_RANGES = [
-  { value: '', labelEn: 'Any salary', labelHe: 'כל שכר' },
+  { value: 'any', labelEn: 'Any salary', labelHe: 'כל שכר' },
   { value: '0-10000', labelEn: '₪0 - ₪10,000', labelHe: '₪0 - ₪10,000' },
   { value: '10000-20000', labelEn: '₪10,000 - ₪20,000', labelHe: '₪10,000 - ₪20,000' },
   { value: '20000-35000', labelEn: '₪20,000 - ₪35,000', labelHe: '₪20,000 - ₪35,000' },
@@ -42,7 +42,7 @@ const SALARY_RANGES = [
 ];
 
 const LOCATIONS = [
-  { value: '', labelEn: 'All locations', labelHe: 'כל המיקומים' },
+  { value: 'all', labelEn: 'All locations', labelHe: 'כל המיקומים' },
   { value: 'tel-aviv', labelEn: 'Tel Aviv', labelHe: 'תל אביב' },
   { value: 'jerusalem', labelEn: 'Jerusalem', labelHe: 'ירושלים' },
   { value: 'haifa', labelEn: 'Haifa', labelHe: 'חיפה' },
@@ -185,7 +185,7 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
                   <SelectValue placeholder={isHebrew ? 'בחר סוג' : 'Select'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{isHebrew ? 'כל הסוגים' : 'All types'}</SelectItem>
+                  <SelectItem value="all">{isHebrew ? 'כל הסוגים' : 'All types'}</SelectItem>
                   {JOB_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {isHebrew ? type.labelHe : type.labelEn}
