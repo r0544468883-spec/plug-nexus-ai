@@ -38,6 +38,7 @@ import { InterviewScheduler } from './InterviewScheduler';
 import { HomeAssignmentTab } from './HomeAssignmentTab';
 import { ApplicationPlugChat } from './ApplicationPlugChat';
 import MatchScoreCircle from './MatchScoreCircle';
+import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
 
 interface ApplicationDetails {
   id: string;
@@ -46,6 +47,7 @@ interface ApplicationDetails {
   match_score: number | null;
   created_at: string;
   notes: string | null;
+  candidate_id?: string;
   job: {
     id: string;
     title: string;
@@ -257,6 +259,12 @@ export function ApplicationDetailsSheet({
               {timeAgo}
             </span>
           </div>
+
+          {/* Candidate Vouches Badge */}
+          <CandidateVouchBadge 
+            candidateId={application.candidate_id || ''} 
+            candidateName={undefined}
+          />
 
           <Separator />
 

@@ -7,6 +7,7 @@ import { Send, Sparkles, User, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 interface Message {
   id: string;
@@ -30,6 +31,22 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch user's resume for context
+  const { data: existingResume } = useQuery({
+    queryKey: ['resume-for-chat', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('owner_id', user.id)
+        .eq('doc_type', 'cv')
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   // Load chat history on mount
   useEffect(() => {
@@ -97,13 +114,22 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
     abortControllerRef.current = new AbortController();
     
+    // Build context with resume if available
+    const context: Record<string, unknown> = {};
+    if (existingResume?.ai_summary && typeof existingResume.ai_summary === 'object') {
+      context.resumeSummary = existingResume.ai_summary;
+    }
+
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plug-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages: userMessages }),
+      body: JSON.stringify({ 
+        messages: userMessages,
+        context: Object.keys(context).length > 0 ? context : undefined,
+      }),
       signal: abortControllerRef.current.signal,
     });
 
