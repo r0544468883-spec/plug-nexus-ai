@@ -21,7 +21,7 @@ import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, HelpCircle, Sparkles } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -407,6 +407,22 @@ export default function Dashboard() {
     }
   };
 
+  const scrollToChat = () => {
+    setCurrentSection('overview');
+    setTimeout(() => {
+      chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const startTour = () => {
+    setCurrentSection('overview');
+    setTimeout(() => {
+      if ((window as any).__startJobSeekerTour) {
+        (window as any).__startJobSeekerTour();
+      }
+    }, 300);
+  };
+
   return (
     <DashboardLayout 
       currentSection={currentSection} 
@@ -436,6 +452,35 @@ export default function Dashboard() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Buttons - Only for job seekers */}
+      {role === 'job_seeker' && (
+        <>
+          {/* Onboarding Tour Button - Bottom Left */}
+          <button
+            onClick={startTour}
+            className="fixed bottom-6 left-6 z-40 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
+            title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
+          >
+            <HelpCircle className="w-6 h-6" />
+            <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              {isRTL ? 'סיור מודרך' : 'Guided Tour'}
+            </span>
+          </button>
+
+          {/* Plug Chat Button - Bottom Right */}
+          <button
+            onClick={scrollToChat}
+            className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group animate-pulse hover:animate-none"
+            title={isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
+          >
+            <Sparkles className="w-6 h-6" />
+            <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              {isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
+            </span>
+          </button>
+        </>
+      )}
     </DashboardLayout>
   );
 }
