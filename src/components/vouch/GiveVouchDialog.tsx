@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { GiveVouchForm } from './GiveVouchForm';
+import { VouchFormContent } from './VouchFormContent';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, Search, User, Loader2 } from 'lucide-react';
+import { Heart, Search, User, Loader2, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface GiveVouchDialogProps {
   trigger?: React.ReactNode;
@@ -28,7 +28,7 @@ export function GiveVouchDialog({ trigger }: GiveVouchDialogProps) {
     name: string;
     avatar?: string;
   } | null>(null);
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const { user } = useAuth();
   const isHebrew = language === 'he';
 
@@ -70,6 +70,8 @@ export function GiveVouchDialog({ trigger }: GiveVouchDialogProps) {
     setSearchQuery('');
   };
 
+  const BackIcon = direction === 'rtl' ? ArrowRight : ArrowLeft;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) handleClose(); }}>
       <DialogTrigger asChild>
@@ -86,15 +88,15 @@ export function GiveVouchDialog({ trigger }: GiveVouchDialogProps) {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={handleBack} className="h-8 px-2">
-                  ←
+                  <BackIcon className="h-4 w-4" />
                 </Button>
                 {isHebrew ? `Vouch עבור ${selectedUser.name}` : `Vouch for ${selectedUser.name}`}
               </DialogTitle>
             </DialogHeader>
-            <GiveVouchForm 
+            <VouchFormContent 
               toUserId={selectedUser.id} 
               toUserName={selectedUser.name}
-              trigger={<span className="hidden" />}
+              onSuccess={handleClose}
             />
           </>
         ) : (
