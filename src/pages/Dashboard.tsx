@@ -22,7 +22,7 @@ import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Backpack, Flag } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -419,29 +419,22 @@ export default function Dashboard() {
     // Always navigate to overview first so targets exist
     setCurrentSection('overview');
 
-    if (role === 'job_seeker') {
-      // Job seeker gets the full guided tour
-      window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
-
-      // Backward-compatible fallback
-      setTimeout(() => {
-        if ((window as any).__startJobSeekerTour) {
-          (window as any).__startJobSeekerTour();
-        }
-      }, 300);
-    } else {
-      // Other roles - show "coming soon" message
-      toast.info(isRTL 
-        ? 'סיור מודרך לתפקיד שלך יהיה זמין בקרוב!' 
-        : 'Guided tour for your role coming soon!');
-    }
+    // Trigger the tour for all roles - the JobSeekerTour will handle job_seeker
+    // For other roles, show coming soon message for now
+    setTimeout(() => {
+      if (role === 'job_seeker') {
+        window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
+      } else {
+        toast.info(isRTL 
+          ? 'סיור מודרך לתפקיד שלך יהיה זמין בקרוב!' 
+          : 'Guided tour for your role coming soon!');
+      }
+    }, 100);
   };
 
-  const JourneyTourIcon = ({ className }: { className?: string }) => (
-    <span className={"relative inline-flex items-center justify-center " + (className ?? '')}>
-      <Backpack className="w-6 h-6" />
-      <Flag className="w-3.5 h-3.5 absolute -top-1 -right-1" />
-    </span>
+  // Profile icon facing right in LTR, left in RTL
+  const TourGuideIcon = () => (
+    <User className={`w-6 h-6 ${isRTL ? '-scale-x-100' : ''}`} />
   );
 
   return (
@@ -482,7 +475,7 @@ export default function Dashboard() {
           className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
           title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
         >
-          <JourneyTourIcon />
+          <TourGuideIcon />
           <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
             {isRTL ? 'סיור מודרך' : 'Guided Tour'}
           </span>
