@@ -66,6 +66,8 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
       return data;
     },
     enabled: !!user?.id,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 
   // Analyze resume with AI
