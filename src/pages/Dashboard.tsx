@@ -5,12 +5,13 @@ import { DashboardLayout, DashboardSection } from '@/components/dashboard/Dashbo
 import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
+import { JobSearchPage } from '@/components/jobs/JobSearchPage';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { VouchWidget } from '@/components/vouch/VouchWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -134,6 +135,13 @@ export default function Dashboard() {
 
   // Role-specific quick actions with handlers
   const getQuickActions = () => {
+    // Vouch action available for all roles
+    const vouchAction = { 
+      title: isRTL ? 'ההמלצות שלי' : 'My Endorsements', 
+      icon: Heart,
+      onClick: () => window.location.href = '/profile',
+    };
+
     switch (role) {
       case 'job_seeker':
         return [
@@ -143,15 +151,16 @@ export default function Dashboard() {
             onClick: () => setShowResumeDialog(true),
           },
           { 
+            title: isRTL ? 'חיפוש משרות' : 'Search Jobs', 
+            icon: Search,
+            onClick: () => setCurrentSection('job-search'),
+          },
+          { 
             title: isRTL ? 'המשרות שלי' : 'My Applications', 
             icon: FileText,
             onClick: () => setCurrentSection('applications'),
           },
-          { 
-            title: isRTL ? 'תובנות AI' : 'AI Insights', 
-            icon: Zap,
-            onClick: () => chatRef.current?.scrollIntoView({ behavior: 'smooth' }),
-          },
+          vouchAction,
         ];
       case 'freelance_hr':
       case 'inhouse_hr':
@@ -159,12 +168,14 @@ export default function Dashboard() {
           { title: t('actions.postJob') || 'Post Job', icon: Plus, onClick: () => {} },
           { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search, onClick: () => {} },
           { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users, onClick: () => {} },
+          vouchAction,
         ];
       case 'company_employee':
         return [
           { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus, onClick: () => {} },
           { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase, onClick: () => {} },
           { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp, onClick: () => {} },
+          vouchAction,
         ];
       default:
         return [];
@@ -336,6 +347,8 @@ export default function Dashboard() {
         return renderSettingsContent();
       case 'applications':
         return <ApplicationsPage />;
+      case 'job-search':
+        return <JobSearchPage />;
       case 'candidates':
         return renderPlaceholderContent(t('dashboard.candidates') || 'Candidates', Users);
       case 'jobs':

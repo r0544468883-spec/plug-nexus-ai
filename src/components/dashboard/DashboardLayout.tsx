@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { PlugLogo } from '@/components/PlugLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { 
   LayoutDashboard, 
   Users, 
@@ -14,12 +15,13 @@ import {
   LogOut,
   Menu,
   X,
-  User
+  User,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'documents' | 'chat' | 'settings';
+export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -59,6 +61,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
     if (role === 'job_seeker') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
+        { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search' },
         { icon: Briefcase, label: 'My Applications', section: 'applications' },
         { icon: FileText, label: 'My Documents', section: 'documents' },
         { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
@@ -169,6 +172,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
           <div className="flex-1 lg:flex-initial" />
           
           <div className="flex items-center gap-4">
+            <NotificationBell />
             <LanguageToggle />
           </div>
         </header>
