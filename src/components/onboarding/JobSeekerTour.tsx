@@ -195,9 +195,7 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     };
   }, []);
 
-  // Early return AFTER registering event listeners
-  if (!isActive || role !== 'job_seeker') return null;
-
+  // These callbacks must be defined BEFORE any early return to follow hooks rules
   const handleTransitionComplete = useCallback(() => {
     setShowTransition(false);
     if (pendingStep !== null) {
@@ -205,6 +203,13 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
       setPendingStep(null);
     }
   }, [pendingStep]);
+
+  const handleElementFound = useCallback((found: boolean) => {
+    setIsElementFound(found);
+  }, []);
+
+  // Early return AFTER all hooks are called
+  if (!isActive || role !== 'job_seeker') return null;
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
@@ -261,10 +266,6 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     // Return to overview
     onNavigate('overview');
   };
-
-  const handleElementFound = useCallback((found: boolean) => {
-    setIsElementFound(found);
-  }, []);
 
   const step = TOUR_STEPS[currentStep];
 
