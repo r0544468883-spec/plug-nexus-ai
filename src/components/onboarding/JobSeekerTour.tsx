@@ -172,18 +172,31 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     }
   }, [currentStep, isActive, currentSection, onNavigate, showTransition]);
 
-  // Expose startTour function globally for settings + listen to global event trigger
+  // CRITICAL: Expose startTour globally BEFORE any early return!
+  // This ensures the event listener is always registered even when tour is inactive
   useEffect(() => {
-    (window as any).__startJobSeekerTour = startTour;
+    const handler = () => {
+      // Check role inside handler, not as effect dependency gate
+      if (role === 'job_seeker') {
+        setCurrentStep(0);
+        setIsActive(true);
+        setShowTransition(false);
+        setPendingStep(null);
+        localStorage.removeItem(TOUR_STORAGE_KEY);
+      }
+    };
 
-    const handler = () => startTour();
+    (window as any).__startJobSeekerTour = handler;
     window.addEventListener('plug:start-job-seeker-tour', handler);
 
     return () => {
       window.removeEventListener('plug:start-job-seeker-tour', handler);
       delete (window as any).__startJobSeekerTour;
     };
-  }, [startTour]);
+  }, [role]);
+
+  // Early return AFTER registering event listeners
+  if (!isActive || role !== 'job_seeker') return null;
 
   const handleTransitionComplete = useCallback(() => {
     setShowTransition(false);
@@ -252,8 +265,6 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
   const handleElementFound = useCallback((found: boolean) => {
     setIsElementFound(found);
   }, []);
-
-  if (!isActive || role !== 'job_seeker') return null;
 
   const step = TOUR_STEPS[currentStep];
 
