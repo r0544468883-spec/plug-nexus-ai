@@ -6,6 +6,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
+import { MessageBadge } from '@/components/messaging/MessageBadge';
 import { 
   LayoutDashboard, 
   Users, 
@@ -197,6 +198,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
           <div className="flex-1 lg:flex-initial" />
           
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Realtime Message Badge */}
+            <MessageBadge onClick={() => onSectionChange('messages')} />
+            
             {/* Global Give Vouch button */}
             <GiveVouchDialog 
               trigger={
