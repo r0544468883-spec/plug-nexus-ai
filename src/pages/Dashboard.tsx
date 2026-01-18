@@ -291,18 +291,46 @@ export default function Dashboard() {
   );
 
   const renderDocumentsContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <FileText className="w-6 h-6 text-primary" />
         {t('dashboard.documents') || 'Documents'}
       </h2>
+
+      {/* Portfolio Links Section */}
+      <PortfolioLinks />
+
+      {/* Resume Upload Section */}
+      {role === 'job_seeker' && (
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-primary" />
+              {isRTL ? 'קורות חיים' : 'Resume / CV'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResumeUpload onSuccess={() => refetchStats()} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Other Documents */}
       <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-primary" />
+            {isRTL ? 'מסמכים נוספים' : 'Other Documents'}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-8 text-center">
-          <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground mb-4">{t('documents.empty') || 'No documents yet'}</p>
-          <Button className="gap-2">
+          <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground mb-4">
+            {isRTL ? 'אין מסמכים נוספים' : 'No additional documents yet'}
+          </p>
+          <Button variant="outline" className="gap-2">
             <Upload className="w-4 h-4" />
-            {t('actions.uploadDocument') || 'Upload Document'}
+            {isRTL ? 'העלה מסמך' : 'Upload Document'}
           </Button>
         </CardContent>
       </Card>
@@ -310,16 +338,25 @@ export default function Dashboard() {
   );
 
   const renderSettingsContent = () => (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <Settings className="w-6 h-6 text-primary" />
         {t('dashboard.settings') || 'Settings'}
       </h2>
-      <Card className="bg-card border-border">
-        <CardContent className="p-6">
-          <p className="text-muted-foreground">{t('settings.comingSoon') || 'Settings panel coming soon...'}</p>
-        </CardContent>
-      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Profile Settings */}
+        <ProfileSettings />
+
+        {/* Preferences Settings */}
+        <PreferencesSettings />
+
+        {/* Privacy Settings */}
+        <PrivacySettings />
+
+        {/* Account Settings */}
+        <AccountSettings />
+      </div>
     </div>
   );
 

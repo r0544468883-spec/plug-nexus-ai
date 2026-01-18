@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, MapPin, Trash2, Plus, Loader2, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, Trash2, Plus, Loader2, Bell, ExternalLink, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,6 +39,8 @@ interface InterviewReminder {
 
 interface InterviewSchedulerProps {
   applicationId: string;
+  jobTitle?: string;
+  companyName?: string;
   onInterviewScheduled?: () => void;
 }
 
@@ -45,7 +53,7 @@ const interviewTypes = [
   { value: 'final', label: { en: 'Final Round', he: 'ראיון סופי' } },
 ];
 
-export function InterviewScheduler({ applicationId, onInterviewScheduled }: InterviewSchedulerProps) {
+export function InterviewScheduler({ applicationId, jobTitle, companyName, onInterviewScheduled }: InterviewSchedulerProps) {
   const { language } = useLanguage();
   const isRTL = language === 'he';
 
@@ -78,6 +86,61 @@ export function InterviewScheduler({ applicationId, onInterviewScheduled }: Inte
       console.error('Error fetching interviews:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAddToCalendar = async (interview: InterviewReminder) => {
+    try {
+      const interviewDate = new Date(interview.interview_date);
+      const endDate = new Date(interviewDate.getTime() + 60 * 60 * 1000); // 1 hour later
+
+      const typeLabel = interviewTypes.find(t => t.value === interview.interview_type)?.label;
+      const title = `${isRTL ? typeLabel?.he : typeLabel?.en} - ${jobTitle || 'Interview'}${companyName ? ` @ ${companyName}` : ''}`;
+
+      const { data, error } = await supabase.functions.invoke('calendar-sync', {
+        body: {
+          title,
+          description: `Interview for ${jobTitle || 'position'}${companyName ? ` at ${companyName}` : ''}`,
+          location: interview.location || '',
+          startTime: interviewDate.toISOString(),
+          endTime: endDate.toISOString(),
+        },
+      });
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+      throw error;
+    }
+  };
+
+  const openGoogleCalendar = async (interview: InterviewReminder) => {
+    try {
+      const data = await handleAddToCalendar(interview);
+      window.open(data.calendarUrl, '_blank');
+      toast.success(isRTL ? 'נפתח ביומן Google' : 'Opening Google Calendar');
+    } catch (error) {
+      toast.error(isRTL ? 'שגיאה בפתיחת היומן' : 'Error opening calendar');
+    }
+  };
+
+  const downloadICS = async (interview: InterviewReminder) => {
+    try {
+      const data = await handleAddToCalendar(interview);
+      
+      const blob = new Blob([data.icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `interview-${format(new Date(interview.interview_date), 'yyyy-MM-dd')}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success(isRTL ? 'קובץ ICS הורד' : 'ICS file downloaded');
+    } catch (error) {
+      toast.error(isRTL ? 'שגיאה בהורדה' : 'Error downloading');
     }
   };
 
@@ -203,14 +266,41 @@ export function InterviewScheduler({ applicationId, onInterviewScheduled }: Inte
                   )}
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteInterview(interview.id)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {/* Calendar Sync Button */}
+                  {!isPast && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-primary hover:text-primary hover:bg-primary/10"
+                        >
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openGoogleCalendar(interview)}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          {isRTL ? 'הוסף ל-Google Calendar' : 'Add to Google Calendar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadICS(interview)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          {isRTL ? 'הורד קובץ ICS' : 'Download ICS File'}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteInterview(interview.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
