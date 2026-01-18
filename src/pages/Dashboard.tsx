@@ -6,6 +6,7 @@ import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
+import { VouchWidget } from '@/components/vouch/VouchWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -225,9 +226,13 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* AI Insights - Right Side */}
-        <div className="lg:col-span-1">
-          <Card className="bg-card border-border plug-ai-highlight h-full">
+        {/* AI Insights + Vouch Widget - Right Side */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Vouch Widget */}
+          <VouchWidget />
+
+          {/* AI Insights */}
+          <Card className="bg-card border-border plug-ai-highlight">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
