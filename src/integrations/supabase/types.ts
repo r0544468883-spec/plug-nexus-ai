@@ -355,6 +355,7 @@ export type Database = {
       jobs: {
         Row: {
           ai_summary: Json | null
+          category: string | null
           company_id: string | null
           created_at: string
           created_by: string | null
@@ -362,7 +363,9 @@ export type Database = {
           id: string
           is_community_shared: boolean | null
           job_type: string | null
+          latitude: number | null
           location: string | null
+          longitude: number | null
           requirements: string | null
           salary_range: string | null
           shared_by_user_id: string | null
@@ -373,6 +376,7 @@ export type Database = {
         }
         Insert: {
           ai_summary?: Json | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -380,7 +384,9 @@ export type Database = {
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           requirements?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
@@ -391,6 +397,7 @@ export type Database = {
         }
         Update: {
           ai_summary?: Json | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -398,7 +405,9 @@ export type Database = {
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           requirements?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
@@ -452,35 +461,56 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allow_recruiter_contact: boolean | null
           avatar_url: string | null
           created_at: string
           email: string
+          email_notifications: boolean | null
           full_name: string
+          github_url: string | null
           id: string
+          linkedin_url: string | null
           phone: string | null
+          portfolio_url: string | null
           preferred_language: string | null
+          profile_visibility: string | null
+          theme: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email: string
+          email_notifications?: boolean | null
           full_name: string
+          github_url?: string | null
           id?: string
+          linkedin_url?: string | null
           phone?: string | null
+          portfolio_url?: string | null
           preferred_language?: string | null
+          profile_visibility?: string | null
+          theme?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           created_at?: string
           email?: string
+          email_notifications?: boolean | null
           full_name?: string
+          github_url?: string | null
           id?: string
+          linkedin_url?: string | null
           phone?: string | null
+          portfolio_url?: string | null
           preferred_language?: string | null
+          profile_visibility?: string | null
+          theme?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, X, MapPin, Briefcase, DollarSign, Building2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Search, X, MapPin, Briefcase, DollarSign, Building2, Navigation, Loader2, Tag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export interface JobFiltersState {
   search: string;
@@ -16,6 +18,10 @@ export interface JobFiltersState {
   jobType: string;
   salaryRange: string;
   companySearch: string;
+  category: string;
+  userLatitude: number | null;
+  userLongitude: number | null;
+  maxDistance: number;
 }
 
 interface JobFiltersProps {
@@ -52,11 +58,25 @@ const LOCATIONS = [
   { value: 'hybrid', labelEn: 'Hybrid', labelHe: 'היברידי' },
 ];
 
+const CATEGORIES = [
+  { value: 'all', labelEn: 'All categories', labelHe: 'כל הקטגוריות' },
+  { value: 'tech', labelEn: 'Technology', labelHe: 'טכנולוגיה' },
+  { value: 'marketing', labelEn: 'Marketing', labelHe: 'שיווק' },
+  { value: 'finance', labelEn: 'Finance', labelHe: 'פיננסים' },
+  { value: 'hr', labelEn: 'Human Resources', labelHe: 'משאבי אנוש' },
+  { value: 'sales', labelEn: 'Sales', labelHe: 'מכירות' },
+  { value: 'design', labelEn: 'Design', labelHe: 'עיצוב' },
+  { value: 'operations', labelEn: 'Operations', labelHe: 'תפעול' },
+  { value: 'customer-service', labelEn: 'Customer Service', labelHe: 'שירות לקוחות' },
+  { value: 'other', labelEn: 'Other', labelHe: 'אחר' },
+];
+
 export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFiltersProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   // Fetch job title suggestions based on search
   const { data: suggestions } = useQuery({
@@ -86,7 +106,7 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
   }, [suggestions]);
 
   const hasActiveFilters = filters.search || filters.location || filters.jobType || 
-    filters.salaryRange || filters.companySearch;
+    filters.salaryRange || filters.companySearch || filters.category || filters.userLatitude;
 
   const updateFilter = <K extends keyof JobFiltersState>(key: K, value: JobFiltersState[K]) => {
     onFiltersChange({ ...filters, [key]: value });
@@ -98,6 +118,40 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
   const handleSuggestionClick = (suggestion: string) => {
     updateFilter('search', suggestion);
     setShowSuggestions(false);
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error(isHebrew ? 'הדפדפן לא תומך במיקום' : 'Geolocation is not supported');
+      return;
+    }
+
+    setIsLoadingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        onFiltersChange({
+          ...filters,
+          userLatitude: position.coords.latitude,
+          userLongitude: position.coords.longitude,
+        });
+        toast.success(isHebrew ? 'המיקום התקבל!' : 'Location received!');
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        toast.error(isHebrew ? 'לא הצלחנו לקבל את המיקום שלך' : 'Could not get your location');
+        setIsLoadingLocation(false);
+      }
+    );
+  };
+
+  const clearLocation = () => {
+    onFiltersChange({
+      ...filters,
+      userLatitude: null,
+      userLongitude: null,
+      maxDistance: 25,
+    });
   };
 
   return (
@@ -152,21 +206,41 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
             </div>
           </div>
 
-          {/* Row 2: Filters */}
+          {/* Row 2: Category and Location with GPS */}
           <div className="flex flex-col lg:flex-row gap-4">
+            {/* Category */}
+            <div className="w-full lg:w-48">
+              <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <Tag className="w-3.5 h-3.5" />
+                {isHebrew ? 'קטגוריה' : 'Category'}
+              </Label>
+              <Select value={filters.category || 'all'} onValueChange={(v) => updateFilter('category', v === 'all' ? '' : v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={isHebrew ? 'בחר קטגוריה' : 'Select category'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {isHebrew ? cat.labelHe : cat.labelEn}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Location */}
             <div className="w-full lg:w-44">
               <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5" />
                 {isHebrew ? 'מיקום' : 'Location'}
               </Label>
-              <Select value={filters.location} onValueChange={(v) => updateFilter('location', v)}>
+              <Select value={filters.location || 'all'} onValueChange={(v) => updateFilter('location', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={isHebrew ? 'בחר מיקום' : 'Select'} />
                 </SelectTrigger>
                 <SelectContent>
                   {LOCATIONS.map((loc) => (
-                    <SelectItem key={loc.value || 'all'} value={loc.value}>
+                    <SelectItem key={loc.value} value={loc.value}>
                       {isHebrew ? loc.labelHe : loc.labelEn}
                     </SelectItem>
                   ))}
@@ -174,13 +248,79 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
               </Select>
             </div>
 
+            {/* GPS Location */}
+            <div className="w-full lg:w-auto">
+              <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <Navigation className="w-3.5 h-3.5" />
+                {isHebrew ? 'מיקום GPS' : 'GPS Location'}
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={filters.userLatitude ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="h-9 gap-2"
+                  onClick={handleGetLocation}
+                  disabled={isLoadingLocation}
+                >
+                  {isLoadingLocation ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Navigation className="w-4 h-4" />
+                  )}
+                  {filters.userLatitude 
+                    ? (isHebrew ? 'מיקום פעיל' : 'Location Active') 
+                    : (isHebrew ? 'השתמש במיקום שלי' : 'Use My Location')}
+                </Button>
+                {filters.userLatitude && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 px-2"
+                    onClick={clearLocation}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Distance Slider (when GPS is active) */}
+          {filters.userLatitude && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {isHebrew ? 'מרחק מקסימלי' : 'Maximum Distance'}
+                </span>
+                <span className="font-medium text-foreground">
+                  {filters.maxDistance} {isHebrew ? 'ק"מ' : 'km'}
+                </span>
+              </Label>
+              <Slider
+                value={[filters.maxDistance]}
+                onValueChange={(v) => updateFilter('maxDistance', v[0])}
+                min={5}
+                max={100}
+                step={5}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>5 {isHebrew ? 'ק"מ' : 'km'}</span>
+                <span>100 {isHebrew ? 'ק"מ' : 'km'}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Row 3: Job Type and Salary */}
+          <div className="flex flex-col lg:flex-row gap-4">
             {/* Job Type */}
             <div className="w-full lg:w-40">
               <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
                 <Briefcase className="w-3.5 h-3.5" />
                 {isHebrew ? 'סוג משרה' : 'Job Type'}
               </Label>
-              <Select value={filters.jobType} onValueChange={(v) => updateFilter('jobType', v)}>
+              <Select value={filters.jobType || 'all'} onValueChange={(v) => updateFilter('jobType', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={isHebrew ? 'בחר סוג' : 'Select'} />
                 </SelectTrigger>
@@ -195,19 +335,19 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
               </Select>
             </div>
 
-            {/* Salary Range - Now a Select dropdown */}
+            {/* Salary Range */}
             <div className="w-full lg:w-48">
               <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5" />
                 {isHebrew ? 'טווח שכר' : 'Salary Range'}
               </Label>
-              <Select value={filters.salaryRange} onValueChange={(v) => updateFilter('salaryRange', v)}>
+              <Select value={filters.salaryRange || 'any'} onValueChange={(v) => updateFilter('salaryRange', v === 'any' ? '' : v)}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder={isHebrew ? 'בחר טווח' : 'Select range'} />
                 </SelectTrigger>
                 <SelectContent>
                   {SALARY_RANGES.map((range) => (
-                    <SelectItem key={range.value || 'any'} value={range.value}>
+                    <SelectItem key={range.value} value={range.value}>
                       {isHebrew ? range.labelHe : range.labelEn}
                     </SelectItem>
                   ))}
@@ -252,12 +392,32 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
                   />
                 </Badge>
               )}
+              {filters.category && (
+                <Badge variant="secondary" className="gap-1">
+                  <Tag className="w-3 h-3" />
+                  {CATEGORIES.find(c => c.value === filters.category)?.[isHebrew ? 'labelHe' : 'labelEn']}
+                  <X 
+                    className="w-3 h-3 cursor-pointer" 
+                    onClick={() => updateFilter('category', '')} 
+                  />
+                </Badge>
+              )}
               {filters.location && (
                 <Badge variant="secondary" className="gap-1">
                   {LOCATIONS.find(l => l.value === filters.location)?.[isHebrew ? 'labelHe' : 'labelEn']}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
                     onClick={() => updateFilter('location', '')} 
+                  />
+                </Badge>
+              )}
+              {filters.userLatitude && (
+                <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                  <Navigation className="w-3 h-3" />
+                  {filters.maxDistance} {isHebrew ? 'ק"מ מהמיקום שלי' : 'km from me'}
+                  <X 
+                    className="w-3 h-3 cursor-pointer" 
+                    onClick={clearLocation} 
                   />
                 </Badge>
               )}
@@ -270,7 +430,7 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
                   />
                 </Badge>
               )}
-              {filters.salaryRange && (
+              {filters.salaryRange && filters.salaryRange !== 'any' && (
                 <Badge variant="secondary" className="gap-1">
                   {SALARY_RANGES.find(r => r.value === filters.salaryRange)?.[isHebrew ? 'labelHe' : 'labelEn']}
                   <X 
