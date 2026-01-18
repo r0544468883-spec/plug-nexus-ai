@@ -360,10 +360,12 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          is_community_shared: boolean | null
           job_type: string | null
           location: string | null
           requirements: string | null
           salary_range: string | null
+          shared_by_user_id: string | null
           source_url: string | null
           status: string | null
           title: string
@@ -376,10 +378,12 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          is_community_shared?: boolean | null
           job_type?: string | null
           location?: string | null
           requirements?: string | null
           salary_range?: string | null
+          shared_by_user_id?: string | null
           source_url?: string | null
           status?: string | null
           title: string
@@ -392,10 +396,12 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          is_community_shared?: boolean | null
           job_type?: string | null
           location?: string | null
           requirements?: string | null
           salary_range?: string | null
+          shared_by_user_id?: string | null
           source_url?: string | null
           status?: string | null
           title?: string

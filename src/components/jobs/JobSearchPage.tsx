@@ -6,18 +6,20 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { JobFilters, JobFiltersState } from './JobFilters';
 import { JobCard } from './JobCard';
 import { JobDetailsSheet } from './JobDetailsSheet';
+import { ShareJobForm } from './ShareJobForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Briefcase, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Search, Briefcase, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const defaultFilters: JobFiltersState = {
   search: '',
   location: '',
   jobType: '',
-  salaryMin: 0,
-  salaryMax: 100000,
+  salaryRange: '',
+  companySearch: '',
 };
 
 export function JobSearchPage() {
@@ -38,28 +40,51 @@ export function JobSearchPage() {
         .from('jobs')
         .select(`
           *,
-          company:companies(id, name, logo_url, description, website)
+          company:companies(id, name, logo_url, description, website),
+          sharer:profiles!jobs_shared_by_user_id_fkey(full_name)
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      // Apply filters
+      // Apply search filter
       if (filters.search) {
-        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+        query = query.ilike('title', `%${filters.search}%`);
       }
+
+      // Apply location filter
       if (filters.location) {
         query = query.ilike('location', `%${filters.location}%`);
       }
+
+      // Apply job type filter
       if (filters.jobType) {
         query = query.eq('job_type', filters.jobType);
+      }
+
+      // Apply salary range filter
+      if (filters.salaryRange) {
+        query = query.eq('salary_range', filters.salaryRange);
       }
 
       const { data, error } = await query.limit(50);
       
       if (error) throw error;
-      return data;
+
+      // Client-side filter for company search
+      let filteredData = data || [];
+      if (filters.companySearch) {
+        const searchLower = filters.companySearch.toLowerCase();
+        filteredData = filteredData.filter(job => 
+          (job.company as any)?.name?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return filteredData;
     },
   });
+
+  // Count community shared jobs
+  const communityJobsCount = jobs.filter(j => j.is_community_shared).length;
 
   // Apply mutation
   const applyMutation = useMutation({
@@ -109,18 +134,29 @@ export function JobSearchPage() {
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
             <Search className="w-6 h-6 text-primary" />
             {isHebrew ? 'חיפוש משרות' : 'Job Search'}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 flex items-center gap-2">
             {isHebrew 
               ? `${jobs.length} משרות נמצאו` 
               : `${jobs.length} jobs found`}
+            {communityJobsCount > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Users className="w-3 h-3" />
+                {isHebrew 
+                  ? `${communityJobsCount} משיתוף קהילתי`
+                  : `${communityJobsCount} community shared`}
+              </Badge>
+            )}
           </p>
         </div>
+        
+        {/* Share Job Button */}
+        <ShareJobForm />
       </div>
 
       {/* Filters */}
@@ -174,6 +210,8 @@ export function JobSearchPage() {
               job={job}
               onViewDetails={handleViewDetails}
               onApply={handleApply}
+              isCommunityShared={job.is_community_shared}
+              sharerName={(job as any).sharer?.full_name}
             />
           ))}
         </div>

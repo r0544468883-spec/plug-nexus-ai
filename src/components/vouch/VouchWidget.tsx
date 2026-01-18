@@ -53,9 +53,9 @@ export function VouchWidget() {
             <div className="p-2 rounded-lg bg-pink-500/10">
               <Heart className="w-4 h-4 text-pink-500" />
             </div>
-            <span className="font-medium text-sm">
-              {isRTL ? 'המלצות' : 'Endorsements'}
-            </span>
+          <span className="font-medium text-sm">
+            {isRTL ? 'Vouches' : 'Vouches'}
+          </span>
           </div>
           <span className="text-2xl font-bold text-foreground">{total}</span>
         </div>

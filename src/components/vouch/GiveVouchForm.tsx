@@ -97,9 +97,9 @@ export function GiveVouchForm({ toUserId, toUserName, trigger }: GiveVouchFormPr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vouches', toUserId] });
       toast({
-        title: isHebrew ? 'ההמלצה נשלחה!' : 'Vouch sent!',
+        title: isHebrew ? 'ה-Vouch נשלח!' : 'Vouch sent!',
         description: isHebrew 
-          ? `תודה שהמלצת על ${toUserName}`
+          ? `תודה שנתת Vouch ל-${toUserName}`
           : `Thank you for vouching for ${toUserName}`,
       });
       setOpen(false);
@@ -136,14 +136,14 @@ export function GiveVouchForm({ toUserId, toUserName, trigger }: GiveVouchFormPr
         {trigger || (
           <Button variant="outline" size="sm" className="gap-2">
             <Heart className="h-4 w-4" />
-            {isHebrew ? 'תן המלצה' : 'Give Vouch'}
+            {isHebrew ? 'תן Vouch' : 'Give Vouch'}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isHebrew ? `המלץ על ${toUserName}` : `Vouch for ${toUserName}`}
+            {isHebrew ? `Vouch עבור ${toUserName}` : `Vouch for ${toUserName}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -257,7 +257,7 @@ export function GiveVouchForm({ toUserId, toUserName, trigger }: GiveVouchFormPr
               ) : (
                 <>
                   <Heart className="h-4 w-4 mr-2" />
-                  {isHebrew ? 'שלח המלצה' : 'Send Vouch'}
+                  {isHebrew ? 'שלח Vouch' : 'Send Vouch'}
                 </>
               )}
             </Button>
