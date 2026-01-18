@@ -4,9 +4,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardSection } from '@/components/dashboard/DashboardLayout';
 import { TourOverlay } from './TourOverlay';
 import { TourTooltip } from './TourTooltip';
+import { TransitionScreen } from './TransitionScreen';
+import { useTourTips } from './useTourTips';
 import { 
-  Sparkles, Search, FileText, Upload, MessageSquare, 
-  Zap, Share2, Brain, Bell, Heart 
+  Sparkles, Search, FileText, 
+  Zap, Share2, Brain, MessageSquare, Heart 
 } from 'lucide-react';
 
 interface TourStep {
@@ -122,15 +124,22 @@ interface JobSeekerTourProps {
 export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps) {
   const { user, role } = useAuth();
   const { language } = useLanguage();
+  const { getPersonalizedTip } = useTourTips();
   const isHebrew = language === 'he';
 
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [showTransition, setShowTransition] = useState(false);
+  const [transitionTip, setTransitionTip] = useState('');
+  const [pendingStep, setPendingStep] = useState<number | null>(null);
+  const [isElementFound, setIsElementFound] = useState(true);
 
   // Start tour function - can be called externally
   const startTour = useCallback(() => {
     setCurrentStep(0);
     setIsActive(true);
+    setShowTransition(false);
+    setPendingStep(null);
   }, []);
 
   // Check if tour should be shown automatically
@@ -145,15 +154,15 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     }
   }, [user, role, startTour]);
 
-  // Navigate to correct section when step changes
+  // Navigate to correct section when step changes (after transition)
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || showTransition) return;
 
     const step = TOUR_STEPS[currentStep];
     if (step && step.section !== currentSection) {
       onNavigate(step.section);
     }
-  }, [currentStep, isActive, currentSection, onNavigate]);
+  }, [currentStep, isActive, currentSection, onNavigate, showTransition]);
 
   // Expose startTour function globally for settings
   useEffect(() => {
@@ -163,9 +172,32 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     };
   }, [startTour]);
 
+  const handleTransitionComplete = useCallback(() => {
+    setShowTransition(false);
+    if (pendingStep !== null) {
+      setCurrentStep(pendingStep);
+      setPendingStep(null);
+    }
+  }, [pendingStep]);
+
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
-      setCurrentStep(prev => prev + 1);
+      const nextStep = currentStep + 1;
+      const currentSection = TOUR_STEPS[currentStep].section;
+      const nextSection = TOUR_STEPS[nextStep].section;
+
+      // Check if we're changing sections
+      if (currentSection !== nextSection) {
+        // Show transition screen
+        const tip = getPersonalizedTip(currentSection, nextSection);
+        setTransitionTip(tip);
+        setShowTransition(true);
+        setPendingStep(nextStep);
+        // Navigate to next section
+        onNavigate(nextSection);
+      } else {
+        setCurrentStep(nextStep);
+      }
     } else {
       handleComplete();
     }
@@ -173,7 +205,22 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
+      const prevStep = currentStep - 1;
+      const currentSection = TOUR_STEPS[currentStep].section;
+      const prevSection = TOUR_STEPS[prevStep].section;
+
+      // Check if we're changing sections
+      if (currentSection !== prevSection) {
+        // Show transition screen
+        const tip = getPersonalizedTip(currentSection, prevSection);
+        setTransitionTip(tip);
+        setShowTransition(true);
+        setPendingStep(prevStep);
+        // Navigate to prev section
+        onNavigate(prevSection);
+      } else {
+        setCurrentStep(prevStep);
+      }
     }
   };
 
@@ -184,9 +231,14 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
   const handleComplete = () => {
     localStorage.setItem(TOUR_STORAGE_KEY, 'true');
     setIsActive(false);
+    setShowTransition(false);
     // Return to overview
     onNavigate('overview');
   };
+
+  const handleElementFound = useCallback((found: boolean) => {
+    setIsElementFound(found);
+  }, []);
 
   if (!isActive || role !== 'job_seeker') return null;
 
@@ -194,23 +246,38 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
 
   return (
     <>
-      <TourOverlay
-        targetSelector={step.targetSelector}
-        isActive={isActive}
+      {/* Transition Screen */}
+      <TransitionScreen
+        tip={transitionTip}
+        isActive={showTransition}
+        onComplete={handleTransitionComplete}
+        duration={2000}
       />
-      <TourTooltip
-        targetSelector={step.targetSelector}
-        title={isHebrew ? step.titleHe : step.titleEn}
-        description={isHebrew ? step.descriptionHe : step.descriptionEn}
-        currentStep={currentStep}
-        totalSteps={TOUR_STEPS.length}
-        onNext={handleNext}
-        onPrev={handlePrev}
-        onSkip={handleSkip}
-        isFirst={currentStep === 0}
-        isLast={currentStep === TOUR_STEPS.length - 1}
-        icon={step.icon}
-      />
+
+      {/* Tour Overlay & Tooltip - only show when not in transition */}
+      {!showTransition && (
+        <>
+          <TourOverlay
+            targetSelector={step.targetSelector}
+            isActive={isActive}
+            onElementFound={handleElementFound}
+          />
+          <TourTooltip
+            targetSelector={step.targetSelector}
+            title={isHebrew ? step.titleHe : step.titleEn}
+            description={isHebrew ? step.descriptionHe : step.descriptionEn}
+            currentStep={currentStep}
+            totalSteps={TOUR_STEPS.length}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            onSkip={handleSkip}
+            isFirst={currentStep === 0}
+            isLast={currentStep === TOUR_STEPS.length - 1}
+            icon={step.icon}
+            isElementFound={isElementFound}
+          />
+        </>
+      )}
     </>
   );
 }
