@@ -22,7 +22,8 @@ import {
   Search,
   ArrowLeft,
   ArrowRight,
-  Heart
+  Heart,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -211,6 +212,28 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
           <div className="flex-1 lg:flex-initial" />
           
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Start Tour button */}
+            {role === 'job_seeker' && (
+              <NavTooltip content={direction === 'rtl' ? 'התחל סיור מודרך - למד להכיר את המערכת' : 'Start guided tour - Learn the system'} side="bottom">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => {
+                    // Navigate to overview first, then start tour
+                    onSectionChange('overview');
+                    setTimeout(() => {
+                      if ((window as any).__startJobSeekerTour) {
+                        (window as any).__startJobSeekerTour();
+                      }
+                    }, 300);
+                  }}
+                  className="relative text-muted-foreground hover:text-primary"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              </NavTooltip>
+            )}
+            
             {/* Realtime Message Badge */}
             <NavTooltip content={direction === 'rtl' ? 'תיבת הודעות - צפה בשיחות ושלח הודעות' : 'Inbox - View conversations and send messages'} side="bottom">
               <span>
