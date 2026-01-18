@@ -217,10 +217,16 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   });
 
   const handleFileSelect = useCallback((file: File) => {
-    // Validate file type
-    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    // Validate file type - PDF, Word, Excel
+    const validTypes = [
+      'application/pdf', 
+      'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
     if (!validTypes.includes(file.type)) {
-      toast.error(isRTL ? 'יש להעלות קובץ PDF או Word' : 'Please upload a PDF or Word file');
+      toast.error(isRTL ? 'יש להעלות קובץ PDF, Word או Excel' : 'Please upload a PDF, Word, or Excel file');
       return;
     }
 
@@ -329,7 +335,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf,.doc,.docx,.xls,.xlsx"
           onChange={handleInputChange}
           className="hidden"
         />
@@ -514,7 +520,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf,.doc,.docx,.xls,.xlsx"
           onChange={handleInputChange}
           className="hidden"
         />
@@ -534,11 +540,11 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
               }
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              PDF, DOC, DOCX ({isRTL ? 'עד 10MB' : 'up to 10MB'})
+              PDF, DOC, DOCX, XLS, XLSX ({isRTL ? 'עד 10MB' : 'up to 10MB'})
             </p>
             <p className="text-xs text-accent mt-2 flex items-center justify-center gap-1">
               <Sparkles className="w-3 h-3" />
-              {isRTL ? 'ניתוח AI אוטומטי' : 'Automatic AI analysis'}
+              {isRTL ? 'ניתוח AI אוטומטי מיידי' : 'Instant AI analysis'}
             </p>
           </div>
         </div>

@@ -4,12 +4,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ApplicationsStats } from './ApplicationsStats';
 import { ApplicationsFilters, StatusFilter, StageFilter, SortOption } from './ApplicationsFilters';
+import { ApplicationsInsights } from './ApplicationsInsights';
 import VerticalApplicationCard from './VerticalApplicationCard';
 import AddApplicationForm from './AddApplicationForm';
 import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
 import PlugBubble from './PlugBubble';
 import { Card, CardContent } from '@/components/ui/card';
-import { Briefcase, Loader2, FolderOpen, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Briefcase, Loader2, FolderOpen, Sparkles, BarChart3, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -48,6 +50,7 @@ export function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [showInsights, setShowInsights] = useState(false);
   
   // Sheet state
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -272,8 +275,35 @@ export function ApplicationsPage() {
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <ApplicationsStats {...stats} />
+      {/* Stats with Insights Toggle */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <ApplicationsStats {...stats} />
+        </div>
+        
+        <Button
+          variant={showInsights ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowInsights(!showInsights)}
+          className="gap-2"
+        >
+          {showInsights ? (
+            <>
+              <X className="h-4 w-4" />
+              {isRTL ? 'הסתר ניתוח' : 'Hide Insights'}
+            </>
+          ) : (
+            <>
+              <BarChart3 className="h-4 w-4" />
+              {isRTL ? 'הצג ניתוח מפורט' : 'Show Detailed Insights'}
+            </>
+          )}
+        </Button>
+
+        {showInsights && applications.length > 0 && (
+          <ApplicationsInsights applications={applications} />
+        )}
+      </div>
 
       {/* Filters */}
       <ApplicationsFilters
