@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Tag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 
@@ -28,6 +28,8 @@ interface JobCardProps {
   onApply: (job: Job) => void;
   isCommunityShared?: boolean;
   sharerName?: string;
+  distance?: number | null;
+  category?: string | null;
 }
 
 const jobTypeLabels: Record<string, { en: string; he: string }> = {
@@ -38,7 +40,19 @@ const jobTypeLabels: Record<string, { en: string; he: string }> = {
   'internship': { en: 'Internship', he: 'התמחות' },
 };
 
-export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName }: JobCardProps) {
+const categoryLabels: Record<string, { en: string; he: string }> = {
+  'tech': { en: 'Technology', he: 'טכנולוגיה' },
+  'marketing': { en: 'Marketing', he: 'שיווק' },
+  'finance': { en: 'Finance', he: 'פיננסים' },
+  'hr': { en: 'HR', he: 'משאבי אנוש' },
+  'sales': { en: 'Sales', he: 'מכירות' },
+  'design': { en: 'Design', he: 'עיצוב' },
+  'operations': { en: 'Operations', he: 'תפעול' },
+  'customer-service': { en: 'Customer Service', he: 'שירות לקוחות' },
+  'other': { en: 'Other', he: 'אחר' },
+};
+
+export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName, distance, category }: JobCardProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
@@ -51,8 +65,22 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
     ? (isHebrew ? jobTypeLabels[job.job_type].he : jobTypeLabels[job.job_type].en)
     : job.job_type;
 
+  const categoryLabel = category && categoryLabels[category]
+    ? (isHebrew ? categoryLabels[category].he : categoryLabels[category].en)
+    : category;
+
   return (
-    <Card className="bg-card border-border hover:border-primary/50 transition-colors plug-card-hover cursor-pointer group">
+    <Card className="bg-card border-border hover:border-primary/50 transition-colors plug-card-hover cursor-pointer group relative">
+      {/* Community Badge - Top Right */}
+      {isCommunityShared && (
+        <div className="absolute top-2 right-2 z-10">
+          <Badge className="gap-1 bg-primary/90 text-primary-foreground shadow-lg">
+            <Users className="w-3 h-3" />
+            {isHebrew ? 'קהילתי' : 'Community'}
+          </Badge>
+        </div>
+      )}
+
       <CardContent className="p-4" onClick={() => onViewDetails(job)}>
         <div className="flex gap-4">
           {/* Company Logo */}
@@ -66,7 +94,7 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
           {/* Job Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="pr-16">
                 <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                   {job.title}
                 </h3>
@@ -78,7 +106,7 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
               <Button
                 variant="ghost"
                 size="icon"
-                className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity absolute top-12 right-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   // Save job logic
@@ -96,35 +124,56 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
             )}
 
             {/* Meta info */}
-            <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
+              {/* Category Badge - Prominent */}
+              {categoryLabel && (
+                <Badge variant="outline" className="text-xs gap-1 bg-accent/10 border-accent/30 text-accent-foreground">
+                  <Tag className="w-3 h-3" />
+                  {categoryLabel}
+                </Badge>
+              )}
+
               {job.location && (
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
                   {job.location}
                 </span>
               )}
+
+              {/* Distance Badge */}
+              {distance !== undefined && distance !== null && (
+                <Badge variant="secondary" className="text-xs gap-1 bg-primary/10 text-primary border-primary/20">
+                  <Navigation className="w-3 h-3" />
+                  {distance} {isHebrew ? 'ק"מ' : 'km'}
+                </Badge>
+              )}
+
               {jobTypeLabel && (
                 <Badge variant="secondary" className="text-xs">
                   {jobTypeLabel}
                 </Badge>
               )}
-              {isCommunityShared && (
-                <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/50">
-                  <Users className="w-3 h-3" />
-                  {sharerName ? (isHebrew ? `שותף ע"י ${sharerName}` : `Shared by ${sharerName}`) : (isHebrew ? 'קהילתי' : 'Community')}
-                </Badge>
-              )}
+
               {job.salary_range && (
                 <span className="flex items-center gap-1">
                   <DollarSign className="w-3.5 h-3.5" />
                   {job.salary_range}
                 </span>
               )}
+
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {timeAgo}
               </span>
             </div>
+
+            {/* Sharer info */}
+            {isCommunityShared && sharerName && (
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {isHebrew ? `שותף על ידי ${sharerName}` : `Shared by ${sharerName}`}
+              </p>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2 mt-4">

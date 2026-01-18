@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -32,7 +33,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Share2, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Share2, Loader2, Users, Sparkles } from 'lucide-react';
 
 const jobSchema = z.object({
   title: z.string().min(2, 'Title is required'),
@@ -40,6 +42,7 @@ const jobSchema = z.object({
   location: z.string().optional(),
   job_type: z.string().optional(),
   salary_range: z.string().optional(),
+  category: z.string().min(1, 'Category is required'),
   description: z.string().optional(),
   source_url: z.string().url().optional().or(z.literal('')),
 });
@@ -62,6 +65,18 @@ const SALARY_RANGES = [
   { value: '50000+', labelEn: '₪50,000+', labelHe: '₪50,000+' },
 ];
 
+const CATEGORIES = [
+  { value: 'tech', labelEn: 'Technology', labelHe: 'טכנולוגיה' },
+  { value: 'marketing', labelEn: 'Marketing', labelHe: 'שיווק' },
+  { value: 'finance', labelEn: 'Finance', labelHe: 'פיננסים' },
+  { value: 'hr', labelEn: 'Human Resources', labelHe: 'משאבי אנוש' },
+  { value: 'sales', labelEn: 'Sales', labelHe: 'מכירות' },
+  { value: 'design', labelEn: 'Design', labelHe: 'עיצוב' },
+  { value: 'operations', labelEn: 'Operations', labelHe: 'תפעול' },
+  { value: 'customer-service', labelEn: 'Customer Service', labelHe: 'שירות לקוחות' },
+  { value: 'other', labelEn: 'Other', labelHe: 'אחר' },
+];
+
 interface ShareJobFormProps {
   trigger?: React.ReactNode;
 }
@@ -81,6 +96,7 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
       location: '',
       job_type: '',
       salary_range: '',
+      category: '',
       description: '',
       source_url: '',
     },
@@ -127,6 +143,7 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
         location: data.location || null,
         job_type: data.job_type || null,
         salary_range: data.salary_range || null,
+        category: data.category || null,
         description: data.description || null,
         source_url: data.source_url || null,
         shared_by_user_id: user.id,
@@ -137,7 +154,7 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(isHebrew ? 'המשרה שותפה בהצלחה!' : 'Job shared successfully!');
+      toast.success(isHebrew ? 'המשרה שותפה בהצלחה! 🎉' : 'Job shared successfully! 🎉');
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       setOpen(false);
       form.reset();
@@ -156,7 +173,7 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" className="gap-2">
+          <Button className="gap-2 bg-primary hover:bg-primary/90">
             <Share2 className="h-4 w-4" />
             {isHebrew ? 'שתף משרה' : 'Share Job'}
           </Button>
@@ -164,9 +181,16 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
             {isHebrew ? 'שתף משרה עם הקהילה' : 'Share a Job with the Community'}
           </DialogTitle>
+          <DialogDescription className="flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1">
+              <Users className="w-3 h-3" />
+              {isHebrew ? 'המשרה תהיה זמינה לכל המשתמשים' : 'Job will be available to all users'}
+            </Badge>
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -206,6 +230,34 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
                 )}
               />
             </div>
+
+            {/* Category - Required and Prominent */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-primary font-medium">
+                    {isHebrew ? 'קטגוריה' : 'Category'} * 
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="border-primary/30 focus:ring-primary">
+                        <SelectValue placeholder={isHebrew ? 'בחר קטגוריה' : 'Select category'} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {isHebrew ? cat.labelHe : cat.labelEn}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -317,15 +369,16 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full gap-2" 
               disabled={createJobMutation.isPending}
+              size="lg"
             >
               {createJobMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {isHebrew ? 'שתף משרה' : 'Share Job'}
+                  <Share2 className="h-4 w-4" />
+                  {isHebrew ? 'שתף משרה עם הקהילה' : 'Share Job with Community'}
                 </>
               )}
             </Button>

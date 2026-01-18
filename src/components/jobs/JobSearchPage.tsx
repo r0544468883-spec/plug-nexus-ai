@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, Briefcase, Users } from 'lucide-react';
+import { Search, Briefcase, Users, Share2, Sparkles, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 const defaultFilters: JobFiltersState = {
@@ -20,7 +20,31 @@ const defaultFilters: JobFiltersState = {
   jobType: '',
   salaryRange: '',
   companySearch: '',
+  category: '',
+  userLatitude: null,
+  userLongitude: null,
+  maxDistance: 25,
 };
+
+// Haversine formula to calculate distance between two points
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
 
 export function JobSearchPage() {
   const { user } = useAuth();
@@ -62,21 +86,48 @@ export function JobSearchPage() {
       }
 
       // Apply salary range filter
-      if (filters.salaryRange) {
+      if (filters.salaryRange && filters.salaryRange !== 'any') {
         query = query.eq('salary_range', filters.salaryRange);
+      }
+
+      // Apply category filter
+      if (filters.category) {
+        query = query.eq('category', filters.category);
       }
 
       const { data, error } = await query.limit(50);
       
       if (error) throw error;
 
-      // Client-side filter for company search
       let filteredData = data || [];
+
+      // Client-side filter for company search
       if (filters.companySearch) {
         const searchLower = filters.companySearch.toLowerCase();
         filteredData = filteredData.filter(job => 
           (job.company as any)?.name?.toLowerCase().includes(searchLower)
         );
+      }
+
+      // Client-side filter for distance (GPS)
+      if (filters.userLatitude && filters.userLongitude) {
+        filteredData = filteredData.map(job => {
+          const jobData = job as any;
+          if (jobData.latitude && jobData.longitude) {
+            const distance = calculateDistance(
+              filters.userLatitude!,
+              filters.userLongitude!,
+              jobData.latitude,
+              jobData.longitude
+            );
+            return { ...job, distance: Math.round(distance) };
+          }
+          return { ...job, distance: null };
+        }).filter(job => {
+          // Keep jobs without coordinates or within distance
+          const jobData = job as any;
+          return jobData.distance === null || jobData.distance <= filters.maxDistance;
+        });
       }
 
       return filteredData;
@@ -133,6 +184,35 @@ export function JobSearchPage() {
 
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+      {/* Community Sharing Banner */}
+      <Card className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-primary/20">
+        <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-primary/20">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">
+                {isHebrew ? 'הכרת משרה טובה? שתף אותה עם הקהילה!' : 'Know a great job? Share it with the community!'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isHebrew 
+                  ? 'כל משרה שתשתף תהיה זמינה לכל מחפשי העבודה במערכת' 
+                  : 'Every job you share will be available to all job seekers'}
+              </p>
+            </div>
+          </div>
+          <ShareJobForm 
+            trigger={
+              <Button className="gap-2 bg-primary hover:bg-primary/90 shadow-lg">
+                <Share2 className="w-4 h-4" />
+                {isHebrew ? 'שתף משרה עכשיו' : 'Share a Job Now'}
+              </Button>
+            }
+          />
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -140,23 +220,26 @@ export function JobSearchPage() {
             <Search className="w-6 h-6 text-primary" />
             {isHebrew ? 'חיפוש משרות' : 'Job Search'}
           </h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-2">
+          <p className="text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             {isHebrew 
               ? `${jobs.length} משרות נמצאו` 
               : `${jobs.length} jobs found`}
             {communityJobsCount > 0 && (
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
                 <Users className="w-3 h-3" />
                 {isHebrew 
                   ? `${communityJobsCount} משיתוף קהילתי`
                   : `${communityJobsCount} community shared`}
               </Badge>
             )}
+            {filters.userLatitude && (
+              <Badge variant="outline" className="gap-1">
+                <MapPin className="w-3 h-3" />
+                {isHebrew ? 'מסונן לפי מיקום' : 'Filtered by location'}
+              </Badge>
+            )}
           </p>
         </div>
-        
-        {/* Share Job Button */}
-        <ShareJobForm />
       </div>
 
       {/* Filters */}
@@ -212,6 +295,8 @@ export function JobSearchPage() {
               onApply={handleApply}
               isCommunityShared={job.is_community_shared}
               sharerName={(job as any).sharer?.full_name}
+              distance={(job as any).distance}
+              category={(job as any).category}
             />
           ))}
         </div>
