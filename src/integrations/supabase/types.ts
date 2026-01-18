@@ -204,6 +204,33 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          participant_1: string
+          participant_2: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_1: string
+          participant_2: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_1?: string
+          participant_2?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           ai_summary: Json | null
@@ -426,6 +453,64 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          from_user_id: string
+          id: string
+          is_read: boolean | null
+          related_application_id: string | null
+          related_job_id: string | null
+          to_user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          from_user_id: string
+          id?: string
+          is_read?: boolean | null
+          related_application_id?: string | null
+          related_job_id?: string | null
+          to_user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          from_user_id?: string
+          id?: string
+          is_read?: boolean | null
+          related_application_id?: string | null
+          related_job_id?: string | null
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_related_application_id_fkey"
+            columns: ["related_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_related_job_id_fkey"
+            columns: ["related_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -463,6 +548,7 @@ export type Database = {
         Row: {
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
+          bio: string | null
           created_at: string
           email: string
           email_notifications: boolean | null
@@ -481,6 +567,7 @@ export type Database = {
         Insert: {
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email: string
           email_notifications?: boolean | null
@@ -499,6 +586,7 @@ export type Database = {
         Update: {
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           email?: string
           email_notifications?: boolean | null

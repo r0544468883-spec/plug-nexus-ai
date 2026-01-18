@@ -25,7 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings';
+export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -73,8 +73,8 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search' },
         { icon: Briefcase, label: 'My Applications', section: 'applications' },
+        { icon: MessageSquare, label: 'Messages', section: 'messages' },
         { icon: FileText, label: 'My Documents', section: 'documents' },
-        { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
         { icon: Settings, label: 'Settings', section: 'settings' },
       ];
     }
@@ -83,9 +83,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview' },
         { icon: Users, label: 'Candidates', section: 'candidates' },
-        { icon: Briefcase, label: 'Jobs', section: 'jobs' },
+        { icon: Briefcase, label: 'Post Job', section: 'post-job' },
+        { icon: MessageSquare, label: 'Messages', section: 'messages' },
         { icon: FileText, label: 'Documents', section: 'documents' },
-        { icon: MessageSquare, label: 'Chat with Plug', section: 'chat' },
         { icon: Settings, label: 'Settings', section: 'settings' },
       ];
     }
