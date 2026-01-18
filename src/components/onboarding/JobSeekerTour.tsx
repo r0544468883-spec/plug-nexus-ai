@@ -32,47 +32,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'I\'m your AI job search assistant! Ask me about positions, get help preparing for interviews, or request tips to improve your resume.',
     icon: Sparkles,
   },
-  // Step 2: Overview - Quick Actions
-  {
-    section: 'overview',
-    targetSelector: '[data-tour="quick-actions"]',
-    titleHe: 'פעולות מהירות ⚡',
-    titleEn: 'Quick Actions ⚡',
-    descriptionHe: 'קיצורי דרך לפעולות נפוצות! העלה קו"ח, חפש משרות, או עבור ישר למועמדויות שלך - הכל בלחיצה אחת.',
-    descriptionEn: 'Shortcuts to common actions! Upload your CV, search for jobs, or jump straight to your applications - all in one click.',
-    icon: Zap,
-  },
-  // Step 3: Overview - Stats
-  {
-    section: 'overview',
-    targetSelector: '[data-tour="stats-row"]',
-    titleHe: 'מעקב התקדמות 📊',
-    titleEn: 'Track Your Progress 📊',
-    descriptionHe: 'כאן תראה סטטיסטיקות בזמן אמת: כמה מועמדויות הגשת, ראיונות שמתקרבים, ומועמדויות פעילות.',
-    descriptionEn: 'See real-time stats here: how many applications you\'ve submitted, upcoming interviews, and active applications.',
-    icon: FileText,
-  },
-  // Step 4: Job Search - Filters
-  {
-    section: 'job-search',
-    targetSelector: '[data-tour="job-filters"]',
-    titleHe: 'חיפוש משרות חכם 🔍',
-    titleEn: 'Smart Job Search 🔍',
-    descriptionHe: 'סנן משרות לפי מיקום, קטגוריה, סוג משרה ושכר. הפעל GPS כדי למצוא משרות קרובות אליך!',
-    descriptionEn: 'Filter jobs by location, category, job type, and salary. Enable GPS to find jobs near you!',
-    icon: Search,
-  },
-  // Step 5: Job Search - Share Job
-  {
-    section: 'job-search',
-    targetSelector: '[data-tour="share-job"]',
-    titleHe: 'שתף עם הקהילה 🤝',
-    titleEn: 'Share with Community 🤝',
-    descriptionHe: 'מצאת משרה מעניינת? שתף אותה עם הקהילה! עזור לאחרים למצוא עבודה ובנה רשת קשרים מקצועית.',
-    descriptionEn: 'Found an interesting job? Share it with the community! Help others find work and build your professional network.',
-    icon: Share2,
-  },
-  // Step 6: Applications - Add Application
+  // Step 2: Applications - Add Application (was 6)
   {
     section: 'applications',
     targetSelector: '[data-tour="add-application"]',
@@ -82,7 +42,27 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Paste a job link from any site - AI will extract all details automatically! You can also add manually.',
     icon: FileText,
   },
-  // Step 7: Documents - Resume Upload
+  // Step 3: Job Search - Filters (was 4)
+  {
+    section: 'job-search',
+    targetSelector: '[data-tour="job-filters"]',
+    titleHe: 'חיפוש משרות חכם 🔍',
+    titleEn: 'Smart Job Search 🔍',
+    descriptionHe: 'סנן משרות לפי מיקום, קטגוריה, סוג משרה ושכר. הפעל GPS כדי למצוא משרות קרובות אליך!',
+    descriptionEn: 'Filter jobs by location, category, job type, and salary. Enable GPS to find jobs near you!',
+    icon: Search,
+  },
+  // Step 4: Job Search - Share Job (was 5)
+  {
+    section: 'job-search',
+    targetSelector: '[data-tour="share-job"]',
+    titleHe: 'שתף עם הקהילה 🤝',
+    titleEn: 'Share with Community 🤝',
+    descriptionHe: 'מצאת משרה מעניינת? שתף אותה עם הקהילה! עזור לאחרים למצוא עבודה ובנה רשת קשרים מקצועית.',
+    descriptionEn: 'Found an interesting job? Share it with the community! Help others find work and build your professional network.',
+    icon: Share2,
+  },
+  // Step 5: Documents - Resume Upload (was 7)
   {
     section: 'documents',
     targetSelector: '[data-tour="resume-upload"]',
@@ -91,6 +71,26 @@ const TOUR_STEPS: TourStep[] = [
     descriptionHe: 'העלה את קורות החיים שלך ו-AI ינתח אותם: יזהה מיומנויות, ידרג את הפרופיל שלך, ויציע תפקידים מתאימים!',
     descriptionEn: 'Upload your resume and AI will analyze it: identify skills, rate your profile, and suggest matching roles!',
     icon: Brain,
+  },
+  // Step 6: Overview - Quick Actions (was 2)
+  {
+    section: 'overview',
+    targetSelector: '[data-tour="quick-actions"]',
+    titleHe: 'פעולות מהירות ⚡',
+    titleEn: 'Quick Actions ⚡',
+    descriptionHe: 'קיצורי דרך לפעולות נפוצות! העלה קו"ח, חפש משרות, או עבור ישר למועמדויות שלך - הכל בלחיצה אחת.',
+    descriptionEn: 'Shortcuts to common actions! Upload your CV, search for jobs, or jump straight to your applications - all in one click.',
+    icon: Zap,
+  },
+  // Step 7: Overview - Stats (was 3)
+  {
+    section: 'overview',
+    targetSelector: '[data-tour="stats-row"]',
+    titleHe: 'מעקב התקדמות 📊',
+    titleEn: 'Track Your Progress 📊',
+    descriptionHe: 'כאן תראה סטטיסטיקות בזמן אמת: כמה מועמדויות הגשת, ראיונות שמתקרבים, ומועמדויות פעילות.',
+    descriptionEn: 'See real-time stats here: how many applications you\'ve submitted, upcoming interviews, and active applications.',
+    icon: FileText,
   },
   // Step 8: Messages - Inbox
   {
