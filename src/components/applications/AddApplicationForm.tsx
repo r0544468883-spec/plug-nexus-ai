@@ -139,7 +139,7 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-tour="add-application">
       {/* URL Input */}
       <div className="flex gap-2">
         <div className="relative flex-1">

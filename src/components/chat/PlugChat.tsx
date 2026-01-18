@@ -346,7 +346,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const showGreeting = messages.length === 0;
 
   return (
-    <div ref={chatContainerRef} className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
+    <div ref={chatContainerRef} data-tour="plug-chat" className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">

@@ -155,7 +155,7 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" data-tour="job-filters">
       <CardContent className="p-4">
         <div className="flex flex-col gap-4">
           {/* Row 1: Search and Company */}

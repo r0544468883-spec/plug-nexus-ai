@@ -348,7 +348,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   const resumeSummary = existingResume?.ai_summary as ResumeSummary | null;
 
   return (
-    <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'} data-tour="resume-upload">
       {/* Existing Resume Display */}
       {existingResume && (
         <Card className="bg-card border-primary/20">

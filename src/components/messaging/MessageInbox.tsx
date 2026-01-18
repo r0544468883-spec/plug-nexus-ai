@@ -162,7 +162,7 @@ export function MessageInbox() {
   }
 
   return (
-    <Card className="bg-card border-border h-full">
+    <Card className="bg-card border-border h-full" data-tour="message-inbox">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between mb-3">
           <CardTitle className="flex items-center gap-2">
