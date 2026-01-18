@@ -172,10 +172,15 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     }
   }, [currentStep, isActive, currentSection, onNavigate, showTransition]);
 
-  // Expose startTour function globally for settings
+  // Expose startTour function globally for settings + listen to global event trigger
   useEffect(() => {
     (window as any).__startJobSeekerTour = startTour;
+
+    const handler = () => startTour();
+    window.addEventListener('plug:start-job-seeker-tour', handler);
+
     return () => {
+      window.removeEventListener('plug:start-job-seeker-tour', handler);
       delete (window as any).__startJobSeekerTour;
     };
   }, [startTour]);

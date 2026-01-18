@@ -415,17 +415,16 @@ export default function Dashboard() {
   };
 
   const startTour = () => {
-    console.log('startTour called, role:', role);
-    console.log('__startJobSeekerTour exists:', !!(window as any).__startJobSeekerTour);
-    
+    // Always navigate to overview first so targets exist
     setCurrentSection('overview');
+
+    // Prefer an event-based trigger (more reliable than global function)
+    window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
+
+    // Backward-compatible fallback
     setTimeout(() => {
-      console.log('After timeout, __startJobSeekerTour exists:', !!(window as any).__startJobSeekerTour);
       if ((window as any).__startJobSeekerTour) {
         (window as any).__startJobSeekerTour();
-        console.log('Tour started!');
-      } else {
-        console.log('Tour function not found!');
       }
     }, 300);
   };
