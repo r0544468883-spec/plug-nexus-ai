@@ -468,6 +468,45 @@ export type Database = {
         }
         Relationships: []
       }
+      vouches: {
+        Row: {
+          created_at: string | null
+          from_user_id: string
+          id: string
+          is_public: boolean | null
+          message: string
+          relationship: string | null
+          skills: string[] | null
+          to_user_id: string
+          updated_at: string | null
+          vouch_type: Database["public"]["Enums"]["vouch_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          from_user_id: string
+          id?: string
+          is_public?: boolean | null
+          message: string
+          relationship?: string | null
+          skills?: string[] | null
+          to_user_id: string
+          updated_at?: string | null
+          vouch_type: Database["public"]["Enums"]["vouch_type"]
+        }
+        Update: {
+          created_at?: string | null
+          from_user_id?: string
+          id?: string
+          is_public?: boolean | null
+          message?: string
+          relationship?: string | null
+          skills?: string[] | null
+          to_user_id?: string
+          updated_at?: string | null
+          vouch_type?: Database["public"]["Enums"]["vouch_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -491,6 +530,7 @@ export type Database = {
         | "freelance_hr"
         | "inhouse_hr"
         | "company_employee"
+      vouch_type: "colleague" | "manager" | "recruiter" | "friend" | "mentor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -624,6 +664,7 @@ export const Constants = {
         "inhouse_hr",
         "company_employee",
       ],
+      vouch_type: ["colleague", "manager", "recruiter", "friend", "mentor"],
     },
   },
 } as const
