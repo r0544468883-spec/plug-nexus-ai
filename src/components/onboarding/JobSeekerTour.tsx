@@ -136,11 +136,14 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
 
   // Start tour function - can be called externally
   const startTour = useCallback(() => {
+    if (role !== 'job_seeker') return;
     setCurrentStep(0);
     setIsActive(true);
     setShowTransition(false);
     setPendingStep(null);
-  }, []);
+    // Clear the completed flag to allow the tour to run
+    localStorage.removeItem(TOUR_STORAGE_KEY);
+  }, [role]);
 
   // Check if tour should be shown automatically
   useEffect(() => {
@@ -149,10 +152,15 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     const hasCompleted = localStorage.getItem(TOUR_STORAGE_KEY);
     if (!hasCompleted) {
       // Delay start to let dashboard render
-      const timer = setTimeout(startTour, 1200);
+      const timer = setTimeout(() => {
+        setCurrentStep(0);
+        setIsActive(true);
+        setShowTransition(false);
+        setPendingStep(null);
+      }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [user, role, startTour]);
+  }, [user, role]);
 
   // Navigate to correct section when step changes (after transition)
   useEffect(() => {
