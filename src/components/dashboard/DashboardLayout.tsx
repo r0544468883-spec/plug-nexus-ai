@@ -13,9 +13,11 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'documents' | 'chat' | 'settings';
 
@@ -128,7 +130,10 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
 
         {/* User info */}
         <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 mb-3">
+          <Link 
+            to="/profile"
+            className="flex items-center gap-3 mb-3 p-2 -m-2 rounded-lg hover:bg-sidebar-accent/10 transition-colors"
+          >
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
               {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
@@ -136,7 +141,8 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
               <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
               <p className="text-xs text-muted-foreground truncate">{getRoleLabel()}</p>
             </div>
-          </div>
+            <User className="w-4 h-4 text-muted-foreground" />
+          </Link>
           <Button 
             variant="ghost" 
             size="sm" 
