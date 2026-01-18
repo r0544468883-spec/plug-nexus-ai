@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
@@ -418,15 +419,22 @@ export default function Dashboard() {
     // Always navigate to overview first so targets exist
     setCurrentSection('overview');
 
-    // Prefer an event-based trigger (more reliable than global function)
-    window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
+    if (role === 'job_seeker') {
+      // Job seeker gets the full guided tour
+      window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
 
-    // Backward-compatible fallback
-    setTimeout(() => {
-      if ((window as any).__startJobSeekerTour) {
-        (window as any).__startJobSeekerTour();
-      }
-    }, 300);
+      // Backward-compatible fallback
+      setTimeout(() => {
+        if ((window as any).__startJobSeekerTour) {
+          (window as any).__startJobSeekerTour();
+        }
+      }, 300);
+    } else {
+      // Other roles - show "coming soon" message
+      toast.info(isRTL 
+        ? 'סיור מודרך לתפקיד שלך יהיה זמין בקרוב!' 
+        : 'Guided tour for your role coming soon!');
+    }
   };
 
   const JourneyTourIcon = ({ className }: { className?: string }) => (
@@ -466,34 +474,32 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Buttons - Only for job seekers */}
-      {role === 'job_seeker' && (
-        <>
-          {/* Onboarding Tour Button - Bottom Left */}
-          <button
-            onClick={startTour}
-            className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
-            title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
-          >
-            <JourneyTourIcon />
-            <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              {isRTL ? 'סיור מודרך' : 'Guided Tour'}
-            </span>
-          </button>
+      {/* Floating Action Buttons - Available for all roles */}
+      <>
+        {/* Onboarding Tour Button - Bottom Left */}
+        <button
+          onClick={startTour}
+          className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
+          title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
+        >
+          <JourneyTourIcon />
+          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            {isRTL ? 'סיור מודרך' : 'Guided Tour'}
+          </span>
+        </button>
 
-          {/* Plug Chat Button - Bottom Right */}
-          <button
-            onClick={scrollToChat}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group animate-pulse hover:animate-none"
-            title={isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-          >
-            <Sparkles className="w-6 h-6" />
-            <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              {isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-            </span>
-          </button>
-        </>
-      )}
+        {/* Plug Chat Button - Bottom Right */}
+        <button
+          onClick={scrollToChat}
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group animate-pulse hover:animate-none"
+          title={isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
+        >
+          <Sparkles className="w-6 h-6" />
+          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            {isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
+          </span>
+        </button>
+      </>
     </DashboardLayout>
   );
 }
