@@ -18,7 +18,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build system prompt based on context
+    // Build comprehensive system prompt based on context
     let systemPrompt = `You are Plug, an AI HR assistant. You help users with job applications, interview preparation, resume tips, and career advice.
 
 Key traits:
@@ -26,11 +26,13 @@ Key traits:
 - Practical and actionable advice
 - Use emojis sparingly to be engaging
 - Keep responses concise but helpful
-- Support both English and Hebrew (respond in the same language as the user)`;
+- Support both English and Hebrew (respond in the same language as the user)
 
-    // Add application context if provided
+You have access to the user's data and can help them with specific questions about their job search.`;
+
+    // Add application context if provided (for application-specific chats)
     if (context?.jobTitle || context?.companyName) {
-      systemPrompt += `\n\nCurrent application context:
+      systemPrompt += `\n\n📌 Current Application Context:
 - Position: ${context.jobTitle || 'Not specified'}
 - Company: ${context.companyName || 'Not specified'}
 - Location: ${context.location || 'Not specified'}
@@ -41,9 +43,61 @@ ${context.matchScore ? `- Match Score: ${context.matchScore}%` : ''}`;
 
     // Add resume context if provided
     if (context?.resumeSummary) {
-      systemPrompt += `\n\nUser's resume summary:
+      systemPrompt += `\n\n📄 User's Resume Summary:
 ${JSON.stringify(context.resumeSummary, null, 2)}`;
     }
+
+    // Add user's applications data
+    if (context?.applications && context.applications.length > 0) {
+      systemPrompt += `\n\n📋 User's Job Applications (${context.applications.length} total):`;
+      context.applications.slice(0, 10).forEach((app: any, index: number) => {
+        systemPrompt += `
+${index + 1}. ${app.jobTitle} at ${app.company}
+   - Status: ${app.status || 'active'}, Stage: ${app.stage || 'applied'}
+   - Location: ${app.location || 'N/A'}, Type: ${app.jobType || 'N/A'}
+   ${app.matchScore ? `- Match Score: ${app.matchScore}%` : ''}
+   - Applied: ${new Date(app.appliedAt).toLocaleDateString()}`;
+      });
+      if (context.applications.length > 10) {
+        systemPrompt += `\n   ... and ${context.applications.length - 10} more applications`;
+      }
+    }
+
+    // Add upcoming interviews
+    if (context?.upcomingInterviews && context.upcomingInterviews.length > 0) {
+      systemPrompt += `\n\n📅 Upcoming Interviews:`;
+      context.upcomingInterviews.forEach((interview: any, index: number) => {
+        const date = new Date(interview.date);
+        systemPrompt += `
+${index + 1}. ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+   - Type: ${interview.type || 'General'}
+   - Location: ${interview.location || 'TBD'}
+   ${interview.notes ? `- Notes: ${interview.notes}` : ''}`;
+      });
+    }
+
+    // Add vouches summary
+    if (context?.vouches) {
+      systemPrompt += `\n\n⭐ User's Endorsements (Vouches):
+- Total Vouches: ${context.vouches.total}
+- Types: ${Object.entries(context.vouches.types).map(([type, count]) => `${type}: ${count}`).join(', ')}
+${context.vouches.skills?.length > 0 ? `- Skills mentioned: ${context.vouches.skills.join(', ')}` : ''}`;
+    }
+
+    // Add helpful capabilities reminder
+    systemPrompt += `\n\n💡 You can help the user with:
+- Questions about their applications and status
+- Interview preparation for upcoming interviews
+- Resume improvement suggestions
+- Career advice based on their vouches and skills
+- Job search strategy`;
+
+    console.log("Plug context loaded:", {
+      hasResume: !!context?.resumeSummary,
+      applicationsCount: context?.applications?.length || 0,
+      interviewsCount: context?.upcomingInterviews?.length || 0,
+      vouchesCount: context?.vouches?.total || 0,
+    });
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

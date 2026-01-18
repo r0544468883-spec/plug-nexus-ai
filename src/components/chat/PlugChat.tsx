@@ -48,6 +48,67 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     enabled: !!user?.id,
   });
 
+  // Fetch user's applications with job details
+  const { data: userApplications } = useQuery({
+    queryKey: ['applications-for-chat', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('applications')
+        .select(`
+          id, status, current_stage, match_score, notes, created_at,
+          jobs:job_id (id, title, location, job_type, salary_range, company:company_id (name))
+        `)
+        .eq('candidate_id', user.id)
+        .order('created_at', { ascending: false });
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch upcoming interviews
+  const { data: upcomingInterviews } = useQuery({
+    queryKey: ['interviews-for-chat', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      // Get user's application IDs first
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('candidate_id', user.id);
+      
+      if (!apps || apps.length === 0) return [];
+      
+      const appIds = apps.map(a => a.id);
+      
+      const { data } = await supabase
+        .from('interview_reminders')
+        .select('*')
+        .in('application_id', appIds)
+        .gte('interview_date', new Date().toISOString())
+        .order('interview_date', { ascending: true });
+      
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch user's vouches
+  const { data: userVouches } = useQuery({
+    queryKey: ['vouches-for-chat', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('vouches')
+        .select('id, vouch_type, skills, message')
+        .eq('to_user_id', user.id)
+        .eq('is_public', true);
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Load chat history on mount
   useEffect(() => {
     if (user) {
@@ -114,10 +175,49 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
     abortControllerRef.current = new AbortController();
     
-    // Build context with resume if available
+    // Build comprehensive context with all user data
     const context: Record<string, unknown> = {};
+    
+    // Add resume summary
     if (existingResume?.ai_summary && typeof existingResume.ai_summary === 'object') {
       context.resumeSummary = existingResume.ai_summary;
+    }
+
+    // Add applications data
+    if (userApplications && userApplications.length > 0) {
+      context.applications = userApplications.map(app => ({
+        jobTitle: (app.jobs as any)?.title || 'Unknown',
+        company: (app.jobs as any)?.company?.name || 'Unknown',
+        location: (app.jobs as any)?.location,
+        jobType: (app.jobs as any)?.job_type,
+        status: app.status,
+        stage: app.current_stage,
+        matchScore: app.match_score,
+        appliedAt: app.created_at,
+        notes: app.notes,
+      }));
+    }
+
+    // Add upcoming interviews
+    if (upcomingInterviews && upcomingInterviews.length > 0) {
+      context.upcomingInterviews = upcomingInterviews.map(i => ({
+        date: i.interview_date,
+        type: i.interview_type,
+        location: i.location,
+        notes: i.notes,
+      }));
+    }
+
+    // Add vouches summary
+    if (userVouches && userVouches.length > 0) {
+      context.vouches = {
+        total: userVouches.length,
+        types: userVouches.reduce((acc, v) => {
+          acc[v.vouch_type] = (acc[v.vouch_type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+        skills: [...new Set(userVouches.flatMap(v => v.skills || []))],
+      };
     }
 
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plug-chat`, {

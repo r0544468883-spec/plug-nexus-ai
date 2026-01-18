@@ -69,7 +69,7 @@ export function VouchSection({ userId, userName, showGiveVouch = true }: VouchSe
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Heart className="h-5 w-5 text-primary" />
-          {isHebrew ? 'המלצות' : 'Endorsements'}
+          {isHebrew ? 'Vouches' : 'Vouches'}
           {vouches && vouches.length > 0 && (
             <span className="text-sm text-muted-foreground font-normal">
               ({vouches.length})
@@ -90,10 +90,10 @@ export function VouchSection({ userId, userName, showGiveVouch = true }: VouchSe
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>{isHebrew ? 'אין המלצות עדיין' : 'No endorsements yet'}</p>
+            <p>{isHebrew ? 'אין Vouches עדיין' : 'No vouches yet'}</p>
             {showGiveVouch && canVouch && (
               <p className="text-sm mt-1">
-                {isHebrew ? 'היה הראשון להמליץ!' : 'Be the first to vouch!'}
+                {isHebrew ? 'היה הראשון לתת Vouch!' : 'Be the first to vouch!'}
               </p>
             )}
           </div>

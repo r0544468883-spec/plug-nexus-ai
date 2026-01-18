@@ -8,6 +8,7 @@ import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
 import { JobSearchPage } from '@/components/jobs/JobSearchPage';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { VouchWidget } from '@/components/vouch/VouchWidget';
+import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -137,7 +138,7 @@ export default function Dashboard() {
   const getQuickActions = () => {
     // Vouch action available for all roles
     const vouchAction = { 
-      title: isRTL ? 'ההמלצות שלי' : 'My Endorsements', 
+      title: isRTL ? 'ה-Vouches שלי' : 'My Vouches', 
       icon: Heart,
       onClick: () => window.location.href = '/profile',
     };

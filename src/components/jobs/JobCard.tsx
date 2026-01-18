@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 
@@ -26,6 +26,8 @@ interface JobCardProps {
   job: Job;
   onViewDetails: (job: Job) => void;
   onApply: (job: Job) => void;
+  isCommunityShared?: boolean;
+  sharerName?: string;
 }
 
 const jobTypeLabels: Record<string, { en: string; he: string }> = {
@@ -36,7 +38,7 @@ const jobTypeLabels: Record<string, { en: string; he: string }> = {
   'internship': { en: 'Internship', he: 'התמחות' },
 };
 
-export function JobCard({ job, onViewDetails, onApply }: JobCardProps) {
+export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName }: JobCardProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
@@ -104,6 +106,12 @@ export function JobCard({ job, onViewDetails, onApply }: JobCardProps) {
               {jobTypeLabel && (
                 <Badge variant="secondary" className="text-xs">
                   {jobTypeLabel}
+                </Badge>
+              )}
+              {isCommunityShared && (
+                <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/50">
+                  <Users className="w-3 h-3" />
+                  {sharerName ? (isHebrew ? `שותף ע"י ${sharerName}` : `Shared by ${sharerName}`) : (isHebrew ? 'קהילתי' : 'Community')}
                 </Badge>
               )}
               {job.salary_range && (
