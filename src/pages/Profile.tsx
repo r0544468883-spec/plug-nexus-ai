@@ -6,9 +6,11 @@ import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Phone, Briefcase } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { User, Mail, Phone, Briefcase, Share2 } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Profile() {
   const { user, profile, role, isLoading } = useAuth();
@@ -46,6 +48,15 @@ export default function Profile() {
       default: return 'default';
     }
   };
+  const handleShareProfile = async () => {
+    const shareUrl = `${window.location.origin}/p/${user.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success(isHebrew ? 'קישור הפרופיל הועתק!' : 'Profile link copied!');
+    } catch {
+      toast.error(isHebrew ? 'שגיאה בהעתקה' : 'Failed to copy');
+    }
+  };
 
   return (
     <DashboardLayout currentSection={currentSection} onSectionChange={setCurrentSection}>
@@ -67,6 +78,16 @@ export default function Profile() {
                   <Briefcase className="w-3 h-3 me-1" />
                   {getRoleLabel()}
                 </Badge>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 mb-3"
+                  onClick={handleShareProfile}
+                >
+                  <Share2 className="w-4 h-4" />
+                  {isHebrew ? 'שתף פרופיל' : 'Share Profile'}
+                </Button>
                 
                 <div className="flex flex-col sm:flex-row gap-3 text-sm text-muted-foreground">
                   {profile?.email && (
