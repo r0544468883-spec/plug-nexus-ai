@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
 import { 
   MapPin, 
   Briefcase, 
@@ -12,7 +13,14 @@ import {
   Loader2,
   Calendar,
   FileText,
-  Sparkles
+  Sparkles,
+  Globe,
+  Linkedin,
+  Github,
+  Phone,
+  MessageSquare,
+  User,
+  Download
 } from 'lucide-react';
 import {
   Sheet,
@@ -24,6 +32,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -32,6 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { InterviewScheduler } from './InterviewScheduler';
@@ -39,6 +50,7 @@ import { HomeAssignmentTab } from './HomeAssignmentTab';
 import { ApplicationPlugChat } from './ApplicationPlugChat';
 import MatchScoreCircle from './MatchScoreCircle';
 import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
+import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 
 interface ApplicationDetails {
   id: string;
@@ -79,12 +91,53 @@ export function ApplicationDetailsSheet({
   onUpdate,
 }: ApplicationDetailsSheetProps) {
   const { language } = useLanguage();
+  const { role } = useAuth();
   const isRTL = language === 'he';
+  const isRecruiter = role === 'freelance_hr' || role === 'inhouse_hr';
 
   const [currentStage, setCurrentStage] = useState(application?.current_stage || 'applied');
   const [notes, setNotes] = useState(application?.notes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Fetch candidate profile for recruiters
+  const { data: candidateProfile } = useQuery({
+    queryKey: ['candidate-profile', application?.candidate_id],
+    queryFn: async () => {
+      if (!application?.candidate_id) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', application.candidate_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!application?.candidate_id && isRecruiter,
+  });
+
+  // Fetch candidate resume
+  const { data: candidateResume } = useQuery({
+    queryKey: ['candidate-resume', application?.candidate_id],
+    queryFn: async () => {
+      if (!application?.candidate_id) return null;
+      
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('owner_id', application.candidate_id)
+        .eq('doc_type', 'resume')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!application?.candidate_id && isRecruiter,
+  });
 
   // Reset state when application changes
   useEffect(() => {
@@ -263,8 +316,137 @@ export function ApplicationDetailsSheet({
           {/* Candidate Vouches Badge */}
           <CandidateVouchBadge 
             candidateId={application.candidate_id || ''} 
-            candidateName={undefined}
+            candidateName={candidateProfile?.full_name}
           />
+
+          {/* Candidate Profile Section (for recruiters) */}
+          {isRecruiter && candidateProfile && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {isRTL ? 'פרופיל מועמד' : 'Candidate Profile'}
+                </h3>
+                
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-14 h-14">
+                    <AvatarImage src={candidateProfile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                      {candidateProfile.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{candidateProfile.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{candidateProfile.email}</p>
+                  </div>
+                </div>
+
+                {/* Bio */}
+                {candidateProfile.bio && (
+                  <p className="text-sm text-muted-foreground">
+                    {candidateProfile.bio}
+                  </p>
+                )}
+
+                {/* Professional Links */}
+                <div className="flex flex-wrap gap-2">
+                  {candidateProfile.portfolio_url && (
+                    <a
+                      href={candidateProfile.portfolio_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Globe className="h-3 w-3" />
+                        Portfolio
+                      </Badge>
+                    </a>
+                  )}
+                  {candidateProfile.linkedin_url && (
+                    <a
+                      href={candidateProfile.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Linkedin className="h-3 w-3" />
+                        LinkedIn
+                      </Badge>
+                    </a>
+                  )}
+                  {candidateProfile.github_url && (
+                    <a
+                      href={candidateProfile.github_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Github className="h-3 w-3" />
+                        GitHub
+                      </Badge>
+                    </a>
+                  )}
+                </div>
+
+                {/* Resume Download */}
+                {candidateResume && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={async () => {
+                      const { data } = await supabase.storage
+                        .from('documents')
+                        .createSignedUrl(candidateResume.file_path, 60);
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    {isRTL ? 'הורד קורות חיים' : 'Download Resume'}
+                  </Button>
+                )}
+
+                {/* Contact Buttons */}
+                <div className="flex gap-2">
+                  {candidateProfile.phone && candidateProfile.allow_recruiter_contact && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        const phone = candidateProfile.phone?.replace(/[^0-9+]/g, '');
+                        const message = encodeURIComponent(
+                          isRTL 
+                            ? `שלום ${candidateProfile.full_name}, ראיתי את המועמדות שלך למשרת ${job?.title} ואשמח לשוחח איתך.`
+                            : `Hi ${candidateProfile.full_name}, I saw your application for ${job?.title} and would love to chat with you.`
+                        );
+                        window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+                      }}
+                    >
+                      <Phone className="h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  )}
+                  
+                  <SendMessageDialog
+                    toUserId={application.candidate_id || ''}
+                    toUserName={candidateProfile.full_name}
+                    relatedJobId={job?.id}
+                    relatedApplicationId={application.id}
+                    trigger={
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        {isRTL ? 'שלח הודעה' : 'Send Message'}
+                      </Button>
+                    }
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 

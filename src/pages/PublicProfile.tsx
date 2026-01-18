@@ -2,26 +2,32 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { VouchCard } from '@/components/vouch/VouchCard';
 import { PlugLogo } from '@/components/PlugLogo';
+import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, User, Shield } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Heart, User, Shield, Globe, Linkedin, Github, MessageSquare, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function PublicProfile() {
   const { userId } = useParams<{ userId: string }>();
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isHebrew = language === 'he';
+  const isOwnProfile = user?.id === userId;
 
-  // Fetch profile
+  // Fetch profile with professional links
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['public-profile', userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, avatar_url')
+        .select('user_id, full_name, avatar_url, bio, portfolio_url, linkedin_url, github_url, allow_recruiter_contact, email')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -152,15 +158,79 @@ export default function PublicProfile() {
                 </AvatarFallback>
               </Avatar>
               
-              <div className="text-center sm:text-start">
+              <div className="text-center sm:text-start flex-1">
                 <h1 className="text-2xl font-bold">{profile.full_name}</h1>
-                <p className="text-muted-foreground mt-1">
+                
+                {/* Bio */}
+                {profile.bio && (
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    {profile.bio}
+                  </p>
+                )}
+                
+                <p className="text-muted-foreground mt-1 text-sm">
                   {isHebrew 
                     ? `${vouches.length} המלצות מקצועיות`
                     : `${vouches.length} professional endorsements`}
                 </p>
+
+                {/* Professional Links */}
+                <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+                  {profile.portfolio_url && (
+                    <a
+                      href={profile.portfolio_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Globe className="h-3 w-3" />
+                        Portfolio
+                      </Badge>
+                    </a>
+                  )}
+                  {profile.linkedin_url && (
+                    <a
+                      href={profile.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Linkedin className="h-3 w-3" />
+                        LinkedIn
+                      </Badge>
+                    </a>
+                  )}
+                  {profile.github_url && (
+                    <a
+                      href={profile.github_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
+                        <Github className="h-3 w-3" />
+                        GitHub
+                      </Badge>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Contact Button (only show if not own profile and user allows contact) */}
+            {!isOwnProfile && user && profile.allow_recruiter_contact && (
+              <div className="mt-6 flex justify-center sm:justify-start">
+                <SendMessageDialog
+                  toUserId={profile.user_id}
+                  toUserName={profile.full_name}
+                  trigger={
+                    <Button className="gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      {isHebrew ? 'שלח הודעה' : 'Send Message'}
+                    </Button>
+                  }
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
