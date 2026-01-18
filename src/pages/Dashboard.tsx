@@ -14,6 +14,9 @@ import { PreferencesSettings } from '@/components/settings/PreferencesSettings';
 import { PrivacySettings } from '@/components/settings/PrivacySettings';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { PortfolioLinks } from '@/components/settings/PortfolioLinks';
+import { MessageInbox } from '@/components/messaging/MessageInbox';
+import { CandidatesPage } from '@/components/candidates/CandidatesPage';
+import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -392,10 +395,12 @@ export default function Dashboard() {
         return <ApplicationsPage />;
       case 'job-search':
         return <JobSearchPage />;
+      case 'messages':
+        return <MessageInbox />;
       case 'candidates':
-        return renderPlaceholderContent(t('dashboard.candidates') || 'Candidates', Users);
-      case 'jobs':
-        return renderPlaceholderContent(t('dashboard.jobs') || 'Jobs', Briefcase);
+        return <CandidatesPage />;
+      case 'post-job':
+        return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
       default:
         return renderOverviewContent();
     }
