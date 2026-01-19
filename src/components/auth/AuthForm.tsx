@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { PlugLogo } from '@/components/PlugLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import { ArrowLeft, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'job_seeker' | 'freelance_hr' | 'inhouse_hr' | 'company_employee';
@@ -24,6 +25,7 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
   const [isLogin, setIsLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [visibleToHR, setVisibleToHR] = useState(true);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -34,6 +36,8 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
   });
 
   const ArrowBackIcon = direction === 'rtl' ? ArrowRight : ArrowLeft;
+  const isHebrew = direction === 'rtl';
+  const isJobSeeker = selectedRole === 'job_seeker';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +70,8 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
           formData.password,
           formData.fullName,
           formData.phone,
-          selectedRole
+          selectedRole,
+          isJobSeeker ? visibleToHR : undefined
         );
         
         if (error) {
@@ -189,19 +194,42 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
             </div>
 
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">{t('auth.confirm_password')}</Label>
-                <Input
-                  id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => updateField('confirmPassword', e.target.value)}
-                  required={!isLogin}
-                  className="h-11"
-                  placeholder="••••••••"
-                  dir="ltr"
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">{t('auth.confirm_password')}</Label>
+                  <Input
+                    id="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => updateField('confirmPassword', e.target.value)}
+                    required={!isLogin}
+                    className="h-11"
+                    placeholder="••••••••"
+                    dir="ltr"
+                  />
+                </div>
+
+                {/* Visible to HR toggle for job seekers */}
+                {isJobSeeker && (
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2 cursor-pointer">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        {isHebrew ? 'גלוי למגייסים' : 'Visible to Recruiters'}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {isHebrew 
+                          ? 'מגייסים יוכלו לראות את הפרופיל שלך ולפנות אליך'
+                          : 'Recruiters can discover your profile and reach out'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={visibleToHR}
+                      onCheckedChange={setVisibleToHR}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             <Button

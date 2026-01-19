@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -13,8 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CandidateCard } from './CandidateCard';
+import { MatchingCandidatesTab } from './MatchingCandidatesTab';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Filter } from 'lucide-react';
+import { Users, Search, Filter, Sparkles, UserCheck } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -136,91 +138,113 @@ export function CandidatesPage() {
         </h2>
       </div>
 
-      {/* Filters */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isHebrew ? 'חיפוש לפי שם או אימייל...' : 'Search by name or email...'}
-                className="pl-10"
-              />
-            </div>
+      {/* Tabs */}
+      <Tabs defaultValue="applications" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="applications" className="gap-2">
+            <UserCheck className="w-4 h-4" />
+            {isHebrew ? 'מועמדים שהגישו' : 'Applications'}
+          </TabsTrigger>
+          <TabsTrigger value="matching" className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            {isHebrew ? 'מועמדים מתאימים' : 'Matching Candidates'}
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Stage Filter */}
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger>
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder={isHebrew ? 'שלב' : 'Stage'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isHebrew ? 'כל השלבים' : 'All Stages'}</SelectItem>
-                <SelectItem value="applied">{isHebrew ? 'הוגש' : 'Applied'}</SelectItem>
-                <SelectItem value="screening">{isHebrew ? 'סינון' : 'Screening'}</SelectItem>
-                <SelectItem value="interview">{isHebrew ? 'ראיון' : 'Interview'}</SelectItem>
-                <SelectItem value="offer">{isHebrew ? 'הצעה' : 'Offer'}</SelectItem>
-                <SelectItem value="hired">{isHebrew ? 'התקבל' : 'Hired'}</SelectItem>
-                <SelectItem value="rejected">{isHebrew ? 'נדחה' : 'Rejected'}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Job Filter */}
-            <Select value={jobFilter} onValueChange={setJobFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder={isHebrew ? 'משרה' : 'Job'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isHebrew ? 'כל המשרות' : 'All Jobs'}</SelectItem>
-                {jobs.map((job) => (
-                  <SelectItem key={job?.id} value={job?.id || ''}>
-                    {job?.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Candidates List */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="bg-card border-border">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-12 h-12 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
+        {/* Applications Tab */}
+        <TabsContent value="applications" className="space-y-4">
+          {/* Filters */}
+          <Card className="bg-card border-border">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={isHebrew ? 'חיפוש לפי שם או אימייל...' : 'Search by name or email...'}
+                    className="pl-10"
+                  />
                 </div>
+
+                {/* Stage Filter */}
+                <Select value={stageFilter} onValueChange={setStageFilter}>
+                  <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder={isHebrew ? 'שלב' : 'Stage'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isHebrew ? 'כל השלבים' : 'All Stages'}</SelectItem>
+                    <SelectItem value="applied">{isHebrew ? 'הוגש' : 'Applied'}</SelectItem>
+                    <SelectItem value="screening">{isHebrew ? 'סינון' : 'Screening'}</SelectItem>
+                    <SelectItem value="interview">{isHebrew ? 'ראיון' : 'Interview'}</SelectItem>
+                    <SelectItem value="offer">{isHebrew ? 'הצעה' : 'Offer'}</SelectItem>
+                    <SelectItem value="hired">{isHebrew ? 'התקבל' : 'Hired'}</SelectItem>
+                    <SelectItem value="rejected">{isHebrew ? 'נדחה' : 'Rejected'}</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Job Filter */}
+                <Select value={jobFilter} onValueChange={setJobFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isHebrew ? 'משרה' : 'Job'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{isHebrew ? 'כל המשרות' : 'All Jobs'}</SelectItem>
+                    {jobs.map((job) => (
+                      <SelectItem key={job?.id} value={job?.id || ''}>
+                        {job?.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Candidates List */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="bg-card border-border">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-12 h-12 rounded-full" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredCandidates.length === 0 ? (
+            <Card className="bg-card border-border">
+              <CardContent className="p-12 text-center">
+                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {searchQuery || stageFilter !== 'all' || jobFilter !== 'all'
+                    ? (isHebrew ? 'לא נמצאו מועמדים התואמים לחיפוש' : 'No candidates match your filters')
+                    : (isHebrew ? 'אין מועמדים עדיין' : 'No candidates yet')}
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : filteredCandidates.length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="p-12 text-center">
-            <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {searchQuery || stageFilter !== 'all' || jobFilter !== 'all'
-                ? (isHebrew ? 'לא נמצאו מועמדים התואמים לחיפוש' : 'No candidates match your filters')
-                : (isHebrew ? 'אין מועמדים עדיין' : 'No candidates yet')}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCandidates.map((candidate) => (
-            <CandidateCard key={candidate.id} candidate={candidate} />
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCandidates.map((candidate) => (
+                <CandidateCard key={candidate.id} candidate={candidate} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Matching Candidates Tab */}
+        <TabsContent value="matching">
+          <MatchingCandidatesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
