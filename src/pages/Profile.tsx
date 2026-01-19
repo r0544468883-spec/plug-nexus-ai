@@ -3,12 +3,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
 import { VouchSection } from '@/components/vouch/VouchSection';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
+import { ResumeEnhancer } from '@/components/documents/ResumeEnhancer';
 import { JobPreferencesSettings } from '@/components/settings/JobPreferencesSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, Briefcase, Share2, Target } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, Share2, Sparkles, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -114,12 +116,29 @@ export default function Profile() {
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
+                <FileText className="w-5 h-5 text-primary" />
                 {isHebrew ? 'קורות חיים' : 'Resume'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResumeUpload />
+              <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="upload" className="gap-2">
+                    <FileText className="w-4 h-4" />
+                    {isHebrew ? 'העלאה' : 'Upload'}
+                  </TabsTrigger>
+                  <TabsTrigger value="enhance" className="gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    {isHebrew ? 'שיפור עם AI' : 'AI Enhance'}
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload">
+                  <ResumeUpload />
+                </TabsContent>
+                <TabsContent value="enhance">
+                  <ResumeEnhancer />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         )}

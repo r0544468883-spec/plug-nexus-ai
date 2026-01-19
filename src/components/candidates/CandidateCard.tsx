@@ -14,7 +14,9 @@ import {
   ExternalLink,
   Briefcase,
   MessageSquare,
-  User
+  User,
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
@@ -30,6 +32,8 @@ interface CandidateProfile {
   linkedin_url: string | null;
   github_url: string | null;
   allow_recruiter_contact: boolean;
+  response_rate?: number | null;
+  avg_response_time_hours?: number | null;
 }
 
 interface Candidate {
@@ -129,7 +133,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
           )}
         </div>
 
-        {/* Stage & Vouches */}
+        {/* Stage & Vouches & Metrics */}
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Badge
             variant="outline"
@@ -142,6 +146,35 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
             <Badge variant="outline" className="gap-1 border-pink-500/20 text-pink-500">
               <Heart className="w-3 h-3" />
               {candidate.vouch_count}
+            </Badge>
+          )}
+
+          {/* Response Rate Badge */}
+          {profile?.response_rate !== undefined && profile?.response_rate !== null && profile.response_rate > 0 && (
+            <Badge 
+              variant="outline" 
+              className={cn(
+                'gap-1',
+                profile.response_rate >= 80 
+                  ? 'border-green-500/20 text-green-500' 
+                  : profile.response_rate >= 50 
+                    ? 'border-yellow-500/20 text-yellow-500'
+                    : 'border-red-500/20 text-red-500'
+              )}
+            >
+              <TrendingUp className="w-3 h-3" />
+              {Math.round(profile.response_rate)}% {isHebrew ? 'תגובה' : 'Response'}
+            </Badge>
+          )}
+
+          {/* Avg Response Time Badge */}
+          {profile?.avg_response_time_hours !== undefined && profile?.avg_response_time_hours !== null && profile.avg_response_time_hours > 0 && (
+            <Badge variant="outline" className="gap-1 border-primary/20 text-primary">
+              <Clock className="w-3 h-3" />
+              {profile.avg_response_time_hours < 24 
+                ? `${Math.round(profile.avg_response_time_hours)}h`
+                : `${Math.round(profile.avg_response_time_hours / 24)}d`
+              }
             </Badge>
           )}
 
