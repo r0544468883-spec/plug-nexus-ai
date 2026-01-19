@@ -68,7 +68,10 @@ export function JobSearchPage() {
         .select(`
           *,
           company:companies(id, name, logo_url, description, website),
-          sharer:profiles!jobs_shared_by_user_id_fkey(full_name)
+          sharer:profiles!jobs_shared_by_user_id_fkey(full_name),
+          field:job_fields(slug, name_en, name_he),
+          role:job_roles(slug, name_en, name_he),
+          experience_level:experience_levels(slug, name_en, name_he)
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -93,7 +96,47 @@ export function JobSearchPage() {
         query = query.eq('salary_range', filters.salaryRange);
       }
 
-      // Apply category filter
+      // Apply field filter (hierarchical)
+      if (filters.fieldSlug) {
+        // Get field_id from slug
+        const { data: fieldData } = await supabase
+          .from('job_fields')
+          .select('id')
+          .eq('slug', filters.fieldSlug)
+          .single();
+        
+        if (fieldData) {
+          query = query.eq('field_id', fieldData.id);
+        }
+      }
+
+      // Apply role filter (hierarchical)
+      if (filters.roleSlug) {
+        const { data: roleData } = await supabase
+          .from('job_roles')
+          .select('id')
+          .eq('slug', filters.roleSlug)
+          .single();
+        
+        if (roleData) {
+          query = query.eq('role_id', roleData.id);
+        }
+      }
+
+      // Apply experience level filter
+      if (filters.experienceLevelSlug) {
+        const { data: expData } = await supabase
+          .from('experience_levels')
+          .select('id')
+          .eq('slug', filters.experienceLevelSlug)
+          .single();
+        
+        if (expData) {
+          query = query.eq('experience_level_id', expData.id);
+        }
+      }
+
+      // Legacy category filter (backward compatibility)
       if (filters.category) {
         query = query.eq('category', filters.category);
       }
