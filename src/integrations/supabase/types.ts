@@ -164,41 +164,50 @@ export type Database = {
       }
       companies: {
         Row: {
+          avg_hiring_speed_days: number | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           industry: string | null
+          last_metrics_update: string | null
           logo_url: string | null
           metadata: Json | null
           name: string
           size: string | null
+          total_hires: number | null
           updated_at: string
           website: string | null
         }
         Insert: {
+          avg_hiring_speed_days?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           industry?: string | null
+          last_metrics_update?: string | null
           logo_url?: string | null
           metadata?: Json | null
           name: string
           size?: string | null
+          total_hires?: number | null
           updated_at?: string
           website?: string | null
         }
         Update: {
+          avg_hiring_speed_days?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           industry?: string | null
+          last_metrics_update?: string | null
           logo_url?: string | null
           metadata?: Json | null
           name?: string
           size?: string | null
+          total_hires?: number | null
           updated_at?: string
           website?: string | null
         }
@@ -745,6 +754,7 @@ export type Database = {
           active_company_id: string | null
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
+          avg_response_time_hours: number | null
           bio: string | null
           created_at: string
           email: string
@@ -755,13 +765,16 @@ export type Database = {
           id: string
           linkedin_url: string | null
           phone: string | null
+          portfolio_summary: Json | null
           portfolio_url: string | null
           preferred_experience_level_id: string | null
           preferred_fields: string[] | null
           preferred_language: string | null
           preferred_roles: string[] | null
           profile_visibility: string | null
+          response_rate: number | null
           theme: string | null
+          total_applications: number | null
           updated_at: string
           user_id: string
           visible_to_hr: boolean | null
@@ -770,6 +783,7 @@ export type Database = {
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
+          avg_response_time_hours?: number | null
           bio?: string | null
           created_at?: string
           email: string
@@ -780,13 +794,16 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           phone?: string | null
+          portfolio_summary?: Json | null
           portfolio_url?: string | null
           preferred_experience_level_id?: string | null
           preferred_fields?: string[] | null
           preferred_language?: string | null
           preferred_roles?: string[] | null
           profile_visibility?: string | null
+          response_rate?: number | null
           theme?: string | null
+          total_applications?: number | null
           updated_at?: string
           user_id: string
           visible_to_hr?: boolean | null
@@ -795,6 +812,7 @@ export type Database = {
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
+          avg_response_time_hours?: number | null
           bio?: string | null
           created_at?: string
           email?: string
@@ -805,13 +823,16 @@ export type Database = {
           id?: string
           linkedin_url?: string | null
           phone?: string | null
+          portfolio_summary?: Json | null
           portfolio_url?: string | null
           preferred_experience_level_id?: string | null
           preferred_fields?: string[] | null
           preferred_language?: string | null
           preferred_roles?: string[] | null
           profile_visibility?: string | null
+          response_rate?: number | null
           theme?: string | null
+          total_applications?: number | null
           updated_at?: string
           user_id?: string
           visible_to_hr?: boolean | null

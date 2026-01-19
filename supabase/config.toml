@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.push-notifications]
 verify_jwt = false
+
+[functions.analyze-portfolio]
+verify_jwt = false
+
+[functions.calculate-metrics]
+verify_jwt = false
+
+[functions.webhook-handler]
+verify_jwt = false
