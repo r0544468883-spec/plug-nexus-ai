@@ -6,26 +6,137 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation
+const MAX_FILE_NAME_LENGTH = 255;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Allow https and Supabase storage URLs
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    // Block internal/private IPs
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname.startsWith('127.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
+      hostname.startsWith('169.254.') ||
+      hostname === '0.0.0.0' ||
+      hostname === '169.254.169.254'
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { fileUrl, fileName, documentId } = await req.json();
+    // Authentication check
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - missing or invalid authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase credentials not configured");
+    // Create client with user's token
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Verify the user
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Auth error:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const authenticatedUserId = claimsData.claims.sub as string;
+    console.log('Authenticated user for analyze-resume:', authenticatedUserId);
+
+    const { fileUrl, fileName, documentId } = await req.json();
+
+    // Validate inputs
+    if (!fileUrl || typeof fileUrl !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'fileUrl is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (!isValidUrl(fileUrl)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid file URL' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (fileName && (typeof fileName !== 'string' || fileName.length > MAX_FILE_NAME_LENGTH)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid fileName' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (documentId && !UUID_REGEX.test(documentId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid documentId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If documentId is provided, verify the user owns the document
+    if (documentId) {
+      const { data: document, error: docError } = await supabaseClient
+        .from('documents')
+        .select('owner_id')
+        .eq('id', documentId)
+        .single();
+
+      if (docError || !document) {
+        return new Response(
+          JSON.stringify({ error: 'Document not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (document.owner_id !== authenticatedUserId) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - you do not own this document' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Create admin client for updating documents
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Download the file content
     let fileContent = "";
@@ -91,7 +202,7 @@ Respond in JSON format with this exact structure:
           { 
             role: "user", 
             content: [
-              { type: "text", text: `Please analyze this resume (${fileName}):` },
+              { type: "text", text: `Please analyze this resume (${fileName || 'resume'}):` },
               { 
                 type: "image_url", 
                 image_url: { url: fileContent.startsWith("data:") ? fileContent : fileUrl } 
@@ -141,12 +252,13 @@ Respond in JSON format with this exact structure:
       };
     }
 
-    // Update the document with the AI summary
+    // Update the document with the AI summary (using admin client since we verified ownership)
     if (documentId) {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from("documents")
         .update({ ai_summary: analysis })
-        .eq("id", documentId);
+        .eq("id", documentId)
+        .eq("owner_id", authenticatedUserId); // Double-check ownership
 
       if (updateError) {
         console.error("Error updating document:", updateError);

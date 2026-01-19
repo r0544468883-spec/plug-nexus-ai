@@ -35,6 +35,52 @@ const EXPERIENCE_LEVELS = [
   { slug: 'executive', name_en: 'Executive / Director', years_min: 15, years_max: null, keywords: ['executive', 'director', 'VP', 'C-level', 'CTO', 'CEO', 'head of', 'chief'] },
 ];
 
+// Input validation helpers
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_COMPANY_NAME_LENGTH = 200;
+const MAX_JOB_TITLE_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_LOCATION_LENGTH = 200;
+const MAX_PAGE_CONTENT_LENGTH = 50000;
+
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Only allow https
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    // Block internal/private IPs
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' ||
+      hostname.startsWith('127.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
+      hostname.startsWith('169.254.') ||
+      hostname === '0.0.0.0' ||
+      hostname.includes('metadata.google') ||
+      hostname === '169.254.169.254'
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validateStringInput(value: string | undefined, maxLength: number, fieldName: string): string | null {
+  if (!value) return null;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    throw new Error(`${fieldName} exceeds maximum length of ${maxLength} characters`);
+  }
+  return trimmed;
+}
+
 // Helper function to detect field from job content
 function detectField(title: string, description: string, requirements: string): string | null {
   const content = `${title} ${description} ${requirements}`.toLowerCase();
@@ -83,18 +129,57 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { url, save, user_id, manual } = body;
-    
+    // Authentication check
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - missing or invalid authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    // Create client with user's token
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    // Verify the user
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Auth error:', claimsError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const authenticatedUserId = claimsData.claims.sub as string;
+    console.log('Authenticated user:', authenticatedUserId);
+
+    const body = await req.json();
+    const { url, save, manual } = body;
+    
+    // Create admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Handle manual application creation
-    if (manual && user_id) {
+    if (manual) {
       const { company_name, job_title, location, job_type, description, source_url } = body;
       
-      if (!company_name || !job_title) {
+      // Validate inputs
+      const validatedCompanyName = validateStringInput(company_name, MAX_COMPANY_NAME_LENGTH, 'Company name');
+      const validatedJobTitle = validateStringInput(job_title, MAX_JOB_TITLE_LENGTH, 'Job title');
+      const validatedLocation = validateStringInput(location, MAX_LOCATION_LENGTH, 'Location');
+      const validatedDescription = validateStringInput(description, MAX_DESCRIPTION_LENGTH, 'Description');
+      const validatedSourceUrl = source_url ? validateStringInput(source_url, 2000, 'Source URL') : null;
+      
+      if (!validatedCompanyName || !validatedJobTitle) {
         return new Response(
           JSON.stringify({ error: 'Company name and job title are required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -107,7 +192,7 @@ serve(async (req) => {
       const { data: existingCompany } = await supabaseAdmin
         .from('companies')
         .select('id')
-        .ilike('name', company_name)
+        .ilike('name', validatedCompanyName)
         .maybeSingle();
 
       if (existingCompany) {
@@ -116,8 +201,8 @@ serve(async (req) => {
         const { data: newCompany, error: companyError } = await supabaseAdmin
           .from('companies')
           .insert({
-            name: company_name,
-            created_by: user_id,
+            name: validatedCompanyName,
+            created_by: authenticatedUserId,
           })
           .select('id')
           .single();
@@ -133,13 +218,13 @@ serve(async (req) => {
       const { data: job, error: jobError } = await supabaseAdmin
         .from('jobs')
         .insert({
-          title: job_title,
+          title: validatedJobTitle,
           company_id: companyId,
-          location: location || null,
+          location: validatedLocation || null,
           job_type: job_type || null,
-          description: description || null,
-          source_url: source_url || null,
-          created_by: user_id,
+          description: validatedDescription || null,
+          source_url: validatedSourceUrl || null,
+          created_by: authenticatedUserId,
         })
         .select('id')
         .single();
@@ -154,7 +239,7 @@ serve(async (req) => {
         .from('applications')
         .insert({
           job_id: job.id,
-          candidate_id: user_id,
+          candidate_id: authenticatedUserId,
           status: 'active',
           current_stage: 'applied',
         })
@@ -192,6 +277,14 @@ serve(async (req) => {
       );
     }
 
+    // Validate URL format and security
+    if (!isValidUrl(url)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid URL. Only HTTPS URLs to public websites are allowed.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
@@ -212,7 +305,7 @@ serve(async (req) => {
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
-        .substring(0, 15000); // Limit context size
+        .substring(0, MAX_PAGE_CONTENT_LENGTH); // Limit context size
     } catch (fetchError) {
       console.error('Error fetching URL:', fetchError);
       return new Response(
@@ -363,8 +456,8 @@ If you cannot extract a field, use null. Always return valid JSON.`
     jobDetails.field_id = fieldId;
     jobDetails.experience_level_id = experienceLevelId;
 
-    // If save is requested, save to database using service role
-    if (save && user_id) {
+    // If save is requested, save to database using authenticated user ID
+    if (save) {
       // Find or create company
       let companyId: string | null = null;
       
@@ -381,7 +474,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
           .from('companies')
           .insert({
             name: jobDetails.company_name,
-            created_by: user_id,
+            created_by: authenticatedUserId,
           })
           .select('id')
           .single();
@@ -405,7 +498,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
           description: jobDetails.description,
           requirements: jobDetails.requirements,
           source_url: url,
-          created_by: user_id,
+          created_by: authenticatedUserId,
           field_id: fieldId,
           role_id: roleId,
           experience_level_id: experienceLevelId,
@@ -424,7 +517,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
         .from('applications')
         .insert({
           job_id: job.id,
-          candidate_id: user_id,
+          candidate_id: authenticatedUserId,
           status: 'active',
           current_stage: 'applied',
         })
@@ -458,9 +551,11 @@ If you cannot extract a field, use null. Always return valid JSON.`
       );
     }
 
+    // Return preview only
     return new Response(
       JSON.stringify({
         success: true,
+        saved: false,
         job: {
           ...jobDetails,
           source_url: url
@@ -470,7 +565,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
     );
 
   } catch (error) {
-    console.error('Error in scrape-job:', error);
+    console.error('scrape-job error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
