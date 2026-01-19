@@ -69,9 +69,9 @@ export function JobSearchPage() {
           *,
           company:companies(id, name, logo_url, description, website),
           sharer:profiles!jobs_shared_by_user_id_fkey(full_name),
-          field:job_fields(slug, name_en, name_he),
-          role:job_roles(slug, name_en, name_he),
-          experience_level:experience_levels(slug, name_en, name_he)
+          job_field:job_fields(id, slug, name_en, name_he),
+          job_role:job_roles(id, slug, name_en, name_he),
+          experience_level:experience_levels(id, slug, name_en, name_he)
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false });

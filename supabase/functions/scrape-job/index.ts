@@ -6,6 +6,77 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Job taxonomy for AI matching
+const JOB_FIELDS = [
+  { slug: 'tech', name_en: 'Hi-Tech & IT', keywords: ['software', 'developer', 'engineer', 'programming', 'coding', 'tech', 'IT', 'digital', 'computer', 'data', 'cyber', 'devops', 'cloud', 'mobile', 'web', 'frontend', 'backend', 'fullstack', 'QA', 'product manager', 'scrum'] },
+  { slug: 'marketing', name_en: 'Marketing & Advertising', keywords: ['marketing', 'advertising', 'seo', 'sem', 'social media', 'content', 'brand', 'campaign', 'digital marketing', 'growth', 'acquisition', 'retention'] },
+  { slug: 'sales', name_en: 'Sales', keywords: ['sales', 'business development', 'account', 'customer success', 'SDR', 'BDR', 'enterprise', 'B2B', 'B2C'] },
+  { slug: 'finance', name_en: 'Finance & Economics', keywords: ['finance', 'accounting', 'financial', 'investment', 'banking', 'budget', 'controller', 'CFO', 'analyst'] },
+  { slug: 'engineering', name_en: 'Engineering', keywords: ['mechanical', 'electrical', 'civil', 'chemical', 'industrial', 'engineer'] },
+  { slug: 'hr', name_en: 'HR & Recruitment', keywords: ['HR', 'human resources', 'recruiter', 'recruiting', 'talent', 'people', 'compensation', 'benefits'] },
+  { slug: 'management', name_en: 'Management & Admin', keywords: ['manager', 'management', 'admin', 'administrative', 'office', 'executive', 'director', 'CEO', 'COO', 'operations'] },
+  { slug: 'customer-service', name_en: 'Customer Service & Support', keywords: ['customer service', 'support', 'helpdesk', 'client', 'call center'] },
+  { slug: 'design', name_en: 'Design & Creative', keywords: ['design', 'designer', 'UX', 'UI', 'graphic', 'creative', 'visual', 'art'] },
+  { slug: 'data', name_en: 'Data & Analytics', keywords: ['data', 'analytics', 'analyst', 'BI', 'business intelligence', 'statistics', 'machine learning', 'AI'] },
+  { slug: 'healthcare', name_en: 'Healthcare & Medical', keywords: ['healthcare', 'medical', 'health', 'nurse', 'doctor', 'clinical', 'pharma', 'biotech'] },
+  { slug: 'education', name_en: 'Education & Teaching', keywords: ['education', 'teaching', 'teacher', 'instructor', 'training', 'learning'] },
+  { slug: 'legal', name_en: 'Legal', keywords: ['legal', 'lawyer', 'attorney', 'law', 'compliance', 'contract'] },
+  { slug: 'logistics', name_en: 'Logistics & Shipping', keywords: ['logistics', 'shipping', 'supply chain', 'warehouse', 'transportation'] },
+  { slug: 'hospitality', name_en: 'Hospitality & Tourism', keywords: ['hospitality', 'hotel', 'tourism', 'travel', 'restaurant', 'food'] },
+  { slug: 'retail', name_en: 'Retail & Commerce', keywords: ['retail', 'store', 'shop', 'ecommerce', 'commerce', 'merchandising'] },
+];
+
+const EXPERIENCE_LEVELS = [
+  { slug: 'entry', name_en: 'Entry Level / Student', years_min: 0, years_max: 0, keywords: ['entry', 'student', 'internship', 'intern', 'graduate', 'no experience', 'junior', '0-1 years'] },
+  { slug: 'junior', name_en: 'Junior', years_min: 1, years_max: 2, keywords: ['junior', '1-2 years', '1-3 years', 'early career'] },
+  { slug: 'mid', name_en: 'Mid-Level', years_min: 3, years_max: 5, keywords: ['mid', 'mid-level', '3-5 years', '2-4 years', '3+ years'] },
+  { slug: 'senior', name_en: 'Senior', years_min: 6, years_max: 10, keywords: ['senior', '5+ years', '5-7 years', '6+ years', 'experienced'] },
+  { slug: 'lead', name_en: 'Lead / Team Lead', years_min: 8, years_max: 15, keywords: ['lead', 'team lead', 'tech lead', 'principal', '8+ years', '10+ years'] },
+  { slug: 'executive', name_en: 'Executive / Director', years_min: 15, years_max: null, keywords: ['executive', 'director', 'VP', 'C-level', 'CTO', 'CEO', 'head of', 'chief'] },
+];
+
+// Helper function to detect field from job content
+function detectField(title: string, description: string, requirements: string): string | null {
+  const content = `${title} ${description} ${requirements}`.toLowerCase();
+  
+  for (const field of JOB_FIELDS) {
+    for (const keyword of field.keywords) {
+      if (content.includes(keyword.toLowerCase())) {
+        return field.slug;
+      }
+    }
+  }
+  return null;
+}
+
+// Helper function to detect experience level from job content
+function detectExperienceLevel(title: string, description: string, requirements: string): string | null {
+  const content = `${title} ${description} ${requirements}`.toLowerCase();
+  
+  // Check for year patterns first
+  const yearsMatch = content.match(/(\d+)[+-]?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience)?/i);
+  if (yearsMatch) {
+    const years = parseInt(yearsMatch[1]);
+    if (years === 0) return 'entry';
+    if (years <= 2) return 'junior';
+    if (years <= 5) return 'mid';
+    if (years <= 10) return 'senior';
+    if (years <= 15) return 'lead';
+    return 'executive';
+  }
+  
+  // Check for keyword patterns
+  for (const level of EXPERIENCE_LEVELS) {
+    for (const keyword of level.keywords) {
+      if (content.includes(keyword.toLowerCase())) {
+        return level.slug;
+      }
+    }
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +85,10 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { url, save, user_id, manual } = body;
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
     // Handle manual application creation
     if (manual && user_id) {
@@ -25,10 +100,6 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
       // Find or create company
       let companyId: string | null = null;
@@ -171,7 +242,8 @@ Always respond with valid JSON in this exact format:
   "job_type": "full-time | part-time | contract | freelance | null",
   "salary_range": "string or null",
   "description": "string (2-3 sentences summary)",
-  "requirements": "string (comma-separated key requirements)"
+  "requirements": "string (comma-separated key requirements)",
+  "years_of_experience": "number or null (estimated years required)"
 }
 If you cannot extract a field, use null. Always return valid JSON.`
           },
@@ -199,7 +271,8 @@ If you cannot extract a field, use null. Always return valid JSON.`
                   },
                   salary_range: { type: "string", description: "Salary range if mentioned" },
                   description: { type: "string", description: "Brief job description (2-3 sentences)" },
-                  requirements: { type: "string", description: "Key requirements, comma-separated" }
+                  requirements: { type: "string", description: "Key requirements, comma-separated" },
+                  years_of_experience: { type: "number", description: "Estimated years of experience required" }
                 },
                 required: ["company_name", "job_title"],
                 additionalProperties: false
@@ -245,20 +318,61 @@ If you cannot extract a field, use null. Always return valid JSON.`
       }
     }
 
+    // Detect field and experience level from taxonomy
+    const detectedFieldSlug = detectField(
+      jobDetails.job_title || '',
+      jobDetails.description || '',
+      jobDetails.requirements || ''
+    );
+    
+    const detectedExpLevelSlug = detectExperienceLevel(
+      jobDetails.job_title || '',
+      jobDetails.description || '',
+      jobDetails.requirements || ''
+    );
+
+    console.log('Detected field:', detectedFieldSlug);
+    console.log('Detected experience level:', detectedExpLevelSlug);
+
+    // Fetch taxonomy IDs from database
+    let fieldId: string | null = null;
+    let roleId: string | null = null;
+    let experienceLevelId: string | null = null;
+
+    if (detectedFieldSlug) {
+      const { data: field } = await supabaseAdmin
+        .from('job_fields')
+        .select('id')
+        .eq('slug', detectedFieldSlug)
+        .single();
+      if (field) fieldId = field.id;
+    }
+
+    if (detectedExpLevelSlug) {
+      const { data: expLevel } = await supabaseAdmin
+        .from('experience_levels')
+        .select('id')
+        .eq('slug', detectedExpLevelSlug)
+        .single();
+      if (expLevel) experienceLevelId = expLevel.id;
+    }
+
+    // Add taxonomy info to response
+    jobDetails.detected_field_slug = detectedFieldSlug;
+    jobDetails.detected_experience_level_slug = detectedExpLevelSlug;
+    jobDetails.field_id = fieldId;
+    jobDetails.experience_level_id = experienceLevelId;
+
     // If save is requested, save to database using service role
     if (save && user_id) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
       // Find or create company
       let companyId: string | null = null;
       
       const { data: existingCompany } = await supabaseAdmin
         .from('companies')
         .select('id')
-        .eq('name', jobDetails.company_name)
-        .single();
+        .ilike('name', jobDetails.company_name)
+        .maybeSingle();
 
       if (existingCompany) {
         companyId = existingCompany.id;
@@ -279,7 +393,7 @@ If you cannot extract a field, use null. Always return valid JSON.`
         companyId = newCompany.id;
       }
 
-      // Create job
+      // Create job with taxonomy
       const { data: job, error: jobError } = await supabaseAdmin
         .from('jobs')
         .insert({
@@ -292,6 +406,10 @@ If you cannot extract a field, use null. Always return valid JSON.`
           requirements: jobDetails.requirements,
           source_url: url,
           created_by: user_id,
+          field_id: fieldId,
+          role_id: roleId,
+          experience_level_id: experienceLevelId,
+          category: detectedFieldSlug,
         })
         .select('id')
         .single();

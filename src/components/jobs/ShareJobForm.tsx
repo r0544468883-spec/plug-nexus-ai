@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Share2, Loader2, Users, Sparkles, Link2, CheckCircle2, Building2, MapPin, Briefcase } from 'lucide-react';
+import { Share2, Loader2, Users, Sparkles, Link2, CheckCircle2, Building2, MapPin, Briefcase, Layers, GraduationCap } from 'lucide-react';
 
 interface ShareJobFormProps {
   trigger?: React.ReactNode;
@@ -31,7 +31,36 @@ interface ScrapedJob {
   salary_range?: string;
   description?: string;
   requirements?: string;
+  detected_field_slug?: string;
+  detected_experience_level_slug?: string;
+  field_id?: string;
+  experience_level_id?: string;
 }
+
+const fieldLabels: Record<string, { en: string; he: string }> = {
+  'tech': { en: 'Hi-Tech & IT', he: 'הייטק ו-IT' },
+  'marketing': { en: 'Marketing', he: 'שיווק' },
+  'sales': { en: 'Sales', he: 'מכירות' },
+  'finance': { en: 'Finance', he: 'פיננסים' },
+  'engineering': { en: 'Engineering', he: 'הנדסה' },
+  'hr': { en: 'HR', he: 'משאבי אנוש' },
+  'management': { en: 'Management', he: 'ניהול' },
+  'customer-service': { en: 'Customer Service', he: 'שירות לקוחות' },
+  'design': { en: 'Design', he: 'עיצוב' },
+  'data': { en: 'Data', he: 'דאטה' },
+  'healthcare': { en: 'Healthcare', he: 'בריאות' },
+  'education': { en: 'Education', he: 'חינוך' },
+  'legal': { en: 'Legal', he: 'משפטים' },
+};
+
+const expLevelLabels: Record<string, { en: string; he: string }> = {
+  'entry': { en: 'Entry Level', he: 'ללא ניסיון' },
+  'junior': { en: 'Junior', he: 'ג׳וניור' },
+  'mid': { en: 'Mid-Level', he: 'בינוני' },
+  'senior': { en: 'Senior', he: 'סניור' },
+  'lead': { en: 'Lead', he: 'ליד' },
+  'executive': { en: 'Executive', he: 'מנהל בכיר' },
+};
 
 export function ShareJobForm({ trigger }: ShareJobFormProps) {
   const [open, setOpen] = useState(false);
@@ -75,10 +104,20 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
     }
   };
 
-  // Share the scraped job with community
+  // Share the scraped job with community - now saves taxonomy IDs
   const shareJobMutation = useMutation({
     mutationFn: async () => {
       if (!user || !scrapedJob) throw new Error('Missing data');
+
+      // Find or create company using service role via edge function
+      const { data, error } = await supabase.functions.invoke('scrape-job', {
+        body: {
+          url: jobUrl,
+          save: false, // Don't create application
+          community_share: true,
+          user_id: user.id,
+        },
+      });
 
       // Find or create company
       let companyId: string | null = null;
@@ -92,11 +131,11 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
       if (existingCompany) {
         companyId = existingCompany.id;
       } else {
+        // Try to insert company - will fail if user doesn't have permission
         const { data: newCompany, error: companyError } = await supabase
           .from('companies')
           .insert({
             name: scrapedJob.company_name,
-            created_by: user.id,
           })
           .select('id')
           .single();
@@ -106,8 +145,8 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
         }
       }
 
-      // Create job with community sharing flag
-      const { error } = await supabase.from('jobs').insert({
+      // Create job with community sharing flag and taxonomy IDs
+      const { error: jobError } = await supabase.from('jobs').insert({
         title: scrapedJob.job_title,
         company_id: companyId,
         location: scrapedJob.location || null,
@@ -119,9 +158,12 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
         shared_by_user_id: user.id,
         is_community_shared: true,
         status: 'active',
+        field_id: scrapedJob.field_id || null,
+        experience_level_id: scrapedJob.experience_level_id || null,
+        category: scrapedJob.detected_field_slug || null,
       });
 
-      if (error) throw error;
+      if (jobError) throw jobError;
     },
     onSuccess: () => {
       toast.success(isHebrew ? 'המשרה שותפה בהצלחה עם הקהילה! 🎉' : 'Job shared with the community! 🎉');
@@ -138,6 +180,16 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
     setOpen(false);
     setJobUrl('');
     setScrapedJob(null);
+  };
+
+  const getFieldLabel = (slug?: string) => {
+    if (!slug || !fieldLabels[slug]) return null;
+    return isHebrew ? fieldLabels[slug].he : fieldLabels[slug].en;
+  };
+
+  const getExpLevelLabel = (slug?: string) => {
+    if (!slug || !expLevelLabels[slug]) return null;
+    return isHebrew ? expLevelLabels[slug].he : expLevelLabels[slug].en;
   };
 
   return (
@@ -265,14 +317,31 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
                     </div>
                   )}
 
-                  {scrapedJob.job_type && (
-                    <Badge variant="secondary">
-                      {scrapedJob.job_type}
-                    </Badge>
-                  )}
+                  {/* Taxonomy badges */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {scrapedJob.job_type && (
+                      <Badge variant="secondary">
+                        {scrapedJob.job_type}
+                      </Badge>
+                    )}
+                    
+                    {scrapedJob.detected_field_slug && (
+                      <Badge className="gap-1 bg-blue-500/20 text-blue-700 border-blue-500/30">
+                        <Layers className="w-3 h-3" />
+                        {getFieldLabel(scrapedJob.detected_field_slug)}
+                      </Badge>
+                    )}
+                    
+                    {scrapedJob.detected_experience_level_slug && (
+                      <Badge className="gap-1 bg-purple-500/20 text-purple-700 border-purple-500/30">
+                        <GraduationCap className="w-3 h-3" />
+                        {getExpLevelLabel(scrapedJob.detected_experience_level_slug)}
+                      </Badge>
+                    )}
+                  </div>
 
                   {scrapedJob.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-3">
+                    <p className="text-sm text-muted-foreground line-clamp-3 pt-2">
                       {scrapedJob.description}
                     </p>
                   )}
