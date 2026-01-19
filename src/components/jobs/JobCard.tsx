@@ -1,4 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Layers, GraduationCap, Briefcase } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
+import { useSavedJobs, useSaveJobMutation } from '@/hooks/useSavedJobs';
+import { useMatchScore } from '@/hooks/useMatchScore';
 
 interface Job {
   id: string;
@@ -84,9 +87,25 @@ const expLevelColors: Record<string, string> = {
   'executive': 'bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-300',
 };
 
-export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName, distance, category, matchScore }: JobCardProps) {
+export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName, distance, category, matchScore: propMatchScore }: JobCardProps) {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isHebrew = language === 'he';
+
+  // Use hook for match score calculation
+  const calculatedMatchScore = useMatchScore(job);
+  const displayMatchScore = propMatchScore ?? calculatedMatchScore;
+
+  // Saved jobs functionality
+  const { data: savedJobIds = [] } = useSavedJobs();
+  const saveJobMutation = useSaveJobMutation();
+  const isSaved = savedJobIds.includes(job.id);
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    saveJobMutation.mutate({ jobId: job.id, isSaved });
+  };
 
   const timeAgo = formatDistanceToNow(new Date(job.created_at), {
     addSuffix: true,
@@ -115,10 +134,10 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
   return (
     <Card className="bg-card border-border hover:border-primary/50 transition-colors plug-card-hover cursor-pointer group relative">
       {/* Match Score Badge - Top Left */}
-      {matchScore !== null && matchScore !== undefined && matchScore > 0 && (
+      {displayMatchScore > 0 && (
         <div className="absolute top-2 left-2 z-10">
-          <Badge className={`gap-1 shadow-lg ${matchScore >= 80 ? 'bg-green-500 text-white' : matchScore >= 60 ? 'bg-yellow-500 text-white' : 'bg-muted text-muted-foreground'}`}>
-            {matchScore}% {isHebrew ? 'התאמה' : 'Match'}
+          <Badge className={`gap-1 shadow-lg ${displayMatchScore >= 85 ? 'bg-green-500 text-white' : displayMatchScore >= 60 ? 'bg-yellow-500 text-white' : 'bg-muted text-muted-foreground'}`}>
+            {displayMatchScore}% {isHebrew ? 'התאמה' : 'Match'}
           </Badge>
         </div>
       )}
@@ -146,7 +165,7 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
           {/* Job Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div className={isCommunityShared || (matchScore && matchScore > 0) ? 'pr-16' : ''}>
+              <div className={isCommunityShared || displayMatchScore > 0 ? 'pr-16' : ''}>
                 <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                   {job.title}
                 </h3>
@@ -155,17 +174,17 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
                 </p>
               </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity absolute top-12 right-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Save job logic
-                }}
-              >
-                <Heart className="w-4 h-4" />
-              </Button>
+              {user && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`flex-shrink-0 transition-all absolute top-12 right-2 ${isSaved ? 'opacity-100 text-red-500' : 'opacity-0 group-hover:opacity-100'}`}
+                  onClick={handleSaveClick}
+                  disabled={saveJobMutation.isPending}
+                >
+                  <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                </Button>
+              )}
             </div>
 
             {/* Taxonomy Badges */}

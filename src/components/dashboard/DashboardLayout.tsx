@@ -27,7 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job';
+export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;

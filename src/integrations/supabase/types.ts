@@ -412,6 +412,45 @@ export type Database = {
           },
         ]
       }
+      job_alerts: {
+        Row: {
+          created_at: string | null
+          experience_level_ids: string[] | null
+          field_ids: string[] | null
+          id: string
+          is_active: boolean | null
+          last_sent_at: string | null
+          location: string | null
+          role_ids: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          experience_level_ids?: string[] | null
+          field_ids?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          last_sent_at?: string | null
+          location?: string | null
+          role_ids?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          experience_level_ids?: string[] | null
+          field_ids?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          last_sent_at?: string | null
+          location?: string | null
+          role_ids?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       job_fields: {
         Row: {
           created_at: string
@@ -582,6 +621,13 @@ export type Database = {
             referencedRelation: "job_roles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "jobs_shared_by_user_id_fkey"
+            columns: ["shared_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       messages: {
@@ -710,6 +756,7 @@ export type Database = {
           theme: string | null
           updated_at: string
           user_id: string
+          visible_to_hr: boolean | null
         }
         Insert: {
           allow_recruiter_contact?: boolean | null
@@ -733,6 +780,7 @@ export type Database = {
           theme?: string | null
           updated_at?: string
           user_id: string
+          visible_to_hr?: boolean | null
         }
         Update: {
           allow_recruiter_contact?: boolean | null
@@ -756,6 +804,7 @@ export type Database = {
           theme?: string | null
           updated_at?: string
           user_id?: string
+          visible_to_hr?: boolean | null
         }
         Relationships: [
           {
@@ -796,6 +845,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      saved_jobs: {
+        Row: {
+          created_at: string | null
+          id: string
+          job_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          job_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          job_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
