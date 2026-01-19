@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Link2, Briefcase, Linkedin, Github, ExternalLink, Loader2, Save } from 'lucide-react';
+import { Link2, Briefcase, Linkedin, Github, ExternalLink, Loader2, Save, Sparkles, Brain } from 'lucide-react';
 
 export function PortfolioLinks() {
   const { user, profile } = useAuth();
@@ -20,6 +20,15 @@ export function PortfolioLinks() {
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [portfolioSummary, setPortfolioSummary] = useState<any>(null);
+
+  // Load existing portfolio summary
+  useEffect(() => {
+    if (profile && (profile as any)?.portfolio_summary) {
+      setPortfolioSummary((profile as any).portfolio_summary);
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
