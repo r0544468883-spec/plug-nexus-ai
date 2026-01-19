@@ -10,6 +10,7 @@ import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import SavedJobs from "./pages/SavedJobs";
 import CandidateProfile from "./pages/CandidateProfile";
+import CVBuilderPage from "./pages/CVBuilder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/p/:userId" element={<PublicProfile />} />
               <Route path="/saved-jobs" element={<SavedJobs />} />
               <Route path="/candidate/:candidateId" element={<CandidateProfile />} />
+              <Route path="/cv-builder" element={<CVBuilderPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
