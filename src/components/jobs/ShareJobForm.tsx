@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Share2, Loader2, Users, Sparkles } from 'lucide-react';
+import { Share2, Loader2, Users, Sparkles, Layers, Briefcase, GraduationCap } from 'lucide-react';
+import { 
+  JOB_FIELDS, 
+  EXPERIENCE_LEVELS, 
+  getRolesByField 
+} from '@/lib/job-taxonomy';
 
 const jobSchema = z.object({
   title: z.string().min(2, 'Title is required'),
@@ -42,7 +47,9 @@ const jobSchema = z.object({
   location: z.string().optional(),
   job_type: z.string().optional(),
   salary_range: z.string().optional(),
-  category: z.string().min(1, 'Category is required'),
+  field_slug: z.string().min(1, 'Field is required'),
+  role_slug: z.string().optional(),
+  experience_level_slug: z.string().optional(),
   description: z.string().optional(),
   source_url: z.string().url().optional().or(z.literal('')),
 });
@@ -65,18 +72,6 @@ const SALARY_RANGES = [
   { value: '50000+', labelEn: '₪50,000+', labelHe: '₪50,000+' },
 ];
 
-const CATEGORIES = [
-  { value: 'tech', labelEn: 'Technology', labelHe: 'טכנולוגיה' },
-  { value: 'marketing', labelEn: 'Marketing', labelHe: 'שיווק' },
-  { value: 'finance', labelEn: 'Finance', labelHe: 'פיננסים' },
-  { value: 'hr', labelEn: 'Human Resources', labelHe: 'משאבי אנוש' },
-  { value: 'sales', labelEn: 'Sales', labelHe: 'מכירות' },
-  { value: 'design', labelEn: 'Design', labelHe: 'עיצוב' },
-  { value: 'operations', labelEn: 'Operations', labelHe: 'תפעול' },
-  { value: 'customer-service', labelEn: 'Customer Service', labelHe: 'שירות לקוחות' },
-  { value: 'other', labelEn: 'Other', labelHe: 'אחר' },
-];
-
 interface ShareJobFormProps {
   trigger?: React.ReactNode;
 }
@@ -96,11 +91,20 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
       location: '',
       job_type: '',
       salary_range: '',
-      category: '',
+      field_slug: '',
+      role_slug: '',
+      experience_level_slug: '',
       description: '',
       source_url: '',
     },
   });
+
+  // Watch the field_slug to get available roles
+  const selectedFieldSlug = form.watch('field_slug');
+  const availableRoles = useMemo(() => {
+    if (!selectedFieldSlug) return [];
+    return getRolesByField(selectedFieldSlug);
+  }, [selectedFieldSlug]);
 
   const createJobMutation = useMutation({
     mutationFn: async (data: JobFormData) => {
@@ -129,11 +133,42 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
           .single();
 
         if (companyError) {
-          // Company creation failed, continue without company_id
           console.log('Could not create company, continuing without it');
         } else {
           companyId = newCompany.id;
         }
+      }
+
+      // Get field_id, role_id, experience_level_id from slugs
+      let fieldId = null;
+      let roleId = null;
+      let experienceLevelId = null;
+
+      if (data.field_slug) {
+        const { data: field } = await supabase
+          .from('job_fields')
+          .select('id')
+          .eq('slug', data.field_slug)
+          .single();
+        if (field) fieldId = field.id;
+      }
+
+      if (data.role_slug) {
+        const { data: role } = await supabase
+          .from('job_roles')
+          .select('id')
+          .eq('slug', data.role_slug)
+          .single();
+        if (role) roleId = role.id;
+      }
+
+      if (data.experience_level_slug) {
+        const { data: expLevel } = await supabase
+          .from('experience_levels')
+          .select('id')
+          .eq('slug', data.experience_level_slug)
+          .single();
+        if (expLevel) experienceLevelId = expLevel.id;
       }
 
       // Create job
@@ -143,7 +178,10 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
         location: data.location || null,
         job_type: data.job_type || null,
         salary_range: data.salary_range || null,
-        category: data.category || null,
+        category: data.field_slug || null, // Keep category for backward compatibility
+        field_id: fieldId,
+        role_id: roleId,
+        experience_level_id: experienceLevelId,
         description: data.description || null,
         source_url: data.source_url || null,
         shared_by_user_id: user.id,
@@ -231,25 +269,32 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
               />
             </div>
 
-            {/* Category - Required and Prominent */}
+            {/* Field - Required */}
             <FormField
               control={form.control}
-              name="category"
+              name="field_slug"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-primary font-medium">
-                    {isHebrew ? 'קטגוריה' : 'Category'} * 
+                  <FormLabel className="text-primary font-medium flex items-center gap-1">
+                    <Layers className="w-4 h-4" />
+                    {isHebrew ? 'תחום עבודה' : 'Job Field'} * 
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      form.setValue('role_slug', ''); // Reset role when field changes
+                    }} 
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger className="border-primary/30 focus:ring-primary">
-                        <SelectValue placeholder={isHebrew ? 'בחר קטגוריה' : 'Select category'} />
+                        <SelectValue placeholder={isHebrew ? 'בחר תחום' : 'Select field'} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {isHebrew ? cat.labelHe : cat.labelEn}
+                      {JOB_FIELDS.map((f) => (
+                        <SelectItem key={f.slug} value={f.slug}>
+                          {isHebrew ? f.name_he : f.name_en}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -259,10 +304,63 @@ export function ShareJobForm({ trigger }: ShareJobFormProps) {
               )}
             />
 
+            {/* Role & Experience Level */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="location"
+                name="role_slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1">
+                      <Briefcase className="w-4 h-4" />
+                      {isHebrew ? 'תפקיד' : 'Role'}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedFieldSlug}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isHebrew ? 'בחר' : 'Select'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableRoles.map((role) => (
+                          <SelectItem key={role.slug} value={role.slug}>
+                            {isHebrew ? role.name_he : role.name_en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="experience_level_slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1">
+                      <GraduationCap className="w-4 h-4" />
+                      {isHebrew ? 'רמת ותק' : 'Experience'}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isHebrew ? 'בחר' : 'Select'} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {EXPERIENCE_LEVELS.map((level) => (
+                          <SelectItem key={level.slug} value={level.slug}>
+                            {isHebrew ? level.name_he : level.name_en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{isHebrew ? 'מיקום' : 'Location'}</FormLabel>

@@ -3,11 +3,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
 import { VouchSection } from '@/components/vouch/VouchSection';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
+import { JobPreferencesSettings } from '@/components/settings/JobPreferencesSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, Briefcase, Share2 } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, Share2, Target } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -122,6 +123,9 @@ export default function Profile() {
             </CardContent>
           </Card>
         )}
+
+        {/* Career Preferences Section - Only for job seekers */}
+        {role === 'job_seeker' && <JobPreferencesSettings />}
 
         {/* Vouches Section */}
         {user && profile && (
