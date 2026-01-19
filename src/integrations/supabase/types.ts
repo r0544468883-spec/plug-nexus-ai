@@ -742,6 +742,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_company_id: string | null
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
           bio: string | null
@@ -766,6 +767,7 @@ export type Database = {
           visible_to_hr: boolean | null
         }
         Insert: {
+          active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -790,6 +792,7 @@ export type Database = {
           visible_to_hr?: boolean | null
         }
         Update: {
+          active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -814,6 +817,13 @@ export type Database = {
           visible_to_hr?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_active_company_id_fkey"
+            columns: ["active_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_preferred_experience_level_id_fkey"
             columns: ["preferred_experience_level_id"]
@@ -973,6 +983,7 @@ export type Database = {
     Views: {
       profiles_secure: {
         Row: {
+          active_company_id: string | null
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
           bio: string | null
@@ -997,6 +1008,7 @@ export type Database = {
           visible_to_hr: boolean | null
         }
         Insert: {
+          active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -1021,6 +1033,7 @@ export type Database = {
           visible_to_hr?: boolean | null
         }
         Update: {
+          active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -1046,6 +1059,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "profiles_active_company_id_fkey"
+            columns: ["active_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profiles_preferred_experience_level_id_fkey"
             columns: ["preferred_experience_level_id"]
             isOneToOne: false
@@ -1070,6 +1090,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_active_company_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
