@@ -22,7 +22,7 @@ interface AuthContextType {
   profile: Profile | null;
   role: AppRole | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string, phone: string, role: AppRole) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, role: AppRole, visibleToHR?: boolean) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
@@ -102,7 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string, 
     fullName: string, 
     phone: string,
-    selectedRole: AppRole
+    selectedRole: AppRole,
+    visibleToHR?: boolean
   ): Promise<{ error: Error | null }> => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -119,10 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        // Update profile with phone
+        // Update profile with phone and visible_to_hr
+        const profileUpdate: Record<string, unknown> = { full_name: fullName, phone };
+        if (typeof visibleToHR === 'boolean') {
+          profileUpdate.visible_to_hr = visibleToHR;
+        }
+        
         await supabase
           .from('profiles')
-          .update({ full_name: fullName, phone })
+          .update(profileUpdate)
           .eq('user_id', data.user.id);
 
         // Insert role

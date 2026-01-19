@@ -8,6 +8,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { MessageBadge } from '@/components/messaging/MessageBadge';
 import { NavTooltip } from '@/components/ui/nav-tooltip';
+import { VisibleToHRBanner } from '@/components/sidebar/VisibleToHRBanner';
 import { 
   LayoutDashboard, 
   Users, 
@@ -155,6 +156,8 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
           ))}
         </nav>
 
+        {/* Visible to HR Banner for job seekers */}
+        <VisibleToHRBanner />
         {/* User info */}
         <div className="p-4 border-t border-sidebar-border">
           <Link 
