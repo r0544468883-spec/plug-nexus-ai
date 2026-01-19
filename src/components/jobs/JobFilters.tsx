@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Search, X, MapPin, Briefcase, DollarSign, Building2, Navigation, Loader2, Tag } from 'lucide-react';
+import { Search, X, MapPin, Briefcase, DollarSign, Building2, Navigation, Loader2, Layers, GraduationCap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { 
+  JOB_FIELDS, 
+  EXPERIENCE_LEVELS, 
+  getRolesByField,
+  getFieldBySlug,
+  getRoleBySlug,
+  getExperienceLevelBySlug 
+} from '@/lib/job-taxonomy';
 
 export interface JobFiltersState {
   search: string;
@@ -19,6 +27,9 @@ export interface JobFiltersState {
   salaryRange: string;
   companySearch: string;
   category: string;
+  fieldSlug: string;
+  roleSlug: string;
+  experienceLevelSlug: string;
   userLatitude: number | null;
   userLongitude: number | null;
   maxDistance: number;
@@ -58,25 +69,18 @@ const LOCATIONS = [
   { value: 'hybrid', labelEn: 'Hybrid', labelHe: 'היברידי' },
 ];
 
-const CATEGORIES = [
-  { value: 'all', labelEn: 'All categories', labelHe: 'כל הקטגוריות' },
-  { value: 'tech', labelEn: 'Technology', labelHe: 'טכנולוגיה' },
-  { value: 'marketing', labelEn: 'Marketing', labelHe: 'שיווק' },
-  { value: 'finance', labelEn: 'Finance', labelHe: 'פיננסים' },
-  { value: 'hr', labelEn: 'Human Resources', labelHe: 'משאבי אנוש' },
-  { value: 'sales', labelEn: 'Sales', labelHe: 'מכירות' },
-  { value: 'design', labelEn: 'Design', labelHe: 'עיצוב' },
-  { value: 'operations', labelEn: 'Operations', labelHe: 'תפעול' },
-  { value: 'customer-service', labelEn: 'Customer Service', labelHe: 'שירות לקוחות' },
-  { value: 'other', labelEn: 'Other', labelHe: 'אחר' },
-];
-
 export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFiltersProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // Get available roles based on selected field
+  const availableRoles = useMemo(() => {
+    if (!filters.fieldSlug) return [];
+    return getRolesByField(filters.fieldSlug);
+  }, [filters.fieldSlug]);
 
   // Fetch job title suggestions based on search
   const { data: suggestions } = useQuery({
@@ -106,10 +110,18 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
   }, [suggestions]);
 
   const hasActiveFilters = filters.search || filters.location || filters.jobType || 
-    filters.salaryRange || filters.companySearch || filters.category || filters.userLatitude;
+    filters.salaryRange || filters.companySearch || filters.fieldSlug || 
+    filters.roleSlug || filters.experienceLevelSlug || filters.userLatitude;
 
   const updateFilter = <K extends keyof JobFiltersState>(key: K, value: JobFiltersState[K]) => {
-    onFiltersChange({ ...filters, [key]: value });
+    const newFilters = { ...filters, [key]: value };
+    
+    // Reset role when field changes
+    if (key === 'fieldSlug') {
+      newFilters.roleSlug = '';
+    }
+    
+    onFiltersChange(newFilters);
     if (key === 'search') {
       setShowSuggestions(false);
     }
@@ -206,27 +218,78 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
             </div>
           </div>
 
-          {/* Row 2: Category and Location with GPS */}
+          {/* Row 2: Field, Role, Experience Level */}
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Category */}
+            {/* Field (תחום) */}
             <div className="w-full lg:w-48">
               <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5" />
-                {isHebrew ? 'קטגוריה' : 'Category'}
+                <Layers className="w-3.5 h-3.5" />
+                {isHebrew ? 'תחום עבודה' : 'Job Field'}
               </Label>
-              <Select value={filters.category || 'all'} onValueChange={(v) => updateFilter('category', v === 'all' ? '' : v)}>
+              <Select value={filters.fieldSlug || 'all'} onValueChange={(v) => updateFilter('fieldSlug', v === 'all' ? '' : v)}>
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder={isHebrew ? 'בחר קטגוריה' : 'Select category'} />
+                  <SelectValue placeholder={isHebrew ? 'בחר תחום' : 'Select field'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {isHebrew ? cat.labelHe : cat.labelEn}
+                  <SelectItem value="all">{isHebrew ? 'כל התחומים' : 'All fields'}</SelectItem>
+                  {JOB_FIELDS.map((field) => (
+                    <SelectItem key={field.slug} value={field.slug}>
+                      {isHebrew ? field.name_he : field.name_en}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Role (תפקיד) */}
+            <div className="w-full lg:w-48">
+              <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <Briefcase className="w-3.5 h-3.5" />
+                {isHebrew ? 'תפקיד' : 'Role'}
+              </Label>
+              <Select 
+                value={filters.roleSlug || 'all'} 
+                onValueChange={(v) => updateFilter('roleSlug', v === 'all' ? '' : v)}
+                disabled={!filters.fieldSlug}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={isHebrew ? 'בחר תפקיד' : 'Select role'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isHebrew ? 'כל התפקידים' : 'All roles'}</SelectItem>
+                  {availableRoles.map((role) => (
+                    <SelectItem key={role.slug} value={role.slug}>
+                      {isHebrew ? role.name_he : role.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Experience Level (רמת ותק) */}
+            <div className="w-full lg:w-44">
+              <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <GraduationCap className="w-3.5 h-3.5" />
+                {isHebrew ? 'רמת ותק' : 'Experience'}
+              </Label>
+              <Select value={filters.experienceLevelSlug || 'all'} onValueChange={(v) => updateFilter('experienceLevelSlug', v === 'all' ? '' : v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={isHebrew ? 'בחר רמה' : 'Select level'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isHebrew ? 'כל הרמות' : 'All levels'}</SelectItem>
+                  {EXPERIENCE_LEVELS.map((level) => (
+                    <SelectItem key={level.slug} value={level.slug}>
+                      {isHebrew ? level.name_he : level.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: Location with GPS */}
+          <div className="flex flex-col lg:flex-row gap-4">
 
             {/* Location */}
             <div className="w-full lg:w-44">
@@ -392,13 +455,32 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
                   />
                 </Badge>
               )}
-              {filters.category && (
+              {filters.fieldSlug && (
                 <Badge variant="secondary" className="gap-1">
-                  <Tag className="w-3 h-3" />
-                  {CATEGORIES.find(c => c.value === filters.category)?.[isHebrew ? 'labelHe' : 'labelEn']}
+                  <Layers className="w-3 h-3" />
+                  {getFieldBySlug(filters.fieldSlug)?.[isHebrew ? 'name_he' : 'name_en']}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
-                    onClick={() => updateFilter('category', '')} 
+                    onClick={() => updateFilter('fieldSlug', '')} 
+                  />
+                </Badge>
+              )}
+              {filters.roleSlug && (
+                <Badge variant="secondary" className="gap-1">
+                  {getRoleBySlug(filters.roleSlug)?.[isHebrew ? 'name_he' : 'name_en']}
+                  <X 
+                    className="w-3 h-3 cursor-pointer" 
+                    onClick={() => updateFilter('roleSlug', '')} 
+                  />
+                </Badge>
+              )}
+              {filters.experienceLevelSlug && (
+                <Badge variant="secondary" className="gap-1">
+                  <GraduationCap className="w-3 h-3" />
+                  {getExperienceLevelBySlug(filters.experienceLevelSlug)?.[isHebrew ? 'name_he' : 'name_en']}
+                  <X 
+                    className="w-3 h-3 cursor-pointer" 
+                    onClick={() => updateFilter('experienceLevelSlug', '')} 
                   />
                 </Badge>
               )}

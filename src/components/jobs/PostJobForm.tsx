@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,21 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Briefcase, MapPin, DollarSign, Loader2, Plus, Building2 } from 'lucide-react';
-
-const JOB_CATEGORIES = [
-  { value: 'engineering', labelEn: 'Engineering', labelHe: 'הנדסה' },
-  { value: 'design', labelEn: 'Design', labelHe: 'עיצוב' },
-  { value: 'product', labelEn: 'Product', labelHe: 'מוצר' },
-  { value: 'marketing', labelEn: 'Marketing', labelHe: 'שיווק' },
-  { value: 'sales', labelEn: 'Sales', labelHe: 'מכירות' },
-  { value: 'operations', labelEn: 'Operations', labelHe: 'תפעול' },
-  { value: 'hr', labelEn: 'HR', labelHe: 'משאבי אנוש' },
-  { value: 'finance', labelEn: 'Finance', labelHe: 'כספים' },
-  { value: 'data', labelEn: 'Data & Analytics', labelHe: 'דאטה ואנליטיקה' },
-  { value: 'customer-success', labelEn: 'Customer Success', labelHe: 'הצלחת לקוחות' },
-  { value: 'other', labelEn: 'Other', labelHe: 'אחר' },
-];
+import { Briefcase, MapPin, DollarSign, Loader2, Plus, Building2, Layers, GraduationCap } from 'lucide-react';
+import { 
+  JOB_FIELDS, 
+  EXPERIENCE_LEVELS, 
+  getRolesByField 
+} from '@/lib/job-taxonomy';
 
 const JOB_TYPES = [
   { value: 'full-time', labelEn: 'Full-time', labelHe: 'משרה מלאה' },
@@ -55,9 +46,23 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
   const [requirements, setRequirements] = useState('');
   const [location, setLocation] = useState('');
   const [salaryRange, setSalaryRange] = useState('');
-  const [category, setCategory] = useState('');
+  const [fieldSlug, setFieldSlug] = useState('');
+  const [roleSlug, setRoleSlug] = useState('');
+  const [experienceLevelSlug, setExperienceLevelSlug] = useState('');
   const [jobType, setJobType] = useState('');
   const [companyName, setCompanyName] = useState('');
+
+  // Get available roles based on selected field
+  const availableRoles = useMemo(() => {
+    if (!fieldSlug) return [];
+    return getRolesByField(fieldSlug);
+  }, [fieldSlug]);
+
+  // Reset role when field changes
+  const handleFieldChange = (value: string) => {
+    setFieldSlug(value);
+    setRoleSlug('');
+  };
 
   const postMutation = useMutation({
     mutationFn: async () => {
@@ -92,6 +97,38 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
         }
       }
 
+      // Get field_id and role_id from slugs
+      let fieldId = null;
+      let roleId = null;
+      let experienceLevelId = null;
+
+      if (fieldSlug) {
+        const { data: field } = await supabase
+          .from('job_fields')
+          .select('id')
+          .eq('slug', fieldSlug)
+          .single();
+        if (field) fieldId = field.id;
+      }
+
+      if (roleSlug) {
+        const { data: role } = await supabase
+          .from('job_roles')
+          .select('id')
+          .eq('slug', roleSlug)
+          .single();
+        if (role) roleId = role.id;
+      }
+
+      if (experienceLevelSlug) {
+        const { data: expLevel } = await supabase
+          .from('experience_levels')
+          .select('id')
+          .eq('slug', experienceLevelSlug)
+          .single();
+        if (expLevel) experienceLevelId = expLevel.id;
+      }
+
       // Create job
       const { error } = await supabase.from('jobs').insert({
         title,
@@ -99,7 +136,10 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
         requirements,
         location,
         salary_range: salaryRange || null,
-        category,
+        category: fieldSlug, // Keep category for backward compatibility
+        field_id: fieldId,
+        role_id: roleId,
+        experience_level_id: experienceLevelId,
         job_type: jobType,
         company_id: companyId,
         created_by: user.id,
@@ -118,7 +158,9 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
       setRequirements('');
       setLocation('');
       setSalaryRange('');
-      setCategory('');
+      setFieldSlug('');
+      setRoleSlug('');
+      setExperienceLevelSlug('');
       setJobType('');
       setCompanyName('');
       
@@ -131,7 +173,7 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description || !category || !jobType) {
+    if (!title || !description || !fieldSlug || !jobType) {
       toast.error(isHebrew ? 'אנא מלא את כל השדות הנדרשים' : 'Please fill in all required fields');
       return;
     }
@@ -177,18 +219,40 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
             />
           </div>
 
-          {/* Category & Type */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Field, Role & Type */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>{isHebrew ? 'קטגוריה *' : 'Category *'}</Label>
-              <Select value={category} onValueChange={setCategory} required>
+              <Label className="flex items-center gap-2">
+                <Layers className="w-4 h-4" />
+                {isHebrew ? 'תחום עבודה *' : 'Job Field *'}
+              </Label>
+              <Select value={fieldSlug} onValueChange={handleFieldChange} required>
                 <SelectTrigger>
-                  <SelectValue placeholder={isHebrew ? 'בחר קטגוריה' : 'Select category'} />
+                  <SelectValue placeholder={isHebrew ? 'בחר תחום' : 'Select field'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {JOB_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {isHebrew ? cat.labelHe : cat.labelEn}
+                  {JOB_FIELDS.map((field) => (
+                    <SelectItem key={field.slug} value={field.slug}>
+                      {isHebrew ? field.name_he : field.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4" />
+                {isHebrew ? 'תפקיד' : 'Role'}
+              </Label>
+              <Select value={roleSlug} onValueChange={setRoleSlug} disabled={!fieldSlug}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isHebrew ? 'בחר תפקיד' : 'Select role'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map((role) => (
+                    <SelectItem key={role.slug} value={role.slug}>
+                      {isHebrew ? role.name_he : role.name_en}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -210,6 +274,26 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Experience Level */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <GraduationCap className="w-4 h-4" />
+              {isHebrew ? 'רמת ותק נדרשת' : 'Required Experience Level'}
+            </Label>
+            <Select value={experienceLevelSlug} onValueChange={setExperienceLevelSlug}>
+              <SelectTrigger>
+                <SelectValue placeholder={isHebrew ? 'בחר רמת ותק' : 'Select experience level'} />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPERIENCE_LEVELS.map((level) => (
+                  <SelectItem key={level.slug} value={level.slug}>
+                    {isHebrew ? level.name_he : level.name_en}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Location & Salary */}
