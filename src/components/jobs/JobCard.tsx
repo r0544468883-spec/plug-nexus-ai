@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Tag } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Layers, GraduationCap, Briefcase } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 
@@ -20,6 +20,24 @@ interface Job {
     name: string;
     logo_url: string | null;
   } | null;
+  job_field?: {
+    id: string;
+    slug: string;
+    name_en: string;
+    name_he: string;
+  } | null;
+  job_role?: {
+    id: string;
+    slug: string;
+    name_en: string;
+    name_he: string;
+  } | null;
+  experience_level?: {
+    id: string;
+    slug: string;
+    name_en: string;
+    name_he: string;
+  } | null;
 }
 
 interface JobCardProps {
@@ -30,6 +48,7 @@ interface JobCardProps {
   sharerName?: string;
   distance?: number | null;
   category?: string | null;
+  matchScore?: number | null;
 }
 
 const jobTypeLabels: Record<string, { en: string; he: string }> = {
@@ -40,19 +59,32 @@ const jobTypeLabels: Record<string, { en: string; he: string }> = {
   'internship': { en: 'Internship', he: 'התמחות' },
 };
 
-const categoryLabels: Record<string, { en: string; he: string }> = {
-  'tech': { en: 'Technology', he: 'טכנולוגיה' },
-  'marketing': { en: 'Marketing', he: 'שיווק' },
-  'finance': { en: 'Finance', he: 'פיננסים' },
-  'hr': { en: 'HR', he: 'משאבי אנוש' },
-  'sales': { en: 'Sales', he: 'מכירות' },
-  'design': { en: 'Design', he: 'עיצוב' },
-  'operations': { en: 'Operations', he: 'תפעול' },
-  'customer-service': { en: 'Customer Service', he: 'שירות לקוחות' },
-  'other': { en: 'Other', he: 'אחר' },
+const fieldColors: Record<string, string> = {
+  'tech': 'bg-blue-500/20 text-blue-700 border-blue-500/30 dark:text-blue-300',
+  'marketing': 'bg-pink-500/20 text-pink-700 border-pink-500/30 dark:text-pink-300',
+  'sales': 'bg-green-500/20 text-green-700 border-green-500/30 dark:text-green-300',
+  'finance': 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30 dark:text-yellow-300',
+  'engineering': 'bg-orange-500/20 text-orange-700 border-orange-500/30 dark:text-orange-300',
+  'hr': 'bg-purple-500/20 text-purple-700 border-purple-500/30 dark:text-purple-300',
+  'management': 'bg-indigo-500/20 text-indigo-700 border-indigo-500/30 dark:text-indigo-300',
+  'customer-service': 'bg-teal-500/20 text-teal-700 border-teal-500/30 dark:text-teal-300',
+  'design': 'bg-rose-500/20 text-rose-700 border-rose-500/30 dark:text-rose-300',
+  'data': 'bg-cyan-500/20 text-cyan-700 border-cyan-500/30 dark:text-cyan-300',
+  'healthcare': 'bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-300',
+  'education': 'bg-emerald-500/20 text-emerald-700 border-emerald-500/30 dark:text-emerald-300',
+  'legal': 'bg-slate-500/20 text-slate-700 border-slate-500/30 dark:text-slate-300',
 };
 
-export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName, distance, category }: JobCardProps) {
+const expLevelColors: Record<string, string> = {
+  'entry': 'bg-green-500/20 text-green-700 border-green-500/30 dark:text-green-300',
+  'junior': 'bg-blue-500/20 text-blue-700 border-blue-500/30 dark:text-blue-300',
+  'mid': 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30 dark:text-yellow-300',
+  'senior': 'bg-orange-500/20 text-orange-700 border-orange-500/30 dark:text-orange-300',
+  'lead': 'bg-purple-500/20 text-purple-700 border-purple-500/30 dark:text-purple-300',
+  'executive': 'bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-300',
+};
+
+export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharerName, distance, category, matchScore }: JobCardProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
@@ -65,12 +97,32 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
     ? (isHebrew ? jobTypeLabels[job.job_type].he : jobTypeLabels[job.job_type].en)
     : job.job_type;
 
-  const categoryLabel = category && categoryLabels[category]
-    ? (isHebrew ? categoryLabels[category].he : categoryLabels[category].en)
-    : category;
+  const fieldSlug = job.job_field?.slug || category;
+  const fieldName = job.job_field 
+    ? (isHebrew ? job.job_field.name_he : job.job_field.name_en)
+    : null;
+
+  const roleName = job.job_role
+    ? (isHebrew ? job.job_role.name_he : job.job_role.name_en)
+    : null;
+
+  const expLevelName = job.experience_level
+    ? (isHebrew ? job.experience_level.name_he : job.experience_level.name_en)
+    : null;
+
+  const expLevelSlug = job.experience_level?.slug;
 
   return (
     <Card className="bg-card border-border hover:border-primary/50 transition-colors plug-card-hover cursor-pointer group relative">
+      {/* Match Score Badge - Top Left */}
+      {matchScore !== null && matchScore !== undefined && matchScore > 0 && (
+        <div className="absolute top-2 left-2 z-10">
+          <Badge className={`gap-1 shadow-lg ${matchScore >= 80 ? 'bg-green-500 text-white' : matchScore >= 60 ? 'bg-yellow-500 text-white' : 'bg-muted text-muted-foreground'}`}>
+            {matchScore}% {isHebrew ? 'התאמה' : 'Match'}
+          </Badge>
+        </div>
+      )}
+
       {/* Community Badge - Top Right */}
       {isCommunityShared && (
         <div className="absolute top-2 right-2 z-10">
@@ -94,7 +146,7 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
           {/* Job Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <div className="pr-16">
+              <div className={isCommunityShared || (matchScore && matchScore > 0) ? 'pr-16' : ''}>
                 <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                   {job.title}
                 </h3>
@@ -116,6 +168,39 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
               </Button>
             </div>
 
+            {/* Taxonomy Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              {/* Field Badge */}
+              {fieldName && (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs gap-1 ${fieldSlug && fieldColors[fieldSlug] ? fieldColors[fieldSlug] : 'bg-accent/10 text-accent-foreground'}`}
+                >
+                  <Layers className="w-3 h-3" />
+                  {fieldName}
+                </Badge>
+              )}
+
+              {/* Role Badge */}
+              {roleName && (
+                <Badge variant="outline" className="text-xs gap-1 bg-secondary/50 text-secondary-foreground">
+                  <Briefcase className="w-3 h-3" />
+                  {roleName}
+                </Badge>
+              )}
+
+              {/* Experience Level Badge */}
+              {expLevelName && (
+                <Badge 
+                  variant="outline" 
+                  className={`text-xs gap-1 ${expLevelSlug && expLevelColors[expLevelSlug] ? expLevelColors[expLevelSlug] : 'bg-muted text-muted-foreground'}`}
+                >
+                  <GraduationCap className="w-3 h-3" />
+                  {expLevelName}
+                </Badge>
+              )}
+            </div>
+
             {/* Description preview */}
             {job.description && (
               <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
@@ -125,14 +210,6 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
 
             {/* Meta info */}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted-foreground">
-              {/* Category Badge - Prominent */}
-              {categoryLabel && (
-                <Badge variant="outline" className="text-xs gap-1 bg-accent/10 border-accent/30 text-accent-foreground">
-                  <Tag className="w-3 h-3" />
-                  {categoryLabel}
-                </Badge>
-              )}
-
               {job.location && (
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
@@ -154,7 +231,7 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
                 </Badge>
               )}
 
-              {job.salary_range && (
+              {job.salary_range && job.salary_range !== 'null' && (
                 <span className="flex items-center gap-1">
                   <DollarSign className="w-3.5 h-3.5" />
                   {job.salary_range}
