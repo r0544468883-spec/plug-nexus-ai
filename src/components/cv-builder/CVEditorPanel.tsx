@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { v4 as uuidv4 } from 'crypto';
+
 
 interface CVEditorPanelProps {
   data: CVData;

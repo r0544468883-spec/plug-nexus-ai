@@ -28,8 +28,8 @@ export const CVBuilder = () => {
         .eq('user_id', user.id)
         .single();
       
-      if (profile?.cv_data && Object.keys(profile.cv_data as object).length > 0) {
-        setCvData(profile.cv_data as CVData);
+      if (profile?.cv_data && typeof profile.cv_data === 'object' && Object.keys(profile.cv_data).length > 0) {
+        setCvData(profile.cv_data as unknown as CVData);
       } else if (profile) {
         // Pre-fill from profile
         setCvData({
@@ -55,7 +55,7 @@ export const CVBuilder = () => {
       
       const { error } = await supabase
         .from('profiles')
-        .update({ cv_data: data as unknown as Record<string, unknown> })
+        .update({ cv_data: JSON.parse(JSON.stringify(data)) })
         .eq('user_id', user.id);
       
       setIsSaving(false);
