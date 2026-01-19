@@ -628,6 +628,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "jobs_shared_by_user_id_fkey"
+            columns: ["shared_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_secure"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       messages: {
@@ -964,9 +971,105 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_secure: {
+        Row: {
+          allow_recruiter_contact: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          email: string | null
+          email_notifications: boolean | null
+          experience_years: number | null
+          full_name: string | null
+          github_url: string | null
+          id: string | null
+          linkedin_url: string | null
+          phone: string | null
+          portfolio_url: string | null
+          preferred_experience_level_id: string | null
+          preferred_fields: string[] | null
+          preferred_language: string | null
+          preferred_roles: string[] | null
+          profile_visibility: string | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string | null
+          visible_to_hr: boolean | null
+        }
+        Insert: {
+          allow_recruiter_contact?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          email?: never
+          email_notifications?: boolean | null
+          experience_years?: number | null
+          full_name?: string | null
+          github_url?: string | null
+          id?: string | null
+          linkedin_url?: string | null
+          phone?: never
+          portfolio_url?: string | null
+          preferred_experience_level_id?: string | null
+          preferred_fields?: string[] | null
+          preferred_language?: string | null
+          preferred_roles?: string[] | null
+          profile_visibility?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          visible_to_hr?: boolean | null
+        }
+        Update: {
+          allow_recruiter_contact?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          email?: never
+          email_notifications?: boolean | null
+          experience_years?: number | null
+          full_name?: string | null
+          github_url?: string | null
+          id?: string | null
+          linkedin_url?: string | null
+          phone?: never
+          portfolio_url?: string | null
+          preferred_experience_level_id?: string | null
+          preferred_fields?: string[] | null
+          preferred_language?: string | null
+          preferred_roles?: string[] | null
+          profile_visibility?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          visible_to_hr?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_preferred_experience_level_id_fkey"
+            columns: ["preferred_experience_level_id"]
+            isOneToOne: false
+            referencedRelation: "experience_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_view_contact_details: {
+        Args: { profile_user_id: string }
+        Returns: boolean
+      }
+      create_audit_log_entry: {
+        Args: {
+          p_action: string
+          p_entity_id?: string
+          p_entity_type: string
+          p_new_values?: Json
+          p_old_values?: Json
+        }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
