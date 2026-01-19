@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { VouchCard } from '@/components/vouch/VouchCard';
 import { ApplicationDetailsSheet } from '@/components/applications/ApplicationDetailsSheet';
@@ -38,6 +40,10 @@ import {
   Eye,
   Clock,
   Star,
+  StickyNote,
+  Save,
+  Loader2,
+  FileDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -67,11 +73,14 @@ export default function CandidateProfile() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { language } = useLanguage();
+  const queryClient = useQueryClient();
   const isHebrew = language === 'he';
   const isRecruiter = role === 'freelance_hr' || role === 'inhouse_hr';
 
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [applicationSheetOpen, setApplicationSheetOpen] = useState(false);
+  const [internalNote, setInternalNote] = useState('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Fetch candidate profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -244,6 +253,90 @@ export default function CandidateProfile() {
     enabled: !!candidateId && isRecruiter,
   });
 
+  // Fetch recruiter's internal note
+  const { data: existingNote } = useQuery({
+    queryKey: ['recruiter-candidate-note', user?.id, candidateId],
+    queryFn: async () => {
+      if (!candidateId || !user?.id) return null;
+
+      const { data, error } = await supabase
+        .from('recruiter_candidate_notes')
+        .select('*')
+        .eq('recruiter_id', user.id)
+        .eq('candidate_id', candidateId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!candidateId && !!user?.id && isRecruiter,
+  });
+
+  // Set note when fetched
+  useState(() => {
+    if (existingNote?.note) {
+      setInternalNote(existingNote.note);
+    }
+  });
+
+  // Update internal note state when existingNote changes
+  const noteInitialized = useRef(false);
+  if (existingNote?.note && !noteInitialized.current) {
+    setInternalNote(existingNote.note);
+    noteInitialized.current = true;
+  }
+
+  // Fetch conversation history
+  const { data: messages = [] } = useQuery({
+    queryKey: ['candidate-conversation', user?.id, candidateId],
+    queryFn: async () => {
+      if (!candidateId || !user?.id) return [];
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${candidateId}),and(from_user_id.eq.${candidateId},to_user_id.eq.${user.id})`)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!candidateId && !!user?.id,
+  });
+
+  // Save internal note mutation
+  const saveNoteMutation = useMutation({
+    mutationFn: async (note: string) => {
+      if (!candidateId || !user?.id) throw new Error('Missing data');
+
+      if (existingNote) {
+        // Update existing note
+        const { error } = await supabase
+          .from('recruiter_candidate_notes')
+          .update({ note })
+          .eq('id', existingNote.id);
+        if (error) throw error;
+      } else {
+        // Create new note
+        const { error } = await supabase
+          .from('recruiter_candidate_notes')
+          .insert({
+            recruiter_id: user.id,
+            candidate_id: candidateId,
+            note,
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(isHebrew ? 'ההערה נשמרה' : 'Note saved');
+      queryClient.invalidateQueries({ queryKey: ['recruiter-candidate-note', user?.id, candidateId] });
+    },
+    onError: () => {
+      toast.error(isHebrew ? 'שגיאה בשמירת ההערה' : 'Error saving note');
+    },
+  });
+
   const handleDownloadDocument = async (filePath: string, fileName: string) => {
     const { data } = await supabase.storage
       .from('resumes')
@@ -273,6 +366,110 @@ export default function CandidateProfile() {
         : `Hi ${profile.full_name}, I'm a recruiter and would love to discuss job opportunities with you.`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  };
+
+  // PDF Export function
+  const exportToPdf = async () => {
+    if (!profile) return;
+    
+    setIsExportingPdf(true);
+    try {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPosition = 20;
+      const margin = 20;
+      const lineHeight = 7;
+
+      // Helper function to add text with word wrap
+      const addText = (text: string, fontSize: number = 10, isBold: boolean = false) => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+        const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+        
+        // Check if we need a new page
+        if (yPosition + lines.length * lineHeight > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.text(lines, margin, yPosition);
+        yPosition += lines.length * lineHeight + 2;
+      };
+
+      const addSection = (title: string) => {
+        yPosition += 5;
+        addText(title, 14, true);
+        yPosition += 2;
+      };
+
+      // Title
+      addText(`Candidate Profile: ${profile.full_name}`, 18, true);
+      addText(`Generated: ${format(new Date(), 'PPP')}`, 10);
+      yPosition += 5;
+
+      // Basic Info
+      addSection(isHebrew ? 'Basic Information' : 'Basic Information');
+      addText(`Email: ${profile.email}`);
+      if (profile.phone) addText(`Phone: ${profile.phone}`);
+      if (profile.bio) addText(`Bio: ${profile.bio}`);
+      
+      // Links
+      if (profile.linkedin_url) addText(`LinkedIn: ${profile.linkedin_url}`);
+      if (profile.github_url) addText(`GitHub: ${profile.github_url}`);
+      if (profile.portfolio_url) addText(`Portfolio: ${profile.portfolio_url}`);
+
+      // Career Preferences
+      if (careerPrefs) {
+        addSection('Career Preferences');
+        if (careerPrefs.fields?.length) {
+          addText(`Preferred Fields: ${careerPrefs.fields.map((f: any) => f.name_en).join(', ')}`);
+        }
+        if (careerPrefs.roles?.length) {
+          addText(`Preferred Roles: ${careerPrefs.roles.map((r: any) => r.name_en).join(', ')}`);
+        }
+        if (careerPrefs.experienceLevel) {
+          addText(`Experience Level: ${careerPrefs.experienceLevel.name_en}`);
+        }
+        if (profile.experience_years != null) {
+          addText(`Years of Experience: ${profile.experience_years}`);
+        }
+      }
+
+      // Application History
+      if (applications.length > 0) {
+        addSection('Application History');
+        applications.forEach((app: any) => {
+          const stageName = stageLabels[app.current_stage]?.en || app.current_stage;
+          addText(`• ${app.job?.title || 'Unknown Job'} at ${app.job?.company?.name || 'Unknown Company'} - ${stageName} (${format(new Date(app.created_at), 'PP')})`);
+        });
+      }
+
+      // Vouches
+      if (vouches.length > 0) {
+        addSection('Recommendations');
+        vouches.forEach((vouch: any) => {
+          addText(`• From ${vouch.from_profile?.full_name || 'Anonymous'} (${vouch.vouch_type}): "${vouch.message}"`);
+          if (vouch.skills?.length) {
+            addText(`  Skills: ${vouch.skills.join(', ')}`);
+          }
+        });
+      }
+
+      // Internal Note
+      if (internalNote) {
+        addSection('Internal Notes');
+        addText(internalNote);
+      }
+
+      // Save PDF
+      pdf.save(`${profile.full_name.replace(/\s+/g, '_')}_profile.pdf`);
+      toast.success(isHebrew ? 'קובץ PDF נוצר בהצלחה' : 'PDF exported successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error(isHebrew ? 'שגיאה ביצירת PDF' : 'Error exporting PDF');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   // Access check
@@ -348,11 +545,27 @@ export default function CandidateProfile() {
   return (
     <div className="min-h-screen bg-background" dir={isHebrew ? 'rtl' : 'ltr'}>
       <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
-        {/* Back button */}
-        <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2">
-          <BackIcon className="w-4 h-4" />
-          {isHebrew ? 'חזרה' : 'Back'}
-        </Button>
+        {/* Header Actions */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2">
+            <BackIcon className="w-4 h-4" />
+            {isHebrew ? 'חזרה' : 'Back'}
+          </Button>
+
+          <Button 
+            variant="outline" 
+            onClick={exportToPdf} 
+            disabled={isExportingPdf}
+            className="gap-2"
+          >
+            {isExportingPdf ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileDown className="w-4 h-4" />
+            )}
+            {isHebrew ? 'ייצוא PDF' : 'Export PDF'}
+          </Button>
+        </div>
 
         {/* Profile Header */}
         <Card className="overflow-hidden">
@@ -468,27 +681,62 @@ export default function CandidateProfile() {
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview" className="gap-1">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="overview" className="gap-1 text-xs sm:text-sm">
               <User className="w-4 h-4 hidden sm:inline" />
               {isHebrew ? 'סקירה' : 'Overview'}
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-1">
+            <TabsTrigger value="history" className="gap-1 text-xs sm:text-sm">
               <Briefcase className="w-4 h-4 hidden sm:inline" />
               {isHebrew ? 'היסטוריה' : 'History'}
             </TabsTrigger>
-            <TabsTrigger value="documents" className="gap-1">
+            <TabsTrigger value="documents" className="gap-1 text-xs sm:text-sm">
               <FileText className="w-4 h-4 hidden sm:inline" />
-              {isHebrew ? 'מסמכים' : 'Documents'}
+              {isHebrew ? 'מסמכים' : 'Docs'}
             </TabsTrigger>
-            <TabsTrigger value="vouches" className="gap-1">
+            <TabsTrigger value="vouches" className="gap-1 text-xs sm:text-sm">
               <Heart className="w-4 h-4 hidden sm:inline" />
               {isHebrew ? 'המלצות' : 'Vouches'}
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="gap-1 text-xs sm:text-sm">
+              <MessageSquare className="w-4 h-4 hidden sm:inline" />
+              {isHebrew ? 'שיחות' : 'Chat'}
             </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="mt-6 space-y-6">
+            {/* Internal Notes Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <StickyNote className="w-5 h-5 text-yellow-500" />
+                  {isHebrew ? 'הערות פנימיות' : 'Internal Notes'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  value={internalNote}
+                  onChange={(e) => setInternalNote(e.target.value)}
+                  placeholder={isHebrew ? 'הוסף הערות פנימיות על המועמד...' : 'Add internal notes about this candidate...'}
+                  className="min-h-[100px] resize-none"
+                  dir={isHebrew ? 'rtl' : 'ltr'}
+                />
+                <Button
+                  onClick={() => saveNoteMutation.mutate(internalNote)}
+                  disabled={saveNoteMutation.isPending}
+                  className="gap-2"
+                >
+                  {saveNoteMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {isHebrew ? 'שמור הערה' : 'Save Note'}
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Career Preferences */}
             <Card>
               <CardHeader>
@@ -521,9 +769,9 @@ export default function CandidateProfile() {
                       {isHebrew ? 'תפקידים מועדפים' : 'Preferred Roles'}
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {careerPrefs.roles.map((role: any) => (
-                        <Badge key={role.id} variant="outline">
-                          {isHebrew ? role.name_he : role.name_en}
+                      {careerPrefs.roles.map((r: any) => (
+                        <Badge key={r.id} variant="outline">
+                          {isHebrew ? r.name_he : r.name_en}
                         </Badge>
                       ))}
                     </div>
@@ -591,14 +839,10 @@ export default function CandidateProfile() {
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <Calendar className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                  <p className="text-sm font-medium">
-                    {formatDistanceToNow(new Date(profile.created_at), {
-                      locale: isHebrew ? he : enUS,
-                    })}
-                  </p>
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                  <p className="text-2xl font-bold">{messages.length}</p>
                   <p className="text-xs text-muted-foreground">
-                    {isHebrew ? 'בפלטפורמה' : 'On platform'}
+                    {isHebrew ? 'הודעות' : 'Messages'}
                   </p>
                 </CardContent>
               </Card>
@@ -815,6 +1059,75 @@ export default function CandidateProfile() {
                     {vouches.map((vouch) => (
                       <VouchCard key={vouch.id} vouch={vouch} />
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Chat History Tab */}
+          <TabsContent value="chat" className="mt-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-green-500" />
+                  {isHebrew ? 'היסטוריית שיחות' : 'Conversation History'}
+                </CardTitle>
+                <SendMessageDialog
+                  toUserId={candidateId || ''}
+                  toUserName={profile.full_name}
+                  trigger={
+                    <Button size="sm" className="gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      {isHebrew ? 'הודעה חדשה' : 'New Message'}
+                    </Button>
+                  }
+                />
+              </CardHeader>
+              <CardContent>
+                {messages.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      {isHebrew ? 'אין הודעות עדיין' : 'No messages yet'}
+                    </p>
+                    <SendMessageDialog
+                      toUserId={candidateId || ''}
+                      toUserName={profile.full_name}
+                      trigger={
+                        <Button variant="outline" className="gap-2">
+                          <MessageSquare className="w-4 h-4" />
+                          {isHebrew ? 'שלח הודעה ראשונה' : 'Send First Message'}
+                        </Button>
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {messages.map((message) => {
+                      const isFromMe = message.from_user_id === user?.id;
+                      return (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            'flex flex-col max-w-[80%] p-3 rounded-lg',
+                            isFromMe
+                              ? 'ms-auto bg-primary text-primary-foreground'
+                              : 'me-auto bg-muted'
+                          )}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <span className={cn(
+                            'text-xs mt-1',
+                            isFromMe ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          )}>
+                            {format(new Date(message.created_at), 'Pp', {
+                              locale: isHebrew ? he : enUS,
+                            })}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

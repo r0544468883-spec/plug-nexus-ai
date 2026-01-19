@@ -846,6 +846,33 @@ export type Database = {
         }
         Relationships: []
       }
+      recruiter_candidate_notes: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          id: string
+          note: string
+          recruiter_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          id?: string
+          note: string
+          recruiter_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          recruiter_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       saved_jobs: {
         Row: {
           created_at: string | null
