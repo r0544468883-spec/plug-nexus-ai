@@ -23,12 +23,13 @@ import {
   Search,
   ArrowLeft,
   ArrowRight,
-  Heart
+  Heart,
+  FileEdit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs';
+export type DashboardSection = 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -77,6 +78,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על החשבון, סטטיסטיקות והודעות מ-Plug', tooltipEn: 'Overview of your account, stats, and Plug messages' },
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
         { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
+        { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות מקבלים ומגייסים', tooltipEn: 'Internal messages from recruiters and contacts' },
         { icon: FileText, label: 'My Documents', section: 'documents', tooltipHe: 'קורות חיים, מסמכים וקישורים מקצועיים', tooltipEn: 'Resume, documents, and professional links' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל, פרטיות והעדפות', tooltipEn: 'Profile settings, privacy, and preferences' },

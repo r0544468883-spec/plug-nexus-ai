@@ -19,6 +19,7 @@ import { MessageInbox } from '@/components/messaging/MessageInbox';
 import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
+import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -403,6 +404,8 @@ export default function Dashboard() {
         return <CandidatesPage />;
       case 'post-job':
         return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
+      case 'cv-builder':
+        return <CVBuilder />;
       default:
         return renderOverviewContent();
     }
