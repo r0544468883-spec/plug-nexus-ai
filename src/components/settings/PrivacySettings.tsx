@@ -9,13 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Eye, UserCheck, Loader2, Save } from 'lucide-react';
+import { Shield, Eye, UserCheck, Loader2, Save, Sparkles } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export function PrivacySettings() {
-  const { user, profile } = useAuth();
+  const { user, profile, role } = useAuth();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const isHebrew = language === 'he';
+  const isJobSeeker = role === 'job_seeker';
 
   const [profileVisibility, setProfileVisibility] = useState(
     (profile as any)?.profile_visibility || 'public'
@@ -23,11 +25,15 @@ export function PrivacySettings() {
   const [allowRecruiterContact, setAllowRecruiterContact] = useState(
     (profile as any)?.allow_recruiter_contact ?? true
   );
+  const [visibleToHR, setVisibleToHR] = useState(
+    (profile as any)?.visible_to_hr ?? false
+  );
 
   useEffect(() => {
     if (profile) {
       setProfileVisibility((profile as any)?.profile_visibility || 'public');
       setAllowRecruiterContact((profile as any)?.allow_recruiter_contact ?? true);
+      setVisibleToHR((profile as any)?.visible_to_hr ?? false);
     }
   }, [profile]);
 
@@ -40,6 +46,7 @@ export function PrivacySettings() {
         .update({
           profile_visibility: profileVisibility,
           allow_recruiter_contact: allowRecruiterContact,
+          visible_to_hr: visibleToHR,
         })
         .eq('user_id', user.id);
 
@@ -105,6 +112,30 @@ export function PrivacySettings() {
             onCheckedChange={setAllowRecruiterContact}
           />
         </div>
+
+        {/* Always Visible to HR - Only for job seekers */}
+        {isJobSeeker && (
+          <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="space-y-0.5">
+              <Label className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                {isHebrew ? 'גלוי תמיד למגייסים' : 'Always Visible to HR'}
+                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                  {isHebrew ? 'חדש' : 'New'}
+                </Badge>
+              </Label>
+              <p className="text-sm text-muted-foreground max-w-md">
+                {isHebrew 
+                  ? 'מגייסים יוכלו לראות את הפרופיל שלך ולפנות אליך גם בלי שהגשת מועמדות למשרות שלהם'
+                  : 'Recruiters can discover your profile and reach out even without you applying to their jobs'}
+              </p>
+            </div>
+            <Switch
+              checked={visibleToHR}
+              onCheckedChange={setVisibleToHR}
+            />
+          </div>
+        )}
 
         <Button
           onClick={() => updateMutation.mutate()}
