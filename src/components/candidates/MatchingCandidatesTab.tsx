@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,9 +24,13 @@ import {
   Github, 
   MessageSquare,
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  UserPlus,
+  Loader2,
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface MatchedCandidate {
   user_id: string;
@@ -49,9 +53,12 @@ interface Job {
 export function MatchingCandidatesTab() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const queryClient = useQueryClient();
   const isHebrew = language === 'he';
 
   const [selectedJobId, setSelectedJobId] = useState<string>('');
+  const [importingCandidates, setImportingCandidates] = useState<Set<string>>(new Set());
+  const [importedCandidates, setImportedCandidates] = useState<Set<string>>(new Set());
 
   // Fetch recruiter's jobs
   const { data: jobs = [] } = useQuery({
@@ -87,11 +94,59 @@ export function MatchingCandidatesTab() {
     enabled: !!selectedJobId,
   });
 
+  // Import candidate mutation
+  const importMutation = useMutation({
+    mutationFn: async ({ candidateUserId, matchScore }: { candidateUserId: string; matchScore: number }) => {
+      const { data, error } = await supabase.functions.invoke('import-candidate', {
+        body: {
+          job_id: selectedJobId,
+          candidate_user_id: candidateUserId,
+          match_score: matchScore,
+          send_notification: true
+        }
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      setImportedCandidates(prev => new Set([...prev, variables.candidateUserId]));
+      toast.success(isHebrew ? 'המועמד יובא בהצלחה והודעה נשלחה!' : 'Candidate imported and notified!');
+      queryClient.invalidateQueries({ queryKey: ['hr-candidates'] });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('already has an application')) {
+        toast.error(isHebrew ? 'למועמד כבר יש מועמדות למשרה זו' : 'Candidate already applied to this job');
+      } else {
+        toast.error(isHebrew ? 'שגיאה בייבוא המועמד' : 'Failed to import candidate');
+      }
+    },
+  });
+
+  const handleImport = async (candidate: MatchedCandidate) => {
+    setImportingCandidates(prev => new Set([...prev, candidate.user_id]));
+    try {
+      await importMutation.mutateAsync({
+        candidateUserId: candidate.user_id,
+        matchScore: candidate.matchScore
+      });
+    } finally {
+      setImportingCandidates(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(candidate.user_id);
+        return newSet;
+      });
+    }
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 85) return 'bg-green-500/10 text-green-600 border-green-500/20';
     if (score >= 60) return 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20';
     return 'bg-muted text-muted-foreground border-border';
   };
+
+  const selectedJob = jobs.find(j => j.id === selectedJobId);
 
   return (
     <div className="space-y-4">
@@ -267,17 +322,46 @@ export function MatchingCandidatesTab() {
                     </div>
                   )}
 
-                  {/* Contact */}
-                  <SendMessageDialog
-                    toUserId={candidate.user_id}
-                    toUserName={candidate.full_name}
-                    trigger={
-                      <Button variant="outline" size="sm" className="w-full gap-2">
-                        <MessageSquare className="w-4 h-4" />
-                        {isHebrew ? 'שלח הודעה' : 'Send Message'}
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {importedCandidates.has(candidate.user_id) ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 gap-2 bg-green-500/10 text-green-600 border-green-500/20"
+                        disabled
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        {isHebrew ? 'יובא בהצלחה' : 'Imported'}
                       </Button>
-                    }
-                  />
+                    ) : (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 gap-2"
+                        onClick={() => handleImport(candidate)}
+                        disabled={importingCandidates.has(candidate.user_id)}
+                      >
+                        {importingCandidates.has(candidate.user_id) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <UserPlus className="w-4 h-4" />
+                        )}
+                        {isHebrew ? 'ייבא למשרה' : 'Import to Job'}
+                      </Button>
+                    )}
+                    
+                    <SendMessageDialog
+                      toUserId={candidate.user_id}
+                      toUserName={candidate.full_name}
+                      relatedJobId={selectedJobId}
+                      trigger={
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      }
+                    />
+                  </div>
                 </CardContent>
               </Card>
             ))}
