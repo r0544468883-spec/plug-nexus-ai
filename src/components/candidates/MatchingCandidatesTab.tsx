@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +28,8 @@ import {
   AlertCircle,
   UserPlus,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -53,6 +55,7 @@ interface Job {
 export function MatchingCandidatesTab() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isHebrew = language === 'he';
 
@@ -323,7 +326,18 @@ export function MatchingCandidatesTab() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {/* View Profile Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => navigate(`/candidate/${candidate.user_id}`)}
+                    >
+                      <User className="w-4 h-4" />
+                      {isHebrew ? 'פרופיל' : 'Profile'}
+                    </Button>
+
                     {importedCandidates.has(candidate.user_id) ? (
                       <Button 
                         variant="outline" 
@@ -332,7 +346,7 @@ export function MatchingCandidatesTab() {
                         disabled
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        {isHebrew ? 'יובא בהצלחה' : 'Imported'}
+                        {isHebrew ? 'יובא' : 'Imported'}
                       </Button>
                     ) : (
                       <Button
@@ -347,7 +361,7 @@ export function MatchingCandidatesTab() {
                         ) : (
                           <UserPlus className="w-4 h-4" />
                         )}
-                        {isHebrew ? 'ייבא למשרה' : 'Import to Job'}
+                        {isHebrew ? 'ייבא' : 'Import'}
                       </Button>
                     )}
                     

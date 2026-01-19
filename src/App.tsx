@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
 import SavedJobs from "./pages/SavedJobs";
+import CandidateProfile from "./pages/CandidateProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/p/:userId" element={<PublicProfile />} />
               <Route path="/saved-jobs" element={<SavedJobs />} />
+              <Route path="/candidate/:candidateId" element={<CandidateProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

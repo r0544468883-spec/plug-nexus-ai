@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +13,8 @@ import {
   Phone,
   ExternalLink,
   Briefcase,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
@@ -71,6 +73,7 @@ const stageLabels: Record<string, { en: string; he: string }> = {
 
 export function CandidateCard({ candidate }: CandidateCardProps) {
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const isHebrew = language === 'he';
   const profile = candidate.profile;
 
@@ -88,6 +91,12 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
         : `Hi ${profile.full_name}, I saw your application for the ${candidate.job?.title} position. I'd love to chat with you.`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  };
+
+  const goToProfile = () => {
+    if (candidate.candidate_id) {
+      navigate(`/candidate/${candidate.candidate_id}`);
+    }
   };
 
   return (
@@ -179,34 +188,47 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
         )}
 
         {/* Contact Actions */}
-        {profile?.allow_recruiter_contact && (
-          <div className="flex items-center gap-2">
-            <SendMessageDialog
-              toUserId={candidate.candidate_id}
-              toUserName={profile?.full_name || ''}
-              relatedJobId={candidate.job?.id}
-              relatedApplicationId={candidate.id}
-              trigger={
-                <Button variant="outline" size="sm" className="flex-1 gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  {isHebrew ? 'הודעה' : 'Message'}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Profile Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            onClick={goToProfile}
+          >
+            <User className="w-4 h-4" />
+            {isHebrew ? 'פרופיל מלא' : 'Full Profile'}
+          </Button>
+
+          {profile?.allow_recruiter_contact && (
+            <>
+              <SendMessageDialog
+                toUserId={candidate.candidate_id}
+                toUserName={profile?.full_name || ''}
+                relatedJobId={candidate.job?.id}
+                relatedApplicationId={candidate.id}
+                trigger={
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    {isHebrew ? 'הודעה' : 'Message'}
+                  </Button>
+                }
+              />
+              
+              {profile?.phone && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20"
+                  onClick={openWhatsApp}
+                >
+                  <Phone className="w-4 h-4" />
+                  WhatsApp
                 </Button>
-              }
-            />
-            
-            {profile?.phone && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20"
-                onClick={openWhatsApp}
-              >
-                <Phone className="w-4 h-4" />
-                WhatsApp
-              </Button>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

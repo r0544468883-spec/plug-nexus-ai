@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
@@ -92,6 +93,7 @@ export function ApplicationDetailsSheet({
 }: ApplicationDetailsSheetProps) {
   const { language } = useLanguage();
   const { role } = useAuth();
+  const navigate = useNavigate();
   const isRTL = language === 'he';
   const isRecruiter = role === 'freelance_hr' || role === 'inhouse_hr';
 
@@ -410,7 +412,21 @@ export function ApplicationDetailsSheet({
                 )}
 
                 {/* Contact Buttons */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  {/* View Full Profile Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/candidate/${application.candidate_id}`);
+                    }}
+                  >
+                    <User className="h-4 w-4" />
+                    {isRTL ? 'פרופיל מלא' : 'Full Profile'}
+                  </Button>
+
                   {candidateProfile.phone && candidateProfile.allow_recruiter_contact && (
                     <Button
                       variant="default"
