@@ -294,6 +294,39 @@ export type Database = {
           },
         ]
       }
+      experience_levels: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name_en: string
+          name_he: string
+          slug: string
+          years_max: number | null
+          years_min: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name_en: string
+          name_he: string
+          slug: string
+          years_max?: number | null
+          years_min?: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name_en?: string
+          name_he?: string
+          slug?: string
+          years_max?: number | null
+          years_min?: number
+        }
+        Relationships: []
+      }
       home_assignments: {
         Row: {
           application_id: string
@@ -379,6 +412,74 @@ export type Database = {
           },
         ]
       }
+      job_fields: {
+        Row: {
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          name_en: string
+          name_he: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name_en: string
+          name_he: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name_en?: string
+          name_he?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      job_roles: {
+        Row: {
+          created_at: string
+          display_order: number
+          field_id: string
+          id: string
+          name_en: string
+          name_he: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          field_id: string
+          id?: string
+          name_en: string
+          name_he: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          field_id?: string
+          id?: string
+          name_en?: string
+          name_he?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_roles_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "job_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           ai_summary: Json | null
@@ -387,6 +488,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          experience_level_id: string | null
+          field_id: string | null
           id: string
           is_community_shared: boolean | null
           job_type: string | null
@@ -394,6 +497,7 @@ export type Database = {
           location: string | null
           longitude: number | null
           requirements: string | null
+          role_id: string | null
           salary_range: string | null
           shared_by_user_id: string | null
           source_url: string | null
@@ -408,6 +512,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          experience_level_id?: string | null
+          field_id?: string | null
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
@@ -415,6 +521,7 @@ export type Database = {
           location?: string | null
           longitude?: number | null
           requirements?: string | null
+          role_id?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
           source_url?: string | null
@@ -429,6 +536,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          experience_level_id?: string | null
+          field_id?: string | null
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
@@ -436,6 +545,7 @@ export type Database = {
           location?: string | null
           longitude?: number | null
           requirements?: string | null
+          role_id?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
           source_url?: string | null
@@ -449,6 +559,27 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_experience_level_id_fkey"
+            columns: ["experience_level_id"]
+            isOneToOne: false
+            referencedRelation: "experience_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "job_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "job_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -564,13 +695,17 @@ export type Database = {
           created_at: string
           email: string
           email_notifications: boolean | null
+          experience_years: number | null
           full_name: string
           github_url: string | null
           id: string
           linkedin_url: string | null
           phone: string | null
           portfolio_url: string | null
+          preferred_experience_level_id: string | null
+          preferred_fields: string[] | null
           preferred_language: string | null
+          preferred_roles: string[] | null
           profile_visibility: string | null
           theme: string | null
           updated_at: string
@@ -583,13 +718,17 @@ export type Database = {
           created_at?: string
           email: string
           email_notifications?: boolean | null
+          experience_years?: number | null
           full_name: string
           github_url?: string | null
           id?: string
           linkedin_url?: string | null
           phone?: string | null
           portfolio_url?: string | null
+          preferred_experience_level_id?: string | null
+          preferred_fields?: string[] | null
           preferred_language?: string | null
+          preferred_roles?: string[] | null
           profile_visibility?: string | null
           theme?: string | null
           updated_at?: string
@@ -602,19 +741,31 @@ export type Database = {
           created_at?: string
           email?: string
           email_notifications?: boolean | null
+          experience_years?: number | null
           full_name?: string
           github_url?: string | null
           id?: string
           linkedin_url?: string | null
           phone?: string | null
           portfolio_url?: string | null
+          preferred_experience_level_id?: string | null
+          preferred_fields?: string[] | null
           preferred_language?: string | null
+          preferred_roles?: string[] | null
           profile_visibility?: string | null
           theme?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_preferred_experience_level_id_fkey"
+            columns: ["preferred_experience_level_id"]
+            isOneToOne: false
+            referencedRelation: "experience_levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
