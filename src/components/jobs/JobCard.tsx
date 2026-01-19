@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Layers, GraduationCap, Briefcase } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Building2, ExternalLink, Heart, Users, Navigation, Layers, GraduationCap, Briefcase, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { useSavedJobs, useSaveJobMutation } from '@/hooks/useSavedJobs';
@@ -22,6 +22,7 @@ interface Job {
     id: string;
     name: string;
     logo_url: string | null;
+    avg_hiring_speed_days?: number | null;
   } | null;
   job_field?: {
     id: string;
@@ -261,6 +262,20 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
                 <Clock className="w-3.5 h-3.5" />
                 {timeAgo}
               </span>
+
+              {/* Hiring Speed Badge */}
+              {job.company?.avg_hiring_speed_days && job.company.avg_hiring_speed_days > 0 && (
+                <Badge 
+                  variant="outline" 
+                  className="text-xs gap-1 bg-primary/10 text-primary border-primary/20"
+                >
+                  <Zap className="w-3 h-3" />
+                  {isHebrew 
+                    ? `ממוצע ${Math.round(job.company.avg_hiring_speed_days)} ימים לגיוס`
+                    : `Avg ${Math.round(job.company.avg_hiring_speed_days)} days to hire`
+                  }
+                </Badge>
+              )}
             </div>
 
             {/* Sharer info */}

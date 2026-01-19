@@ -84,12 +84,81 @@ export function PortfolioLinks() {
             <Briefcase className="w-4 h-4" />
             {isHebrew ? 'תיק עבודות' : 'Portfolio'}
           </Label>
-          <Input
-            value={portfolioUrl}
-            onChange={(e) => setPortfolioUrl(e.target.value)}
-            placeholder="https://yourportfolio.com"
-            type="url"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={portfolioUrl}
+              onChange={(e) => setPortfolioUrl(e.target.value)}
+              placeholder="https://yourportfolio.com"
+              type="url"
+              className="flex-1"
+            />
+            {portfolioUrl && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={async () => {
+                  if (!portfolioUrl || !user) return;
+                  setIsAnalyzing(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('analyze-portfolio', {
+                      body: { portfolioUrl }
+                    });
+                    if (error) throw error;
+                    setPortfolioSummary(data.summary);
+                    toast.success(isHebrew ? 'הפורטפוליו נותח בהצלחה!' : 'Portfolio analyzed successfully!');
+                    queryClient.invalidateQueries({ queryKey: ['profile'] });
+                  } catch (err) {
+                    console.error('Portfolio analysis error:', err);
+                    toast.error(isHebrew ? 'שגיאה בניתוח הפורטפוליו' : 'Failed to analyze portfolio');
+                  } finally {
+                    setIsAnalyzing(false);
+                  }
+                }}
+                disabled={isAnalyzing}
+                title={isHebrew ? 'נתח עם AI' : 'Analyze with AI'}
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Brain className="w-4 h-4 text-primary" />
+                )}
+              </Button>
+            )}
+          </div>
+          
+          {/* Portfolio AI Summary */}
+          {portfolioSummary && (
+            <div className="mt-3 p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Sparkles className="w-4 h-4" />
+                {isHebrew ? 'סיכום AI של הפורטפוליו' : 'AI Portfolio Summary'}
+              </div>
+              
+              {portfolioSummary.overall_summary && (
+                <p className="text-sm text-muted-foreground">{portfolioSummary.overall_summary}</p>
+              )}
+              
+              {portfolioSummary.tech_stack?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-foreground mb-1">
+                    {isHebrew ? 'טכנולוגיות' : 'Tech Stack'}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {portfolioSummary.tech_stack.map((tech: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs">{tech}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {portfolioSummary.style && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">{isHebrew ? 'סגנון: ' : 'Style: '}</span>
+                  {portfolioSummary.style}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* LinkedIn URL */}
