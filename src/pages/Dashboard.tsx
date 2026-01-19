@@ -23,7 +23,7 @@ import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, User } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, User, FileEdit } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -157,6 +157,11 @@ export default function Dashboard() {
     switch (role) {
       case 'job_seeker':
         return [
+          { 
+            title: isRTL ? 'בניית קו״ח' : 'CV Builder', 
+            icon: FileEdit,
+            onClick: () => setCurrentSection('cv-builder'),
+          },
           { 
             title: t('actions.uploadCV') || 'Upload CV', 
             icon: Upload,
