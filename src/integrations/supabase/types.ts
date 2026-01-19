@@ -757,6 +757,7 @@ export type Database = {
           avg_response_time_hours: number | null
           bio: string | null
           created_at: string
+          cv_data: Json | null
           email: string
           email_notifications: boolean | null
           experience_years: number | null
@@ -786,6 +787,7 @@ export type Database = {
           avg_response_time_hours?: number | null
           bio?: string | null
           created_at?: string
+          cv_data?: Json | null
           email: string
           email_notifications?: boolean | null
           experience_years?: number | null
@@ -815,6 +817,7 @@ export type Database = {
           avg_response_time_hours?: number | null
           bio?: string | null
           created_at?: string
+          cv_data?: Json | null
           email?: string
           email_notifications?: boolean | null
           experience_years?: number | null
