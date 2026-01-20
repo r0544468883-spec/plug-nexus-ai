@@ -203,6 +203,46 @@ export function ApplicationsPage() {
     }
   }, [user?.id, isRTL, t]);
 
+  const handleStageChange = useCallback(async (id: string, newStage: string) => {
+    try {
+      const updateData: Record<string, string> = {
+        current_stage: newStage,
+        last_interaction: new Date().toISOString(),
+      };
+
+      // Update status based on stage
+      if (newStage === 'rejected' || newStage === 'withdrawn') {
+        updateData.status = newStage;
+      } else if (newStage === 'hired') {
+        updateData.status = 'hired';
+      } else {
+        updateData.status = 'active';
+      }
+
+      const { error } = await supabase
+        .from('applications')
+        .update(updateData)
+        .eq('id', id)
+        .eq('candidate_id', user?.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === id 
+            ? { ...app, current_stage: newStage, status: updateData.status } 
+            : app
+        )
+      );
+
+      toast.success(isRTL ? 'השלב עודכן' : 'Stage updated');
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      toast.error(t('common.error') || 'Failed to update stage');
+    }
+  }, [user?.id, isRTL, t]);
+
   const handlePlugAction = useCallback((action: string) => {
     if (action === 'interview_prep') {
       toast.info(isRTL ? 'הכנה לראיון - בקרוב!' : 'Interview prep - Coming soon!');
@@ -350,6 +390,7 @@ export function ApplicationsPage() {
                 }}
                 onViewDetails={() => handleViewDetails(application)}
                 onWithdraw={() => handleWithdraw(application.id)}
+                onStageChange={(stage) => handleStageChange(application.id, stage)}
               />
             )
           ))}

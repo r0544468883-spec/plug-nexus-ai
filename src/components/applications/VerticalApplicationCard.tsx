@@ -3,6 +3,13 @@ import { he, enUS } from 'date-fns/locale';
 import { MapPin, Briefcase, Clock, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import MatchScoreCircle from './MatchScoreCircle';
 import SwipeableCard from './SwipeableCard';
@@ -33,6 +40,7 @@ interface VerticalApplicationCardProps {
   application: Application;
   onViewDetails: () => void;
   onWithdraw: () => void;
+  onStageChange?: (stage: string) => void;
 }
 
 const stageConfig: Record<string, { label: { en: string; he: string }; color: string }> = {
@@ -66,6 +74,7 @@ const VerticalApplicationCard = ({
   application,
   onViewDetails,
   onWithdraw,
+  onStageChange,
 }: VerticalApplicationCardProps) => {
   const { language } = useLanguage();
   const isMobile = useIsMobile();
@@ -130,9 +139,36 @@ const VerticalApplicationCard = ({
 
             {/* Stage & Time */}
             <div className="flex items-center justify-between">
-              <Badge variant="secondary" className={stage.color}>
-                {isRTL ? stage.label.he : stage.label.en}
-              </Badge>
+              {onStageChange ? (
+                <Select
+                  value={application.current_stage}
+                  onValueChange={(value) => onStageChange(value)}
+                >
+                  <SelectTrigger 
+                    className="w-auto h-7 gap-1 px-2 border-none bg-transparent hover:bg-muted"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <SelectValue>
+                      <Badge variant="secondary" className={stage.color}>
+                        {isRTL ? stage.label.he : stage.label.en}
+                      </Badge>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent onClick={(e) => e.stopPropagation()}>
+                    {Object.entries(stageConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <span className={`px-2 py-0.5 rounded text-xs ${config.color}`}>
+                          {isRTL ? config.label.he : config.label.en}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="secondary" className={stage.color}>
+                  {isRTL ? stage.label.he : stage.label.en}
+                </Badge>
+              )}
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {timeAgo}
