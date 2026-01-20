@@ -18,6 +18,7 @@ interface TourTooltipProps {
   isLast: boolean;
   icon?: React.ElementType;
   isElementFound?: boolean;
+  customImage?: string;
 }
 
 export function TourTooltip({
@@ -33,6 +34,7 @@ export function TourTooltip({
   isLast,
   icon: Icon,
   isElementFound = true,
+  customImage,
 }: TourTooltipProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
@@ -173,9 +175,22 @@ export function TourTooltip({
                 ))}
               </div>
 
-              {/* Icon and Content */}
+              {/* Icon/Image and Content */}
               <div className="space-y-3 mb-5">
-                {Icon && (
+                {customImage ? (
+                  <motion.div 
+                    className="mx-auto rounded-xl overflow-hidden shadow-lg"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  >
+                    <img 
+                      src={customImage} 
+                      alt="Tour illustration" 
+                      className="w-full h-24 object-cover"
+                    />
+                  </motion.div>
+                ) : Icon && (
                   <motion.div 
                     className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto"
                     initial={{ scale: 0, rotate: -180 }}

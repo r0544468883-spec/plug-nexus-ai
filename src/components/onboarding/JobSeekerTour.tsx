@@ -9,7 +9,7 @@ import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
   Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
-  Link, SlidersHorizontal
+  Link, SlidersHorizontal, Building2
 } from 'lucide-react';
 import onboardingNotesImage from '@/assets/onboarding-notes.png';
 
@@ -64,6 +64,16 @@ const TOUR_STEPS: TourStep[] = [
     descriptionHe: 'מצאת משרה מעניינת? שתף אותה עם הקהילה! עזור לאחרים למצוא עבודה ובנה רשת קשרים מקצועית.',
     descriptionEn: 'Found an interesting job? Share it with the community! Help others find work and build your professional network.',
     icon: Share2,
+  },
+  // Step 5: Company Recommendations - NEW!
+  {
+    section: 'job-search',
+    targetSelector: '[data-tour="company-recommendations"]',
+    titleHe: 'חברות מומלצות עבורך 🏢',
+    titleEn: 'Recommended Companies 🏢',
+    descriptionHe: 'לאחר העלאת קו"ח, Plug ממליץ על חברות שמתאימות לפרופיל שלך! סנן לפי תחום וגלה הזדמנויות חדשות.',
+    descriptionEn: 'After uploading your CV, Plug recommends companies that match your profile! Filter by field and discover new opportunities.',
+    icon: Sparkles,
   },
   // Step 5: Documents - Resume Upload
   {
@@ -334,6 +344,7 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
             isLast={currentStep === TOUR_STEPS.length - 1}
             icon={step.icon}
             isElementFound={isElementFound}
+            customImage={step.customImage}
           />
         </>
       )}
