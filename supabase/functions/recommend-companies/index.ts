@@ -56,7 +56,6 @@ serve(async (req) => {
         id, name, description, industry, website, logo_url, size,
         avg_hiring_speed_days, total_hires
       `)
-      .not('website', 'is', null)
       .order('total_hires', { ascending: false, nullsFirst: false })
       .limit(limit);
 
