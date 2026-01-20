@@ -20,12 +20,37 @@ import {
   getExperienceLevelBySlug 
 } from '@/lib/job-taxonomy';
 
+// Industry types for filtering
+const INDUSTRIES = [
+  { value: 'digital-agency', labelEn: 'Digital Agency', labelHe: 'סוכנות דיגיטל' },
+  { value: 'architecture', labelEn: 'Architecture', labelHe: 'אדריכלות' },
+  { value: 'banking', labelEn: 'Banking', labelHe: 'בנקאות' },
+  { value: 'insurance', labelEn: 'Insurance', labelHe: 'ביטוח' },
+  { value: 'startup', labelEn: 'Startup', labelHe: 'סטארטאפ' },
+  { value: 'enterprise', labelEn: 'Enterprise', labelHe: 'ארגון גדול' },
+  { value: 'consulting', labelEn: 'Consulting', labelHe: 'ייעוץ' },
+  { value: 'government', labelEn: 'Government', labelHe: 'ממשלתי' },
+  { value: 'ngo', labelEn: 'Non-Profit', labelHe: 'מלכ"ר' },
+  { value: 'healthcare', labelEn: 'Healthcare', labelHe: 'בריאות' },
+  { value: 'education', labelEn: 'Education', labelHe: 'חינוך' },
+  { value: 'retail', labelEn: 'Retail', labelHe: 'קמעונאות' },
+  { value: 'manufacturing', labelEn: 'Manufacturing', labelHe: 'ייצור' },
+  { value: 'telecom', labelEn: 'Telecom', labelHe: 'טלקום' },
+  { value: 'fintech', labelEn: 'Fintech', labelHe: 'פינטק' },
+  { value: 'cyber', labelEn: 'Cybersecurity', labelHe: 'סייבר' },
+  { value: 'gaming', labelEn: 'Gaming', labelHe: 'גיימינג' },
+  { value: 'ecommerce', labelEn: 'E-Commerce', labelHe: 'מסחר אלקטרוני' },
+  { value: 'media', labelEn: 'Media & Entertainment', labelHe: 'מדיה ובידור' },
+  { value: 'real-estate', labelEn: 'Real Estate', labelHe: 'נדל"ן' },
+];
+
 export interface JobFiltersState {
   search: string;
   location: string;
   jobType: string;
   salaryRange: string;
   companySearch: string;
+  industry: string;
   category: string;
   fieldSlug: string;
   roleSlug: string;
@@ -111,7 +136,8 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
 
   const hasActiveFilters = filters.search || filters.location || filters.jobType || 
     filters.salaryRange || filters.companySearch || filters.fieldSlug || 
-    filters.roleSlug || filters.experienceLevelSlug || filters.userLatitude;
+    filters.roleSlug || filters.experienceLevelSlug || filters.userLatitude ||
+    filters.industry;
 
   const updateFilter = <K extends keyof JobFiltersState>(key: K, value: JobFiltersState[K]) => {
     const newFilters = { ...filters, [key]: value };
@@ -375,8 +401,29 @@ export function JobFilters({ filters, onFiltersChange, onClearFilters }: JobFilt
             </div>
           )}
 
-          {/* Row 3: Job Type and Salary */}
+          {/* Row 4: Job Type, Salary, Industry */}
           <div className="flex flex-col lg:flex-row gap-4">
+            {/* Industry */}
+            <div className="w-full lg:w-48">
+              <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5" />
+                {isHebrew ? 'ענף' : 'Industry'}
+              </Label>
+              <Select value={filters.industry || 'all'} onValueChange={(v) => updateFilter('industry', v === 'all' ? '' : v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={isHebrew ? 'בחר ענף' : 'Select industry'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isHebrew ? 'כל הענפים' : 'All industries'}</SelectItem>
+                  {INDUSTRIES.map((ind) => (
+                    <SelectItem key={ind.value} value={ind.value}>
+                      {isHebrew ? ind.labelHe : ind.labelEn}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Job Type */}
             <div className="w-full lg:w-40">
               <Label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">

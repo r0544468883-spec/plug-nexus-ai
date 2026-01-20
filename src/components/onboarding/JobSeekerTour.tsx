@@ -8,7 +8,7 @@ import { TransitionScreen } from './TransitionScreen';
 import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
-  Zap, Share2, Brain, MessageSquare, Heart 
+  Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings 
 } from 'lucide-react';
 
 interface TourStep {
