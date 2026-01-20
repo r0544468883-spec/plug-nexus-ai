@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Clock, DollarSign, Building2, Briefcase, ExternalLink, Share2, Heart, CheckCircle2 } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Building2, Briefcase, ExternalLink, Share2, Heart, CheckCircle2, Layers } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { EditJobFieldForm } from './EditJobFieldForm';
 
 interface Job {
   id: string;
@@ -20,6 +23,10 @@ interface Job {
   salary_range: string | null;
   source_url: string | null;
   created_at: string;
+  field_id?: string | null;
+  role_id?: string | null;
+  shared_by_user_id?: string | null;
+  created_by?: string | null;
   company?: {
     id: string;
     name: string;
@@ -34,6 +41,7 @@ interface JobDetailsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onApply: (job: Job) => void;
+  onRefresh?: () => void;
 }
 
 const jobTypeLabels: Record<string, { en: string; he: string }> = {
@@ -44,11 +52,16 @@ const jobTypeLabels: Record<string, { en: string; he: string }> = {
   'internship': { en: 'Internship', he: 'התמחות' },
 };
 
-export function JobDetailsSheet({ job, open, onOpenChange, onApply }: JobDetailsSheetProps) {
+export function JobDetailsSheet({ job, open, onOpenChange, onApply, onRefresh }: JobDetailsSheetProps) {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isHebrew = language === 'he';
+  const [showEditField, setShowEditField] = useState(false);
 
   if (!job) return null;
+  
+  // Check if current user is the job poster
+  const isJobPoster = user && (job.shared_by_user_id === user.id || job.created_by === user.id);
 
   const timeAgo = formatDistanceToNow(new Date(job.created_at), {
     addSuffix: true,
@@ -130,6 +143,20 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply }: JobDetails
                 <Heart className="w-4 h-4" />
               </Button>
             </div>
+
+            {/* Edit Field Button - Only for job poster */}
+            {isJobPoster && (
+              <div className="mb-6">
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  onClick={() => setShowEditField(true)}
+                >
+                  <Layers className="w-4 h-4" />
+                  {isHebrew ? 'ערוך תחום משרה' : 'Edit Job Field'}
+                </Button>
+              </div>
+            )}
 
             <Separator className="my-6" />
 
@@ -214,6 +241,18 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply }: JobDetails
           </div>
         </ScrollArea>
       </SheetContent>
+
+      {/* Edit Job Field Dialog */}
+      <EditJobFieldForm
+        open={showEditField}
+        onOpenChange={setShowEditField}
+        jobId={job.id}
+        currentFieldId={job.field_id || null}
+        currentRoleId={job.role_id || null}
+        onSuccess={() => {
+          onRefresh?.();
+        }}
+      />
     </Sheet>
   );
 }

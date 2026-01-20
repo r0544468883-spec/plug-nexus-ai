@@ -75,7 +75,7 @@ export const CVBuilder = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="h-[calc(100vh-4rem)] flex flex-col" data-tour="cv-builder">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
         <h1 className="text-lg font-bold">
