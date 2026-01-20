@@ -49,6 +49,7 @@ import { toast } from 'sonner';
 import { InterviewScheduler } from './InterviewScheduler';
 import { HomeAssignmentTab } from './HomeAssignmentTab';
 import { ApplicationPlugChat } from './ApplicationPlugChat';
+import { StageProgressBar } from './StageProgressBar';
 import MatchScoreCircle from './MatchScoreCircle';
 import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
@@ -487,40 +488,16 @@ export function ApplicationDetailsSheet({
             </TabsList>
 
             <TabsContent value="status" className="space-y-4 mt-4">
-              {/* Status Select */}
+              {/* Stage Progress Bar */}
               <div>
                 <h3 className="text-sm font-semibold mb-2">
-                  {isRTL ? 'סטטוס מועמדות' : 'Application Status'}
+                  {isRTL ? 'שלב במועמדות' : 'Application Stage'}
                 </h3>
-                <Select 
-                  value={currentStage} 
-                  onValueChange={handleStageChange}
+                <StageProgressBar
+                  currentStage={currentStage}
+                  onStageChange={handleStageChange}
                   disabled={isSaving}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="applied">
-                      {isRTL ? 'הוגש' : 'Applied'}
-                    </SelectItem>
-                    <SelectItem value="screening">
-                      {isRTL ? 'סינון' : 'Screening'}
-                    </SelectItem>
-                    <SelectItem value="interview">
-                      {isRTL ? 'ראיון' : 'Interview'}
-                    </SelectItem>
-                    <SelectItem value="offer">
-                      {isRTL ? 'הצעה' : 'Offer'}
-                    </SelectItem>
-                    <SelectItem value="hired">
-                      {isRTL ? 'התקבל' : 'Hired'}
-                    </SelectItem>
-                    <SelectItem value="rejected">
-                      {isRTL ? 'נדחה' : 'Rejected'}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               {/* Notes */}
