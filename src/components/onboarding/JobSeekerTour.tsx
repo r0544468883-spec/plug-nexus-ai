@@ -11,7 +11,7 @@ import {
   Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
   Link, SlidersHorizontal, Building2
 } from 'lucide-react';
-import onboardingNotesImage from '@/assets/onboarding-notes.png';
+import onboardingNotesImage from '@/assets/onboarding-notes-new.png';
 
 interface TourStep {
   section: DashboardSection;

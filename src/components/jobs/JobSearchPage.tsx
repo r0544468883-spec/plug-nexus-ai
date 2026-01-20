@@ -59,6 +59,7 @@ export function JobSearchPage() {
   const [filters, setFilters] = useState<JobFiltersState>(defaultFilters);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(true);
 
   // Fetch jobs with filters
   const { data: jobs = [], isLoading } = useQuery({
@@ -231,6 +232,18 @@ export function JobSearchPage() {
 
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+      {/* Company Recommendations (moved up) */}
+      <div data-tour="company-recommendations" className="space-y-3">
+        <Button
+          variant="secondary"
+          onClick={() => setShowRecommendations((v) => !v)}
+          className="w-full justify-center text-center"
+        >
+          PLUG FINDS YOU COMPANIES THAT YOU MIGHT BE INTERESTED IN APPLY TOO
+        </Button>
+        {showRecommendations && <CompanyRecommendations />}
+      </div>
+
       {/* Community Sharing Banner */}
       <Card className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-primary/20">
         <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -348,11 +361,6 @@ export function JobSearchPage() {
           ))}
         </div>
       )}
-
-      {/* Company Recommendations */}
-      <div data-tour="company-recommendations">
-        <CompanyRecommendations />
-      </div>
 
       {/* Job Details Sheet */}
       <JobDetailsSheet
