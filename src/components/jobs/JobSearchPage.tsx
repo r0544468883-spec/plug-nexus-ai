@@ -262,6 +262,19 @@ export function JobSearchPage() {
         </CardContent>
       </Card>
 
+      {/* Companies Button */}
+      <div data-tour="company-recommendations">
+        <Button
+          variant="ghost"
+          onClick={() => setShowRecommendations((v) => !v)}
+          className="gap-2 text-primary hover:text-primary/80"
+        >
+          <Building2 className="w-4 h-4" />
+          {isHebrew ? 'חברות שמחפשות עובדים כמוך' : 'Companies that look for your type of employees'}
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showRecommendations && "rotate-180")} />
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -289,19 +302,6 @@ export function JobSearchPage() {
             )}
           </p>
         </div>
-        
-        {/* Company Recommendations Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRecommendations((v) => !v)}
-          className="gap-2"
-          data-tour="company-recommendations"
-        >
-          <Building2 className="w-4 h-4" />
-          {isHebrew ? 'חברות שמחפשות עובדים כמוך' : 'Companies for you'}
-          <ChevronDown className={cn("w-4 h-4 transition-transform", showRecommendations && "rotate-180")} />
-        </Button>
       </div>
 
       {/* Filters */}
