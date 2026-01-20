@@ -8,8 +8,10 @@ import { TransitionScreen } from './TransitionScreen';
 import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
-  Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings 
+  Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
+  Link, SlidersHorizontal
 } from 'lucide-react';
+import onboardingNotesImage from '@/assets/onboarding-notes.png';
 
 interface TourStep {
   section: DashboardSection;
@@ -19,6 +21,7 @@ interface TourStep {
   descriptionHe: string;
   descriptionEn: string;
   icon: React.ElementType;
+  customImage?: string;
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -32,7 +35,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'I\'m your AI job search assistant! Ask me about positions, get help preparing for interviews, or request tips to improve your resume.',
     icon: Sparkles,
   },
-  // Step 2: Applications - Add Application (was 6)
+  // Step 2: Applications - Add Application
   {
     section: 'applications',
     targetSelector: '[data-tour="add-application"]',
@@ -42,7 +45,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Paste a job link from any site - AI will extract all details automatically! You can also add manually.',
     icon: FileText,
   },
-  // Step 3: Job Search - Filters (was 4)
+  // Step 3: Job Search - Filters
   {
     section: 'job-search',
     targetSelector: '[data-tour="job-filters"]',
@@ -52,7 +55,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Filter jobs by location, category, job type, and salary. Enable GPS to find jobs near you!',
     icon: Search,
   },
-  // Step 4: Job Search - Share Job (was 5)
+  // Step 4: Job Search - Share Job
   {
     section: 'job-search',
     targetSelector: '[data-tour="share-job"]',
@@ -62,7 +65,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Found an interesting job? Share it with the community! Help others find work and build your professional network.',
     icon: Share2,
   },
-  // Step 5: Documents - Resume Upload (was 7)
+  // Step 5: Documents - Resume Upload
   {
     section: 'documents',
     targetSelector: '[data-tour="resume-upload"]',
@@ -72,7 +75,38 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Upload your resume and AI will analyze it: identify skills, rate your profile, and suggest matching roles!',
     icon: Brain,
   },
-  // Step 6: Overview - Quick Actions (was 2)
+  // Step 6: CV Builder - NEW!
+  {
+    section: 'cv-builder',
+    targetSelector: '[data-tour="cv-builder"]',
+    titleHe: 'בונה קו"ח מקצועי 📄',
+    titleEn: 'Professional CV Builder 📄',
+    descriptionHe: 'צור קורות חיים מרשימים עם מגוון תבניות מעוצבות! בחר עיצוב, מלא פרטים, והורד PDF מוכן.',
+    descriptionEn: 'Create impressive resumes with various designed templates! Choose a design, fill in details, and download a ready PDF.',
+    icon: FileEdit,
+    customImage: onboardingNotesImage,
+  },
+  // Step 7: Portfolio & Links - NEW!
+  {
+    section: 'documents',
+    targetSelector: '[data-tour="portfolio-links"]',
+    titleHe: 'קישורים מקצועיים 🔗',
+    titleEn: 'Professional Links 🔗',
+    descriptionHe: 'הוסף קישור לתיק עבודות, LinkedIn, GitHub ועוד. מגייסים יוכלו לראות את העבודות שלך!',
+    descriptionEn: 'Add links to your portfolio, LinkedIn, GitHub, and more. Recruiters can view your work!',
+    icon: Link,
+  },
+  // Step 8: Settings - Preferences - NEW!
+  {
+    section: 'settings',
+    targetSelector: '[data-tour="preferences"]',
+    titleHe: 'העדפות עבודה ⚙️',
+    titleEn: 'Job Preferences ⚙️',
+    descriptionHe: 'הגדר תחומים מועדפים, סוגי משרות, ומיקומים רצויים. Plug ימצא עבורך את ההתאמות הטובות ביותר!',
+    descriptionEn: 'Set preferred fields, job types, and desired locations. Plug will find the best matches for you!',
+    icon: SlidersHorizontal,
+  },
+  // Step 9: Overview - Quick Actions
   {
     section: 'overview',
     targetSelector: '[data-tour="quick-actions"]',
@@ -82,7 +116,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Shortcuts to common actions! Upload your CV, search for jobs, or jump straight to your applications - all in one click.',
     icon: Zap,
   },
-  // Step 7: Overview - Stats (was 3)
+  // Step 10: Overview - Stats
   {
     section: 'overview',
     targetSelector: '[data-tour="stats-row"]',
@@ -92,7 +126,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'See real-time stats here: how many applications you\'ve submitted, upcoming interviews, and active applications.',
     icon: FileText,
   },
-  // Step 8: Messages - Inbox
+  // Step 11: Messages - Inbox
   {
     section: 'messages',
     targetSelector: '[data-tour="message-inbox"]',
@@ -102,7 +136,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Receive messages from recruiters, send messages, and attach files. All your professional communication in one place!',
     icon: MessageSquare,
   },
-  // Step 9: Vouches
+  // Step 12: Vouches
   {
     section: 'overview',
     targetSelector: '[data-tour="vouch-widget"]',

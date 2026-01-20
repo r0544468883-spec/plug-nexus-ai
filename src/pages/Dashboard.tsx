@@ -20,10 +20,11 @@ import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
+import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -254,10 +255,15 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* AI Insights + Vouch Widget - Right Side */}
+        {/* AI Insights + Vouch Widget + Company Recommendations - Right Side */}
         <div className="lg:col-span-1 space-y-4">
           {/* Vouch Widget */}
           <VouchWidget />
+
+          {/* Company Recommendations - Only for job seekers */}
+          {role === 'job_seeker' && (
+            <CompanyRecommendations />
+          )}
 
           {/* AI Insights */}
           <Card className="bg-card border-border plug-ai-highlight">

@@ -65,7 +65,7 @@ export function PortfolioLinks() {
   const hasLinks = portfolioUrl || linkedinUrl || githubUrl;
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" data-tour="portfolio-links">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Link2 className="w-5 h-5 text-primary" />
