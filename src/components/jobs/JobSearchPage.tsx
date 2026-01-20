@@ -20,6 +20,7 @@ const defaultFilters: JobFiltersState = {
   jobType: '',
   salaryRange: '',
   companySearch: '',
+  industry: '',
   category: '',
   fieldSlug: '',
   roleSlug: '',
