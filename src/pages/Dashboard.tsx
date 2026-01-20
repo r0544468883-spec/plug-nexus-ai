@@ -23,7 +23,7 @@ import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, User, FileEdit } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -440,9 +440,12 @@ export default function Dashboard() {
     }, 100);
   };
 
-  // Profile icon facing right in LTR, left in RTL
+  // Route with flag icon for guided tour
   const TourGuideIcon = () => (
-    <User className={`w-6 h-6 ${isRTL ? '-scale-x-100' : ''}`} />
+    <div className="relative">
+      <Route className="w-6 h-6" />
+      <Flag className="w-3 h-3 absolute -top-1 -right-1 text-primary" />
+    </div>
   );
 
   return (

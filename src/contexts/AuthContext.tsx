@@ -36,35 +36,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
+
+  // Load cached role from localStorage for faster initial render
+  useEffect(() => {
+    const cachedRole = localStorage.getItem('plug_user_role');
+    if (cachedRole && ['job_seeker', 'freelance_hr', 'inhouse_hr', 'company_employee'].includes(cachedRole)) {
+      setRole(cachedRole as AppRole);
+    }
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         
-        if (session?.user) {
-          // Defer profile fetch to avoid blocking
+        if (currentSession?.user) {
+          // Defer profile and role fetch to avoid blocking
           setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchRole(session.user.id);
+            fetchProfile(currentSession.user.id);
+            fetchRole(currentSession.user.id);
           }, 0);
         } else {
           setProfile(null);
           setRole(null);
+          setRoleLoading(false);
+          // Clear cached role on logout
+          localStorage.removeItem('plug_user_role');
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
       
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchRole(session.user.id);
+      if (existingSession?.user) {
+        fetchProfile(existingSession.user.id);
+        fetchRole(existingSession.user.id);
+      } else {
+        setRoleLoading(false);
       }
       
       setIsLoading(false);
@@ -86,14 +100,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
+    setRoleLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
 
-    if (!error && data) {
-      setRole(data.role as AppRole);
+      if (!error && data) {
+        const fetchedRole = data.role as AppRole;
+        setRole(fetchedRole);
+        // Cache role in localStorage for faster initial load
+        localStorage.setItem('plug_user_role', fetchedRole);
+      }
+    } catch (err) {
+      console.error('Error fetching role:', err);
+    } finally {
+      setRoleLoading(false);
     }
   };
 

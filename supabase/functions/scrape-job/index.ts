@@ -163,7 +163,7 @@ serve(async (req) => {
     console.log('Authenticated user:', authenticatedUserId);
 
     const body = await req.json();
-    const { url, save, manual } = body;
+    const { url, save, manual, pastedContent } = body;
     
     // Create admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -270,15 +270,18 @@ serve(async (req) => {
       );
     }
     
-    if (!url) {
+    // Handle pasted content - no need to fetch URL
+    const isPastedContent = url === 'paste://manual-entry' && pastedContent;
+    
+    if (!isPastedContent && !url) {
       return new Response(
-        JSON.stringify({ error: 'URL is required' }),
+        JSON.stringify({ error: 'URL or pasted content is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate URL format and security
-    if (!isValidUrl(url)) {
+    // Validate URL format and security (skip for pasted content)
+    if (!isPastedContent && !isValidUrl(url)) {
       return new Response(
         JSON.stringify({ error: 'Invalid URL. Only HTTPS URLs to public websites are allowed.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -290,31 +293,40 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Fetch the job page content
+    // Get page content - either from URL or pasted content
     let pageContent = '';
-    try {
-      const pageResponse = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
-      pageContent = await pageResponse.text();
-      // Clean HTML - remove scripts and styles, keep text
-      pageContent = pageContent
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .substring(0, MAX_PAGE_CONTENT_LENGTH); // Limit context size
-    } catch (fetchError) {
-      console.error('Error fetching URL:', fetchError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch job page. Please check the URL.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    
+    if (isPastedContent) {
+      // Use pasted content directly
+      pageContent = pastedContent.substring(0, MAX_PAGE_CONTENT_LENGTH);
+      console.log('Using pasted content, length:', pageContent.length);
+    } else {
+      // Fetch the job page content
+      try {
+        const pageResponse = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        pageContent = await pageResponse.text();
+        // Clean HTML - remove scripts and styles, keep text
+        pageContent = pageContent
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .substring(0, MAX_PAGE_CONTENT_LENGTH); // Limit context size
+      } catch (fetchError) {
+        console.error('Error fetching URL:', fetchError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch job page. Please check the URL.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Use Lovable AI to extract job details
+    const sourceInfo = isPastedContent ? 'Pasted job description text' : `URL: ${url}`;
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -338,11 +350,12 @@ Always respond with valid JSON in this exact format:
   "requirements": "string (comma-separated key requirements)",
   "years_of_experience": "number or null (estimated years required)"
 }
-If you cannot extract a field, use null. Always return valid JSON.`
+If you cannot extract a field, use null. Always return valid JSON.
+IMPORTANT: Extract the company name even from job board posts - look for "at [Company]", "Company: [Name]", or similar patterns.`
           },
           {
             role: 'user',
-            content: `Extract job details from this job posting:\n\nURL: ${url}\n\nContent:\n${pageContent}`
+            content: `Extract job details from this job posting:\n\n${sourceInfo}\n\nContent:\n${pageContent}`
           }
         ],
         tools: [
