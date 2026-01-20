@@ -24,7 +24,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Heart,
-  FileEdit
+  FileEdit,
+  Route
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -246,6 +247,18 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
               <span>
                 <LanguageToggle />
               </span>
+            </NavTooltip>
+
+            {/* Prominent Logout Button */}
+            <NavTooltip content={direction === 'rtl' ? 'התנתק מהמערכת' : 'Sign out'} side="bottom">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={signOut}
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </NavTooltip>
           </div>
         </header>
