@@ -68,10 +68,10 @@ export function JobSearchPage() {
     setShowRecommendations((v) => {
       const next = !v;
       if (next) {
-        // Scroll after the DOM updates
-        queueMicrotask(() => {
+        // Scroll after the component renders
+        setTimeout(() => {
           recommendationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
+        }, 100);
       }
       return next;
     });
@@ -380,8 +380,11 @@ export function JobSearchPage() {
       )}
 
       {/* Company Recommendations (at bottom) */}
-      <div ref={recommendationsRef} />
-      {showRecommendations && <CompanyRecommendations />}
+      {showRecommendations && (
+        <div ref={recommendationsRef}>
+          <CompanyRecommendations />
+        </div>
+      )}
 
       {/* Job Details Sheet */}
       <JobDetailsSheet
