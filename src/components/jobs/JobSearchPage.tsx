@@ -7,13 +7,13 @@ import { JobFilters, JobFiltersState } from './JobFilters';
 import { JobCard } from './JobCard';
 import { JobDetailsSheet } from './JobDetailsSheet';
 import { ShareJobForm } from './ShareJobForm';
+import { CompanyRecommendations } from './CompanyRecommendations';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Search, Briefcase, Users, Share2, Sparkles, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-
 const defaultFilters: JobFiltersState = {
   search: '',
   location: '',
@@ -348,6 +348,11 @@ export function JobSearchPage() {
           ))}
         </div>
       )}
+
+      {/* Company Recommendations */}
+      <div data-tour="company-recommendations">
+        <CompanyRecommendations />
+      </div>
 
       {/* Job Details Sheet */}
       <JobDetailsSheet
