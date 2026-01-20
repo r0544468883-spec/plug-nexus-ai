@@ -12,7 +12,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, Briefcase, Users, Share2, Sparkles, MapPin } from 'lucide-react';
+import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 const defaultFilters: JobFiltersState = {
   search: '',
@@ -232,16 +233,17 @@ export function JobSearchPage() {
 
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
-      {/* Company Recommendations (moved up) */}
-      <div data-tour="company-recommendations" className="space-y-3">
+      {/* Companies Button */}
+      <div data-tour="company-recommendations">
         <Button
-          variant="secondary"
+          variant="ghost"
           onClick={() => setShowRecommendations((v) => !v)}
-          className="w-full justify-center text-center"
+          className="gap-2 text-primary hover:text-primary/80"
         >
-          PLUG FINDS YOU COMPANIES THAT YOU MIGHT BE INTERESTED IN APPLY TOO
+          <Building2 className="w-4 h-4" />
+          {isHebrew ? 'חברות שמחפשות עובדים כמוך' : 'Companies that look for your type of employees'}
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showRecommendations && "rotate-180")} />
         </Button>
-        {showRecommendations && <CompanyRecommendations />}
       </div>
 
       {/* Community Sharing Banner */}
@@ -361,6 +363,9 @@ export function JobSearchPage() {
           ))}
         </div>
       )}
+
+      {/* Company Recommendations (at bottom) */}
+      {showRecommendations && <CompanyRecommendations />}
 
       {/* Job Details Sheet */}
       <JobDetailsSheet
