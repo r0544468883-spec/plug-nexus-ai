@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,7 +60,22 @@ export function JobSearchPage() {
   const [filters, setFilters] = useState<JobFiltersState>(defaultFilters);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [showRecommendations, setShowRecommendations] = useState(true);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+
+  const recommendationsRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleRecommendations = () => {
+    setShowRecommendations((v) => {
+      const next = !v;
+      if (next) {
+        // Scroll after the DOM updates
+        queueMicrotask(() => {
+          recommendationsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      return next;
+    });
+  };
 
   // Fetch jobs with filters
   const { data: jobs = [], isLoading } = useQuery({
@@ -266,7 +281,7 @@ export function JobSearchPage() {
       <div data-tour="company-recommendations">
         <Button
           variant="ghost"
-          onClick={() => setShowRecommendations((v) => !v)}
+          onClick={toggleRecommendations}
           className="gap-2 text-primary hover:text-primary/80"
         >
           <Building2 className="w-4 h-4" />
@@ -365,6 +380,7 @@ export function JobSearchPage() {
       )}
 
       {/* Company Recommendations (at bottom) */}
+      <div ref={recommendationsRef} />
       {showRecommendations && <CompanyRecommendations />}
 
       {/* Job Details Sheet */}
