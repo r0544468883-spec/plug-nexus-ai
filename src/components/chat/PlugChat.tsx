@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -405,42 +406,62 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
           </div>
         )}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              'flex gap-3',
-              message.sender === 'user' ? 'flex-row-reverse' : ''
-            )}
-          >
-            <div className={cn(
-              'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-              message.sender === 'user' 
-                ? 'bg-primary/20 text-primary' 
-                : 'bg-accent/20 text-accent'
-            )}>
-              {message.sender === 'user' ? (
-                <User className="w-4 h-4" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
+        <AnimatePresence mode="popLayout">
+          {messages.map((message, index) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ 
+                duration: 0.3,
+                delay: index === messages.length - 1 ? 0 : 0,
+                ease: 'easeOut'
+              }}
+              className={cn(
+                'flex gap-3',
+                message.sender === 'user' ? 'flex-row-reverse' : ''
               )}
-            </div>
-            <div className={cn(
-              'max-w-[75%] rounded-2xl px-4 py-2.5',
-              message.sender === 'user'
-                ? 'bg-primary text-primary-foreground rounded-tr-sm rtl:rounded-tr-2xl rtl:rounded-tl-sm'
-                : 'bg-muted text-foreground rounded-tl-sm rtl:rounded-tl-2xl rtl:rounded-tr-sm plug-ai-highlight'
-            )}>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-              <p className={cn(
-                'text-[10px] mt-1',
-                message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
-              )}>
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-          </div>
-        ))}
+            >
+              <motion.div 
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className={cn(
+                  'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                  message.sender === 'user' 
+                    ? 'bg-primary/20 text-primary' 
+                    : 'bg-accent/20 text-accent'
+                )}
+              >
+                {message.sender === 'user' ? (
+                  <User className="w-4 h-4" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, x: message.sender === 'user' ? 10 : -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.05, duration: 0.25 }}
+                className={cn(
+                  'max-w-[75%] rounded-2xl px-4 py-2.5',
+                  message.sender === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-tr-sm rtl:rounded-tr-2xl rtl:rounded-tl-sm'
+                    : 'bg-muted text-foreground rounded-tl-sm rtl:rounded-tl-2xl rtl:rounded-tr-sm plug-ai-highlight'
+                )}
+              >
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <p className={cn(
+                  'text-[10px] mt-1',
+                  message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                )}>
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </motion.div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
 
         {isLoading && messages[messages.length - 1]?.sender !== 'ai' && (
           <div className="flex gap-3">
