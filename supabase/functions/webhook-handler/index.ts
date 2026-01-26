@@ -37,19 +37,35 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const webhookSecret = Deno.env.get('WEBHOOK_SECRET');
 
-    // Verify webhook signature if secret is configured
+    // SECURITY: Webhook secret MUST be configured
+    if (!webhookSecret) {
+      console.error('WEBHOOK_SECRET environment variable is not configured');
+      return new Response(
+        JSON.stringify({ error: 'Webhook endpoint not configured' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: Signature header is required
     const providedSignature = req.headers.get('x-webhook-secret');
+    if (!providedSignature) {
+      console.error('Missing webhook signature header');
+      return new Response(
+        JSON.stringify({ error: 'Missing webhook signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const body = await req.text();
 
-    if (webhookSecret && providedSignature) {
-      const isValid = await verifyWebhookSignature(body, providedSignature, webhookSecret);
-      if (!isValid) {
-        console.error('Invalid webhook signature');
-        return new Response(
-          JSON.stringify({ error: 'Invalid webhook signature' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // SECURITY: Verify HMAC signature
+    const isValid = await verifyWebhookSignature(body, providedSignature, webhookSecret);
+    if (!isValid) {
+      console.error('Invalid webhook signature');
+      return new Response(
+        JSON.stringify({ error: 'Invalid webhook signature' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const payload = body ? JSON.parse(body) : {};
