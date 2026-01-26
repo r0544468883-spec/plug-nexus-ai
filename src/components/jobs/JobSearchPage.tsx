@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 const defaultFilters: JobFiltersState = {
   search: '',
   location: '',
@@ -248,6 +249,9 @@ export function JobSearchPage() {
 
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+      {/* Contextual tips for job search */}
+      <PlugTipContainer context="job_search" maxTips={1} />
+
       {/* Community Sharing Banner */}
       <Card className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-primary/20">
         <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
