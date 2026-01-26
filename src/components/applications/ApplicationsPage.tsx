@@ -9,9 +9,10 @@ import VerticalApplicationCard from './VerticalApplicationCard';
 import AddApplicationForm from './AddApplicationForm';
 import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
 import PlugBubble from './PlugBubble';
+import { EmptyApplicationsState } from './EmptyApplicationsState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Loader2, FolderOpen, Sparkles, BarChart3, X } from 'lucide-react';
+import { Briefcase, Loader2, Sparkles, BarChart3, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -359,21 +360,23 @@ export function ApplicationsPage() {
 
       {/* Applications List */}
       {filteredApplications.length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="p-8 text-center">
-            <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              {applications.length === 0
-                ? (isRTL ? 'עדיין אין מועמדויות' : 'No applications yet')
-                : (isRTL ? 'לא נמצאו תוצאות' : 'No matching applications')}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {applications.length === 0
-                ? (isRTL ? 'הדבק לינק למשרה והתחל!' : 'Paste a job link to get started!')
-                : (isRTL ? 'נסה לשנות את הסינון' : 'Try adjusting your filters')}
-            </p>
-          </CardContent>
-        </Card>
+        applications.length === 0 ? (
+          <EmptyApplicationsState onNavigateToJobs={() => {
+            // Navigate to job search - this is handled by parent Dashboard
+            window.dispatchEvent(new CustomEvent('plug:navigate', { detail: 'job-search' }));
+          }} />
+        ) : (
+          <Card className="bg-card border-border">
+            <CardContent className="p-8 text-center">
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {isRTL ? 'לא נמצאו תוצאות' : 'No matching applications'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {isRTL ? 'נסה לשנות את הסינון' : 'Try adjusting your filters'}
+              </p>
+            </CardContent>
+          </Card>
+        )
       ) : (
         <div className="space-y-3">
           {filteredApplications.map((application) => (

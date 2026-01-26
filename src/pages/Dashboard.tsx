@@ -21,6 +21,7 @@ import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -218,6 +219,14 @@ export default function Dashboard() {
   // Section-specific content renderers
   const renderOverviewContent = () => (
     <div className="space-y-6">
+      {/* Onboarding Checklist for job seekers */}
+      {role === 'job_seeker' && (
+        <OnboardingChecklist 
+          onNavigate={setCurrentSection}
+          onShowResumeDialog={() => setShowResumeDialog(true)}
+        />
+      )}
+
       {/* Welcome Card with Plug CTA */}
       <WelcomeCard onSendMessage={handleWelcomeMessage} />
 

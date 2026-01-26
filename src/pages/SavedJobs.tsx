@@ -5,9 +5,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobDetailsSheet } from '@/components/jobs/JobDetailsSheet';
+import { EmptySavedJobsState } from '@/components/jobs/EmptySavedJobsState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Briefcase } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
@@ -109,19 +110,7 @@ export default function SavedJobs() {
             ))}
           </div>
         ) : savedJobs.length === 0 ? (
-          <Card className="bg-card border-border">
-            <CardContent className="p-12 text-center">
-              <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {isHebrew ? 'אין משרות שמורות' : 'No saved jobs'}
-              </h3>
-              <p className="text-muted-foreground">
-                {isHebrew 
-                  ? 'לחץ על לב במשרה כדי לשמור אותה לצפייה מאוחרת'
-                  : 'Click the heart icon on a job to save it for later'}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptySavedJobsState />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {savedJobs.map((job) => (
