@@ -74,11 +74,19 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
   const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
     abortControllerRef.current = new AbortController();
     
+    // Get the user's session token for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    
+    if (!accessToken) {
+      throw new Error('No active session - please log in');
+    }
+
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plug-chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        'Authorization': `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ 
         messages: userMessages,
