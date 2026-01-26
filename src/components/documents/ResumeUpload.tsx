@@ -8,6 +8,7 @@ import { Upload, FileText, Trash2, Download, RefreshCw, CheckCircle, Sparkles, B
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Progress } from '@/components/ui/progress';
+import { PlugTip } from '@/components/tips/PlugTip';
 
 interface ResumeUploadProps {
   onSuccess?: () => void;
@@ -44,6 +45,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showUploadSuccessTip, setShowUploadSuccessTip] = useState(false);
 
   const isRTL = language === 'he';
 
@@ -175,6 +177,9 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
       toast.success(isRTL ? 'קורות החיים הועלו בהצלחה!' : 'Resume uploaded successfully!');
       setIsUploading(false);
       setUploadProgress(0);
+      
+      // Show success tip
+      setShowUploadSuccessTip(true);
       
       // Trigger AI analysis
       if (data.documentId) {
@@ -349,6 +354,22 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
 
   return (
     <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'} data-tour="resume-upload">
+      {/* Success tip after upload */}
+      {showUploadSuccessTip && (
+        <PlugTip
+          id="cv_uploaded_inline"
+          type="celebration"
+          titleHe="✨ מעולה! קורות החיים נטענו!"
+          titleEn="✨ Awesome! Your resume is uploaded!"
+          messageHe="עכשיו אני יכול להתאים לך משרות בדיוק לפי הניסיון שלך. בוא נמצא את המשרה הבאה שלך!"
+          messageEn="Now I can match jobs exactly to your experience. Let's find your next role!"
+          actionLabel={{ he: 'חפש משרות', en: 'Search Jobs' }}
+          onAction={() => window.location.href = '/'}
+          onDismiss={() => setShowUploadSuccessTip(false)}
+          autoHide={15000}
+        />
+      )}
+
       {/* Existing Resume Display */}
       {existingResume && (
         <Card className="bg-card border-primary/20">
@@ -498,25 +519,26 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
       {isUploading && uploadProgress > 0 && (
         <div className="space-y-2">
           <Progress value={uploadProgress} className="h-2" />
-          <p className="text-xs text-center text-muted-foreground">
-            {isRTL ? 'מעלה...' : 'Uploading...'} {uploadProgress}%
+          <p className="text-xs text-muted-foreground text-center">
+            {isRTL ? `מעלה... ${uploadProgress}%` : `Uploading... ${uploadProgress}%`}
           </p>
         </div>
       )}
 
-      {/* Upload Area */}
+      {/* Upload Zone */}
       <div
+        onClick={() => fileInputRef.current?.click()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
         className={`
-          relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all
+          relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+          transition-all duration-200
           ${isDragging 
-            ? 'border-primary bg-primary/5' 
-            : 'border-border hover:border-primary/50 hover:bg-accent/5'
+            ? 'border-primary bg-primary/5 scale-[1.02]' 
+            : 'border-border hover:border-primary/50 hover:bg-muted/50'
           }
-          ${isUploading || isAnalyzing ? 'pointer-events-none opacity-50' : ''}
+          ${isUploading ? 'pointer-events-none opacity-50' : ''}
         `}
       >
         <input
@@ -527,30 +549,39 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
           className="hidden"
         />
         
-        <div className="flex flex-col items-center gap-3">
-          {isUploading ? (
-            <RefreshCw className="w-10 h-10 text-primary animate-spin" />
-          ) : (
-            <Upload className="w-10 h-10 text-muted-foreground" />
-          )}
-          
+        <div className="space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+            <Upload className="w-8 h-8 text-primary" />
+          </div>
           <div>
             <p className="font-medium text-foreground">
-              {existingResume 
-                ? (isRTL ? 'החלף קורות חיים' : 'Replace Resume')
-                : (isRTL ? 'גרור קובץ או לחץ להעלאה' : 'Drag & drop or click to upload')
+              {isDragging 
+                ? (isRTL ? 'שחרר כדי להעלות' : 'Drop to upload')
+                : (isRTL ? 'גרור קובץ לכאן או לחץ לבחירה' : 'Drag file here or click to select')
               }
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              PDF, DOC, DOCX, XLS, XLSX ({isRTL ? 'עד 10MB' : 'up to 10MB'})
-            </p>
-            <p className="text-xs text-accent mt-2 flex items-center justify-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              {isRTL ? 'ניתוח AI אוטומטי מיידי' : 'Instant AI analysis'}
+              {isRTL 
+                ? 'PDF, Word או Excel (עד 10MB)' 
+                : 'PDF, Word, or Excel (up to 10MB)'
+              }
             </p>
           </div>
         </div>
       </div>
+
+      {/* Encouragement tip for incomplete profile */}
+      {!existingResume && (
+        <PlugTip
+          id="upload_cv_encouragement"
+          type="encouragement"
+          titleHe="💼 טיפ מ-Plug"
+          titleEn="💼 Tip from Plug"
+          messageHe="העלאת קורות חיים תאפשר לי לנתח את הניסיון שלך ולמצוא משרות שמתאימות לך בדיוק!"
+          messageEn="Uploading your resume will let me analyze your experience and find jobs that match you perfectly!"
+          autoHide={20000}
+        />
+      )}
     </div>
   );
 }
