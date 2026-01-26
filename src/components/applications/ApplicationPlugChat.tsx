@@ -208,11 +208,28 @@ export function ApplicationPlugChat({ applicationId, context }: ApplicationPlugC
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get response';
-      toast.error(errorMessage);
+      
+      // Check if it's a session/auth error - show humorous message
+      if (errorMessage.includes('No active session') || errorMessage.includes('log in') || errorMessage.includes('Unauthorized')) {
+        toast.error(
+          isRTL 
+            ? '🔌 אופס! הכבל שלי התנתק...' 
+            : '🔌 Oops! My cable got unplugged...',
+          {
+            description: isRTL 
+              ? 'אני עובד על לחבר את עצמי מחדש. נסה שוב בעוד רגע!'
+              : "I'm working on reconnecting myself. Try again in a moment!",
+          }
+        );
+      } else {
+        toast.error(errorMessage);
+      }
       
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        content: isRTL ? 'מצטער, נתקלתי בשגיאה. נסה שוב.' : 'Sorry, I encountered an error. Please try again.',
+        content: errorMessage.includes('No active session') || errorMessage.includes('Unauthorized')
+          ? (isRTL ? '🔌 אוי, מישהו שלף לי את החשמל! עובד על לחבר את עצמי מחדש...' : "🔌 Oh no, someone unplugged me! Working on reconnecting...")
+          : (isRTL ? 'מצטער, נתקלתי בשגיאה. נסה שוב.' : 'Sorry, I encountered an error. Please try again.'),
         sender: 'ai',
         timestamp: new Date(),
       }]);
