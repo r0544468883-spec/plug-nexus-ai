@@ -154,6 +154,7 @@ export function OnboardingChecklist({ onNavigate, onShowResumeDialog }: Onboardi
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
+      data-tour="onboarding-checklist"
     >
       <Card className="bg-gradient-to-br from-primary/5 via-accent/5 to-background border-primary/20 overflow-hidden">
         {/* Confetti animation when all complete */}

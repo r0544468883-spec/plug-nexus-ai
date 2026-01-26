@@ -57,7 +57,7 @@ export const PlugTipContainer = ({ context, maxTips = 1 }: PlugTipContainerProps
   if (tips.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-tour="plug-tip">
       {tips.map(tip => (
         <PlugTip
           key={tip.id}
