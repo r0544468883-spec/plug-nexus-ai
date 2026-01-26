@@ -9,7 +9,7 @@ import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
   Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
-  Link, SlidersHorizontal, Building2
+  Link, SlidersHorizontal, Building2, Lightbulb, CheckCircle, Target
 } from 'lucide-react';
 import onboardingNotesImage from '@/assets/onboarding-notes-new.png';
 
@@ -34,6 +34,26 @@ const TOUR_STEPS: TourStep[] = [
     descriptionHe: 'אני ה-AI שלך לחיפוש עבודה! שאל אותי על משרות, קבל עזרה בהכנה לראיונות, או בקש טיפים לשיפור קורות החיים שלך.',
     descriptionEn: 'I\'m your AI job search assistant! Ask me about positions, get help preparing for interviews, or request tips to improve your resume.',
     icon: Sparkles,
+  },
+  // Step 2: Onboarding Checklist - NEW!
+  {
+    section: 'overview',
+    targetSelector: '[data-tour="onboarding-checklist"]',
+    titleHe: 'רשימת משימות חכמה ✅',
+    titleEn: 'Smart Onboarding Checklist ✅',
+    descriptionHe: 'עקוב אחרי ההתקדמות שלך! הרשימה מראה לך בדיוק מה צריך לעשות כדי להשלים את הפרופיל ולהתחיל לקבל הצעות מותאמות.',
+    descriptionEn: 'Track your progress! This list shows you exactly what to do to complete your profile and start getting personalized offers.',
+    icon: CheckCircle,
+  },
+  // Step 3: Plug Tips - NEW!
+  {
+    section: 'overview',
+    targetSelector: '[data-tour="plug-tip"]',
+    titleHe: 'טיפים קונטקסטואליים 💡',
+    titleEn: 'Contextual Tips 💡',
+    descriptionHe: 'Plug נותן לך טיפים חכמים לפי הפעילות שלך! הטיפים יעזרו לך למקסם את הסיכויים למצוא עבודה.',
+    descriptionEn: 'Plug gives you smart tips based on your activity! These tips help maximize your chances of finding a job.',
+    icon: Lightbulb,
   },
   // Step 2: Applications - Add Application
   {
