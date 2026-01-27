@@ -64,6 +64,7 @@ export function ApplicationsPage() {
     try {
       setIsLoading(true);
 
+      // Note: Explicitly exclude internal_notes from candidate queries for security
       const { data, error } = await supabase
         .from('applications')
         .select(`

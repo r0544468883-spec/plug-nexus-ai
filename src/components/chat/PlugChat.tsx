@@ -54,6 +54,7 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     queryKey: ['applications-for-chat', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      // Note: Explicitly exclude internal_notes from candidate queries for security
       const { data } = await supabase
         .from('applications')
         .select(`

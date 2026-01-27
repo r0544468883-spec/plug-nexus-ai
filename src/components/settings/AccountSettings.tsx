@@ -80,9 +80,10 @@ export function AccountSettings() {
         .eq('user_id', user?.id)
         .single();
 
+      // Explicit column selection - excludes internal_notes for security
       const { data: applications } = await supabase
         .from('applications')
-        .select('*')
+        .select('id, job_id, status, current_stage, match_score, notes, last_interaction, created_at, updated_at')
         .eq('candidate_id', user?.id);
 
       const { data: documents } = await supabase

@@ -17,19 +17,27 @@ export const CVBuilder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  // Load CV data from profile
+  // Load CV data from profile - uses profiles_secure for PII protection
   useEffect(() => {
     const loadCvData = async () => {
       if (!user) return;
       
+      // Use profiles_secure view for reading profile data (protects PII)
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('cv_data, full_name, email, phone')
+        .from('profiles_secure')
+        .select('full_name, email, phone')
         .eq('user_id', user.id)
         .single();
       
-      if (profile?.cv_data && typeof profile.cv_data === 'object' && Object.keys(profile.cv_data).length > 0) {
-        setCvData(profile.cv_data as unknown as CVData);
+      // Get cv_data separately from profiles (only own data, protected by RLS)
+      const { data: cvProfile } = await supabase
+        .from('profiles')
+        .select('cv_data')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (cvProfile?.cv_data && typeof cvProfile.cv_data === 'object' && Object.keys(cvProfile.cv_data).length > 0) {
+        setCvData(cvProfile.cv_data as unknown as CVData);
       } else if (profile) {
         // Pre-fill from profile
         setCvData({

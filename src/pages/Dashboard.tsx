@@ -96,7 +96,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // Get applications count
+      // Get applications count - explicit column selection for security
       const { data: applications } = await supabase
         .from('applications')
         .select('id, status, current_stage')
