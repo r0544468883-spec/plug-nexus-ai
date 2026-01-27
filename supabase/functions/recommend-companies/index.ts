@@ -13,32 +13,49 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing authorization header' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
 
-    // Verify user
+    // Create client with user's auth header for getClaims
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify user using getClaims
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: claimsData, error: authError } = await authClient.auth.getClaims(token);
     
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    if (authError || !claimsData?.claims) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
+
+    const userId = claimsData.claims.sub as string;
+    
+    // Use service role client for database operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { fieldSlug, limit = 10 } = await req.json();
 
-    console.log('Recommending companies for user:', user.id, 'field:', fieldSlug);
+    console.log('Recommending companies for user:', userId, 'field:', fieldSlug);
 
     // Get user's resume data for context
     const { data: resume } = await supabase
       .from('documents')
       .select('ai_summary')
-      .eq('owner_id', user.id)
+      .eq('owner_id', userId)
       .eq('doc_type', 'cv')
       .maybeSingle();
 
@@ -46,7 +63,7 @@ serve(async (req) => {
     const { data: profile } = await supabase
       .from('profiles')
       .select('preferred_fields, preferred_roles, experience_years')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     // Build query for companies
