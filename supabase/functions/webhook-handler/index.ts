@@ -73,16 +73,16 @@ serve(async (req) => {
 
     console.log(`Webhook received: action=${action}`, payload);
 
-    // Log to audit table
-    const auditEntry = {
-      action: `webhook_${action}`,
-      entity_type: 'webhook',
-      entity_id: payload.id || null,
-      new_values: payload,
-      ip_address: req.headers.get('x-forwarded-for') || 'unknown'
-    };
-
-    await supabaseAdmin.from('audit_log').insert(auditEntry);
+    // Log to audit table using the secure SECURITY DEFINER function
+    // This prevents direct INSERT access and ensures proper audit trail
+    const ipAddress = req.headers.get('x-forwarded-for') || 'unknown';
+    await supabaseAdmin.rpc('create_audit_log_entry', {
+      p_action: `webhook_${action}`,
+      p_entity_type: 'webhook',
+      p_entity_id: payload.id || null,
+      p_new_values: payload,
+      p_old_values: null
+    });
 
     switch (action) {
       case 'new_application': {
