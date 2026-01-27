@@ -66,8 +66,9 @@ export function OnboardingChecklist({ onNavigate, onShowResumeDialog }: Onboardi
     queryKey: ['profile-completion', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      // Use profiles_secure view for consistent security
       const { data } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('bio, linkedin_url, github_url, portfolio_url')
         .eq('user_id', user.id)
         .single();

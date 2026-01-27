@@ -79,8 +79,9 @@ export function CandidatesPage() {
 
       // Get candidate profiles
       const candidateIds = [...new Set(applications.map(a => a.candidate_id))];
+      // Use profiles_secure view for secure access to contact details
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, email, phone, avatar_url, portfolio_url, linkedin_url, github_url, allow_recruiter_contact')
         .in('user_id', candidateIds);
 

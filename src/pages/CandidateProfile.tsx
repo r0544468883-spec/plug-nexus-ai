@@ -88,8 +88,9 @@ export default function CandidateProfile() {
     queryFn: async () => {
       if (!candidateId) return null;
       
+      // Use profiles_secure view for recruiter access to candidate profiles
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('*')
         .eq('user_id', candidateId)
         .maybeSingle();
@@ -232,11 +233,11 @@ export default function CandidateProfile() {
 
       if (error) throw error;
 
-      // Fetch profiles for vouch senders
+      // Fetch profiles for vouch senders (use profiles_secure for safety)
       if (data?.length) {
         const senderIds = [...new Set(data.map(v => v.from_user_id))];
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_secure')
           .select('user_id, full_name, avatar_url')
           .in('user_id', senderIds);
 

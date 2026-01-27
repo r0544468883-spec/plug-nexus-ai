@@ -31,10 +31,10 @@ export function VouchSection({ userId, userName, showGiveVouch = true }: VouchSe
 
       if (vouchesError) throw vouchesError;
 
-      // Get profiles for from_user_ids
+      // Get profiles for from_user_ids (use profiles_secure for safety)
       const fromUserIds = vouchesData.map(v => v.from_user_id);
       const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url')
         .in('user_id', fromUserIds);
 

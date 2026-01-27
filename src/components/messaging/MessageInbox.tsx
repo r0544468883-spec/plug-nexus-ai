@@ -61,8 +61,9 @@ export function MessageInbox() {
         c.participant_1 === user.id ? c.participant_2 : c.participant_1
       );
 
+      // Use profiles_secure view to protect contact details
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url')
         .in('user_id', otherUserIds);
 

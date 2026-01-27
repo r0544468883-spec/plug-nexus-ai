@@ -73,7 +73,7 @@ export function AccountSettings() {
   const handleExportData = async () => {
     setIsExporting(true);
     try {
-      // Fetch all user data
+      // Fetch all user data - using profiles table is safe here (own data export)
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')

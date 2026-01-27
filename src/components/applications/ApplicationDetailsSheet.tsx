@@ -109,8 +109,9 @@ export function ApplicationDetailsSheet({
     queryFn: async () => {
       if (!application?.candidate_id) return null;
       
+      // Use profiles_secure view for recruiter access to candidate profiles
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('*')
         .eq('user_id', application.candidate_id)
         .maybeSingle();
