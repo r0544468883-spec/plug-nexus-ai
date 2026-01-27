@@ -5,15 +5,13 @@ import { VouchSection } from '@/components/vouch/VouchSection';
 import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { ResumeEnhancer } from '@/components/documents/ResumeEnhancer';
 import { JobPreferencesSettings } from '@/components/settings/JobPreferencesSettings';
+import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, Briefcase, Share2, Sparkles, FileText } from 'lucide-react';
+import { Briefcase, Sparkles, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 export default function Profile() {
   const { user, profile, role, isLoading } = useAuth();
@@ -51,65 +49,22 @@ export default function Profile() {
       default: return 'default';
     }
   };
-  const handleShareProfile = async () => {
-    const shareUrl = `${window.location.origin}/p/${user.id}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success(isHebrew ? 'קישור הפרופיל הועתק!' : 'Profile link copied!');
-    } catch {
-      toast.error(isHebrew ? 'שגיאה בהעתקה' : 'Failed to copy');
-    }
-  };
 
   return (
     <DashboardLayout currentSection={currentSection} onSectionChange={setCurrentSection}>
       <div className="max-w-4xl mx-auto space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
-        {/* Profile Header */}
-        <Card className="bg-gradient-to-br from-card to-accent/5 border-border">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <Avatar className="w-24 h-24 border-4 border-primary/20">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 text-center sm:text-start">
-                <h1 className="text-2xl font-bold mb-1">{profile?.full_name || 'User'}</h1>
-                <Badge variant={getRoleBadgeVariant()} className="mb-3">
-                  <Briefcase className="w-3 h-3 me-1" />
-                  {getRoleLabel()}
-                </Badge>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 mb-3"
-                  onClick={handleShareProfile}
-                >
-                  <Share2 className="w-4 h-4" />
-                  {isHebrew ? 'שתף פרופיל' : 'Share Profile'}
-                </Button>
-                
-                <div className="flex flex-col sm:flex-row gap-3 text-sm text-muted-foreground">
-                  {profile?.email && (
-                    <div className="flex items-center gap-1">
-                      <Mail className="w-4 h-4" />
-                      <span>{profile.email}</span>
-                    </div>
-                  )}
-                  {profile?.phone && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      <span>{profile.phone}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Personal Card Editor - First for job seekers */}
+        {role === 'job_seeker' && <PersonalCardEditor />}
+
+        {/* Role Badge for non-job seekers */}
+        {role !== 'job_seeker' && (
+          <div className="flex items-center gap-2">
+            <Badge variant={getRoleBadgeVariant()}>
+              <Briefcase className="w-3 h-3 me-1" />
+              {getRoleLabel()}
+            </Badge>
+          </div>
+        )}
 
         {/* Resume Section - Only for job seekers */}
         {role === 'job_seeker' && (

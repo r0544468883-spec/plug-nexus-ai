@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,13 +6,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { VouchCard } from '@/components/vouch/VouchCard';
 import { PlugLogo } from '@/components/PlugLogo';
-import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
+import { PersonalCard } from '@/components/profile/PersonalCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Heart, User, Shield, Globe, Linkedin, Github, MessageSquare, Mail } from 'lucide-react';
+import { Heart, User, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function PublicProfile() {
@@ -20,15 +18,16 @@ export default function PublicProfile() {
   const { user } = useAuth();
   const isHebrew = language === 'he';
   const isOwnProfile = user?.id === userId;
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
-  // Fetch profile with professional links
+  // Fetch profile with professional links and new personal fields
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['public-profile', userId],
     queryFn: async () => {
       // Use profiles_secure view for public profile to protect contact details
       const { data, error } = await supabase
         .from('profiles_secure')
-        .select('user_id, full_name, avatar_url, bio, portfolio_url, linkedin_url, github_url, allow_recruiter_contact, email')
+        .select('user_id, full_name, avatar_url, bio, portfolio_url, linkedin_url, github_url, allow_recruiter_contact, email, personal_tagline, about_me, intro_video_url')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -37,6 +36,29 @@ export default function PublicProfile() {
     },
     enabled: !!userId,
   });
+
+  // Fetch video signed URL if needed
+  useEffect(() => {
+    const fetchVideoUrl = async () => {
+      const videoPath = profile?.intro_video_url;
+      if (!videoPath) return;
+
+      if (videoPath.startsWith('profile-videos/')) {
+        const filePath = videoPath.replace('profile-videos/', '');
+        const { data } = await supabase.storage
+          .from('profile-videos')
+          .createSignedUrl(filePath, 60 * 60); // 1 hour
+        
+        if (data?.signedUrl) {
+          setVideoUrl(data.signedUrl);
+        }
+      } else if (videoPath.startsWith('http')) {
+        setVideoUrl(videoPath);
+      }
+    };
+
+    fetchVideoUrl();
+  }, [profile?.intro_video_url]);
 
   // Fetch public vouches
   const { data: vouches = [], isLoading: vouchesLoading } = useQuery({
@@ -148,92 +170,25 @@ export default function PublicProfile() {
       </header>
 
       <main className="max-w-3xl mx-auto p-4 space-y-6">
-        {/* Profile Card */}
-        <Card className="bg-gradient-to-br from-card to-primary/5 border-border overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <Avatar className="w-24 h-24 border-4 border-primary/20">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {profile.full_name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="text-center sm:text-start flex-1">
-                <h1 className="text-2xl font-bold">{profile.full_name}</h1>
-                
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    {profile.bio}
-                  </p>
-                )}
-                
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {isHebrew 
-                    ? `${vouches.length} המלצות מקצועיות`
-                    : `${vouches.length} professional endorsements`}
-                </p>
-
-                {/* Professional Links */}
-                <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
-                  {profile.portfolio_url && (
-                    <a
-                      href={profile.portfolio_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Globe className="h-3 w-3" />
-                        Portfolio
-                      </Badge>
-                    </a>
-                  )}
-                  {profile.linkedin_url && (
-                    <a
-                      href={profile.linkedin_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Linkedin className="h-3 w-3" />
-                        LinkedIn
-                      </Badge>
-                    </a>
-                  )}
-                  {profile.github_url && (
-                    <a
-                      href={profile.github_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Github className="h-3 w-3" />
-                        GitHub
-                      </Badge>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Button (only show if not own profile and user allows contact) */}
-            {!isOwnProfile && user && profile.allow_recruiter_contact && (
-              <div className="mt-6 flex justify-center sm:justify-start">
-                <SendMessageDialog
-                  toUserId={profile.user_id}
-                  toUserName={profile.full_name}
-                  trigger={
-                    <Button className="gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      {isHebrew ? 'שלח הודעה' : 'Send Message'}
-                    </Button>
-                  }
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Personal Card */}
+        <PersonalCard
+          profile={{
+            user_id: profile.user_id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            personal_tagline: profile.personal_tagline,
+            about_me: profile.about_me,
+            intro_video_url: videoUrl,
+            portfolio_url: profile.portfolio_url,
+            linkedin_url: profile.linkedin_url,
+            github_url: profile.github_url,
+            phone: null, // Hidden in public view
+            email: profile.email,
+            allow_recruiter_contact: profile.allow_recruiter_contact ?? true,
+          }}
+          showActions={!isOwnProfile && !!user}
+          showVideo={true}
+        />
 
         {/* Endorsements */}
         <Card className="bg-card border-border">

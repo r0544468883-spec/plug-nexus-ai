@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { VouchCard } from '@/components/vouch/VouchCard';
 import { ApplicationDetailsSheet } from '@/components/applications/ApplicationDetailsSheet';
+import { PersonalCard } from '@/components/profile/PersonalCard';
 
 import {
   ArrowLeft,
@@ -44,6 +45,7 @@ import {
   Save,
   Loader2,
   FileDown,
+  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -81,6 +83,7 @@ export default function CandidateProfile() {
   const [applicationSheetOpen, setApplicationSheetOpen] = useState(false);
   const [internalNote, setInternalNote] = useState('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   // Fetch candidate profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -273,12 +276,28 @@ export default function CandidateProfile() {
     enabled: !!candidateId && !!user?.id && isRecruiter,
   });
 
-  // Set note when fetched
-  useState(() => {
-    if (existingNote?.note) {
-      setInternalNote(existingNote.note);
-    }
-  });
+  // Fetch video signed URL if needed
+  useEffect(() => {
+    const fetchVideoUrl = async () => {
+      const videoPath = (profile as any)?.intro_video_url;
+      if (!videoPath) return;
+
+      if (videoPath.startsWith('profile-videos/')) {
+        const filePath = videoPath.replace('profile-videos/', '');
+        const { data } = await supabase.storage
+          .from('profile-videos')
+          .createSignedUrl(filePath, 60 * 60); // 1 hour
+        
+        if (data?.signedUrl) {
+          setVideoUrl(data.signedUrl);
+        }
+      } else if (videoPath.startsWith('http')) {
+        setVideoUrl(videoPath);
+      }
+    };
+
+    fetchVideoUrl();
+  }, [(profile as any)?.intro_video_url]);
 
   // Update internal note state when existingNote changes
   const noteInitialized = useRef(false);
@@ -568,117 +587,49 @@ export default function CandidateProfile() {
           </Button>
         </div>
 
-        {/* Profile Header */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              {/* Avatar */}
-              <Avatar className="w-24 h-24 flex-shrink-0">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                  {profile.full_name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+        {/* Personal Card */}
+        <PersonalCard
+          profile={{
+            user_id: candidateId || '',
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            personal_tagline: (profile as any).personal_tagline,
+            about_me: (profile as any).about_me,
+            intro_video_url: videoUrl,
+            portfolio_url: profile.portfolio_url,
+            linkedin_url: profile.linkedin_url,
+            github_url: profile.github_url,
+            phone: profile.phone,
+            email: profile.email,
+            allow_recruiter_contact: profile.allow_recruiter_contact ?? true,
+          }}
+          showActions={true}
+          showVideo={true}
+          relatedApplicationId={applications[0]?.id}
+          relatedJobId={applications[0]?.job?.id}
+        />
 
-              {/* Info */}
-              <div className="flex-1 min-w-0 space-y-3">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div>
-                    <h1 className="text-2xl font-bold">{profile.full_name}</h1>
-                    <p className="text-muted-foreground">{profile.email}</p>
-                  </div>
-                  
-                  {/* Badges */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {vouches.length > 0 && (
-                      <Badge variant="outline" className="gap-1 border-pink-500/20 text-pink-500">
-                        <Heart className="w-3 h-3" />
-                        {vouches.length} {isHebrew ? 'המלצות' : 'vouches'}
-                      </Badge>
-                    )}
-                    {profile.visible_to_hr && (
-                      <Badge variant="outline" className="gap-1 border-green-500/20 text-green-600">
-                        <Eye className="w-3 h-3" />
-                        {isHebrew ? 'גלוי למגייסים' : 'Visible to HR'}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-sm text-muted-foreground">{profile.bio}</p>
-                )}
-
-                {/* Professional Links */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {profile.portfolio_url && (
-                    <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Globe className="h-3 w-3" />
-                        Portfolio
-                      </Badge>
-                    </a>
-                  )}
-                  {profile.linkedin_url && (
-                    <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Linkedin className="h-3 w-3" />
-                        LinkedIn
-                      </Badge>
-                    </a>
-                  )}
-                  {profile.github_url && (
-                    <a href={profile.github_url} target="_blank" rel="noopener noreferrer">
-                      <Badge variant="outline" className="gap-1 cursor-pointer hover:bg-muted">
-                        <Github className="h-3 w-3" />
-                        GitHub
-                      </Badge>
-                    </a>
-                  )}
-                </div>
-
-                {/* Contact Actions */}
-                <div className="flex items-center gap-2 flex-wrap pt-2">
-                  {profile.phone && profile.allow_recruiter_contact && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="gap-2 bg-green-600 hover:bg-green-700"
-                      onClick={openWhatsApp}
-                    >
-                      <Phone className="h-4 w-4" />
-                      WhatsApp
-                    </Button>
-                  )}
-                  
-                  <SendMessageDialog
-                    toUserId={candidateId || ''}
-                    toUserName={profile.full_name}
-                    trigger={
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        {isHebrew ? 'שלח הודעה' : 'Send Message'}
-                      </Button>
-                    }
-                  />
-
-                  {profile.email && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="gap-2"
-                      onClick={() => window.open(`mailto:${profile.email}`, '_blank')}
-                    >
-                      <Mail className="h-4 w-4" />
-                      Email
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Extra Badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {vouches.length > 0 && (
+            <Badge variant="outline" className="gap-1 border-pink-500/20 text-pink-500">
+              <Heart className="w-3 h-3" />
+              {vouches.length} {isHebrew ? 'המלצות' : 'vouches'}
+            </Badge>
+          )}
+          {profile.visible_to_hr && (
+            <Badge variant="outline" className="gap-1 border-emerald-500/20 text-emerald-600">
+              <Eye className="w-3 h-3" />
+              {isHebrew ? 'גלוי למגייסים' : 'Visible to HR'}
+            </Badge>
+          )}
+          {(profile as any).intro_video_url && (
+            <Badge variant="outline" className="gap-1 border-primary/20 text-primary">
+              <Video className="w-3 h-3" />
+              {isHebrew ? 'יש סרטון היכרות' : 'Has Intro Video'}
+            </Badge>
+          )}
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="overview" className="w-full">

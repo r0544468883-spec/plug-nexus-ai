@@ -11,12 +11,12 @@ import {
   Linkedin, 
   Github, 
   Phone,
-  ExternalLink,
   Briefcase,
   MessageSquare,
   User,
   TrendingUp,
-  Clock
+  Clock,
+  Video
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
@@ -34,6 +34,9 @@ interface CandidateProfile {
   allow_recruiter_contact: boolean;
   response_rate?: number | null;
   avg_response_time_hours?: number | null;
+  personal_tagline?: string | null;
+  about_me?: string | null;
+  intro_video_url?: string | null;
 }
 
 interface Candidate {
@@ -119,9 +122,15 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
             <h3 className="font-semibold truncate">
               {profile?.full_name || (isHebrew ? 'מועמד לא ידוע' : 'Unknown Candidate')}
             </h3>
-            <p className="text-sm text-muted-foreground truncate">
-              {candidate.job?.title}
-            </p>
+            {profile?.personal_tagline ? (
+              <p className="text-sm text-muted-foreground line-clamp-1 italic">
+                "{profile.personal_tagline}"
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground truncate">
+                {candidate.job?.title}
+              </p>
+            )}
           </div>
 
           {candidate.match_score && (
@@ -175,6 +184,14 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
                 ? `${Math.round(profile.avg_response_time_hours)}h`
                 : `${Math.round(profile.avg_response_time_hours / 24)}d`
               }
+            </Badge>
+          )}
+
+          {/* Intro Video Badge */}
+          {profile?.intro_video_url && (
+            <Badge variant="outline" className="gap-1 border-primary/20 text-primary">
+              <Video className="w-3 h-3" />
+              {isHebrew ? 'סרטון' : 'Video'}
             </Badge>
           )}
 
@@ -252,7 +269,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2 bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20"
+                  className="gap-2 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20"
                   onClick={openWhatsApp}
                 >
                   <Phone className="w-4 h-4" />
