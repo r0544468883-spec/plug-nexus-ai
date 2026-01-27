@@ -23,10 +23,11 @@ import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
+import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2 } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -410,10 +411,22 @@ export default function Dashboard() {
     );
   };
 
+  const renderPersonalContent = () => (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <User className="w-6 h-6 text-primary" />
+        {isRTL ? 'הכרטיס האישי שלי' : 'My Personal Card'}
+      </h2>
+      <PersonalCardEditor />
+    </div>
+  );
+
   const renderSectionContent = () => {
     switch (currentSection) {
       case 'overview':
         return renderOverviewContent();
+      case 'personal':
+        return renderPersonalContent();
       case 'chat':
         return renderChatContent();
       case 'documents':
