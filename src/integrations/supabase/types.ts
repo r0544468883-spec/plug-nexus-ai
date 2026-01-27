@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "application_timeline_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       applications: {
@@ -58,6 +65,7 @@ export type Database = {
           created_at: string
           current_stage: string | null
           id: string
+          internal_notes: string | null
           job_id: string
           last_interaction: string | null
           match_score: number | null
@@ -70,6 +78,7 @@ export type Database = {
           created_at?: string
           current_stage?: string | null
           id?: string
+          internal_notes?: string | null
           job_id: string
           last_interaction?: string | null
           match_score?: number | null
@@ -82,6 +91,7 @@ export type Database = {
           created_at?: string
           current_stage?: string | null
           id?: string
+          internal_notes?: string | null
           job_id?: string
           last_interaction?: string | null
           match_score?: number | null
@@ -295,6 +305,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "documents_related_application_id_fkey"
+            columns: ["related_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_related_job_id_fkey"
             columns: ["related_job_id"]
             isOneToOne: false
@@ -375,6 +392,13 @@ export type Database = {
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "home_assignments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       interview_reminders: {
@@ -417,6 +441,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_reminders_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
             referencedColumns: ["id"]
           },
         ]
@@ -705,6 +736,13 @@ export type Database = {
             columns: ["related_application_id"]
             isOneToOne: false
             referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_related_application_id_fkey"
+            columns: ["related_application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
             referencedColumns: ["id"]
           },
           {
@@ -1005,6 +1043,86 @@ export type Database = {
       }
     }
     Views: {
+      applications_candidate_view: {
+        Row: {
+          candidate_id: string | null
+          created_at: string | null
+          current_stage: string | null
+          id: string | null
+          job_id: string | null
+          last_interaction: string | null
+          match_score: number | null
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string | null
+          current_stage?: string | null
+          id?: string | null
+          job_id?: string | null
+          last_interaction?: string | null
+          match_score?: number | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string | null
+          current_stage?: string | null
+          id?: string | null
+          job_id?: string | null
+          last_interaction?: string | null
+          match_score?: number | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log_user_view: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          new_values: Json | null
+          old_values: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles_secure: {
         Row: {
           active_company_id: string | null
