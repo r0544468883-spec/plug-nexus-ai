@@ -796,6 +796,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about_me: string | null
           active_company_id: string | null
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
@@ -809,7 +810,9 @@ export type Database = {
           full_name: string
           github_url: string | null
           id: string
+          intro_video_url: string | null
           linkedin_url: string | null
+          personal_tagline: string | null
           phone: string | null
           portfolio_summary: Json | null
           portfolio_url: string | null
@@ -826,6 +829,7 @@ export type Database = {
           visible_to_hr: boolean | null
         }
         Insert: {
+          about_me?: string | null
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
@@ -839,7 +843,9 @@ export type Database = {
           full_name: string
           github_url?: string | null
           id?: string
+          intro_video_url?: string | null
           linkedin_url?: string | null
+          personal_tagline?: string | null
           phone?: string | null
           portfolio_summary?: Json | null
           portfolio_url?: string | null
@@ -856,6 +862,7 @@ export type Database = {
           visible_to_hr?: boolean | null
         }
         Update: {
+          about_me?: string | null
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
@@ -869,7 +876,9 @@ export type Database = {
           full_name?: string
           github_url?: string | null
           id?: string
+          intro_video_url?: string | null
           linkedin_url?: string | null
+          personal_tagline?: string | null
           phone?: string | null
           portfolio_summary?: Json | null
           portfolio_url?: string | null
@@ -1190,6 +1199,7 @@ export type Database = {
       }
       profiles_secure: {
         Row: {
+          about_me: string | null
           active_company_id: string | null
           allow_recruiter_contact: boolean | null
           avatar_url: string | null
@@ -1201,7 +1211,9 @@ export type Database = {
           full_name: string | null
           github_url: string | null
           id: string | null
+          intro_video_url: string | null
           linkedin_url: string | null
+          personal_tagline: string | null
           phone: string | null
           portfolio_url: string | null
           preferred_experience_level_id: string | null
@@ -1215,6 +1227,7 @@ export type Database = {
           visible_to_hr: boolean | null
         }
         Insert: {
+          about_me?: string | null
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
@@ -1226,7 +1239,9 @@ export type Database = {
           full_name?: string | null
           github_url?: string | null
           id?: string | null
+          intro_video_url?: string | null
           linkedin_url?: string | null
+          personal_tagline?: string | null
           phone?: never
           portfolio_url?: string | null
           preferred_experience_level_id?: string | null
@@ -1240,6 +1255,7 @@ export type Database = {
           visible_to_hr?: boolean | null
         }
         Update: {
+          about_me?: string | null
           active_company_id?: string | null
           allow_recruiter_contact?: boolean | null
           avatar_url?: string | null
@@ -1251,7 +1267,9 @@ export type Database = {
           full_name?: string | null
           github_url?: string | null
           id?: string | null
+          intro_video_url?: string | null
           linkedin_url?: string | null
+          personal_tagline?: string | null
           phone?: never
           portfolio_url?: string | null
           preferred_experience_level_id?: string | null
