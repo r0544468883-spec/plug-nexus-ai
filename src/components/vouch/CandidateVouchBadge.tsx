@@ -39,9 +39,9 @@ export function CandidateVouchBadge({ candidateId, candidateName }: CandidateVou
       // Get unique from_user_ids
       const fromUserIds = [...new Set(vouchesData.map(v => v.from_user_id))];
 
-      // Fetch profiles for those users
+      // Fetch profiles for those users (use profiles_secure for safety)
       const { data: profiles } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url')
         .in('user_id', fromUserIds);
 

@@ -111,9 +111,9 @@ export function usePlugTips() {
     if (!user) return;
 
     const fetchUserData = async () => {
-      // Fetch profile
+      // Fetch profile (use profiles_secure for consistent security)
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('*')
         .eq('user_id', user.id)
         .single();

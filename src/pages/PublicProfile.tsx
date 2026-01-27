@@ -25,8 +25,9 @@ export default function PublicProfile() {
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['public-profile', userId],
     queryFn: async () => {
+      // Use profiles_secure view for public profile to protect contact details
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url, bio, portfolio_url, linkedin_url, github_url, allow_recruiter_contact, email')
         .eq('user_id', userId)
         .maybeSingle();
@@ -51,10 +52,10 @@ export default function PublicProfile() {
 
       if (vouchesError) throw vouchesError;
 
-      // Get profiles for from_user_ids
+      // Get profiles for from_user_ids (use profiles_secure for safety)
       const fromUserIds = vouchesData.map(v => v.from_user_id);
       const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url')
         .in('user_id', fromUserIds);
 

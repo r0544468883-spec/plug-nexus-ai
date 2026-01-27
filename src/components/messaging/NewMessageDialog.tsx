@@ -43,8 +43,9 @@ export function NewMessageDialog() {
     queryFn: async () => {
       if (!searchQuery.trim() || searchQuery.length < 2) return [];
 
+      // Use profiles_secure view for user search to protect contact details
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('user_id, full_name, avatar_url, email')
         .neq('user_id', user?.id || '')
         .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
