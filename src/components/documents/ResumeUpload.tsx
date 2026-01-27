@@ -76,6 +76,14 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   const analyzeResume = async (documentId: string, filePath: string, fileName: string) => {
     setIsAnalyzing(true);
     try {
+      // Get user's access token for authenticated edge function call
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('No active session');
+      }
+
       // Get signed URL for the file
       const { data: signedData } = await supabase.storage
         .from('resumes')
@@ -89,7 +97,7 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           fileUrl: signedData.signedUrl,
