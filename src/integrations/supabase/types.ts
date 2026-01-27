@@ -641,6 +641,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "jobs_experience_level_id_fkey"
             columns: ["experience_level_id"]
             isOneToOne: false
@@ -887,6 +894,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "profiles_active_company_id_fkey"
+            columns: ["active_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profiles_preferred_experience_level_id_fkey"
             columns: ["preferred_experience_level_id"]
             isOneToOne: false
@@ -1123,6 +1137,57 @@ export type Database = {
         }
         Relationships: []
       }
+      companies_secure: {
+        Row: {
+          avg_hiring_speed_days: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string | null
+          industry: string | null
+          last_metrics_update: string | null
+          logo_url: string | null
+          metadata: Json | null
+          name: string | null
+          size: string | null
+          total_hires: number | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          avg_hiring_speed_days?: never
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          industry?: string | null
+          last_metrics_update?: never
+          logo_url?: string | null
+          metadata?: never
+          name?: string | null
+          size?: string | null
+          total_hires?: never
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          avg_hiring_speed_days?: never
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string | null
+          industry?: string | null
+          last_metrics_update?: never
+          logo_url?: string | null
+          metadata?: never
+          name?: string | null
+          size?: string | null
+          total_hires?: never
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       profiles_secure: {
         Row: {
           active_company_id: string | null
@@ -1205,6 +1270,13 @@ export type Database = {
             columns: ["active_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_active_company_id_fkey"
+            columns: ["active_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
             referencedColumns: ["id"]
           },
           {
