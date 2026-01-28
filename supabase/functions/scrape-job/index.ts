@@ -295,33 +295,80 @@ serve(async (req) => {
 
     // Get page content - either from URL or pasted content
     let pageContent = '';
+    let scrapeMethod = 'unknown';
     
     if (isPastedContent) {
       // Use pasted content directly
       pageContent = pastedContent.substring(0, MAX_PAGE_CONTENT_LENGTH);
+      scrapeMethod = 'pasted';
       console.log('Using pasted content, length:', pageContent.length);
     } else {
-      // Fetch the job page content
-      try {
-        const pageResponse = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      // Try Firecrawl first for better scraping, fallback to basic fetch
+      const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
+      
+      if (FIRECRAWL_API_KEY) {
+        try {
+          console.log('Attempting Firecrawl scrape for:', url);
+          const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              url: url,
+              formats: ['markdown'],
+              onlyMainContent: true,
+              waitFor: 3000, // Wait for dynamic content
+            }),
+          });
+          
+          const firecrawlData = await firecrawlResponse.json();
+          
+          if (firecrawlResponse.ok && firecrawlData.success && firecrawlData.data?.markdown) {
+            pageContent = firecrawlData.data.markdown.substring(0, MAX_PAGE_CONTENT_LENGTH);
+            scrapeMethod = 'firecrawl';
+            console.log('Firecrawl success, content length:', pageContent.length);
+          } else {
+            console.log('Firecrawl failed or no content, falling back to basic fetch:', firecrawlData.error || 'No markdown');
           }
-        });
-        pageContent = await pageResponse.text();
-        // Clean HTML - remove scripts and styles, keep text
-        pageContent = pageContent
-          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .substring(0, MAX_PAGE_CONTENT_LENGTH); // Limit context size
-      } catch (fetchError) {
-        console.error('Error fetching URL:', fetchError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch job page. Please check the URL.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        } catch (firecrawlError) {
+          console.error('Firecrawl error, falling back to basic fetch:', firecrawlError);
+        }
+      }
+      
+      // Fallback to basic fetch if Firecrawl didn't work
+      if (!pageContent) {
+        try {
+          console.log('Using basic fetch for:', url);
+          const pageResponse = await fetch(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.5,he;q=0.3',
+            }
+          });
+          pageContent = await pageResponse.text();
+          // Clean HTML - remove scripts and styles, keep text
+          pageContent = pageContent
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .substring(0, MAX_PAGE_CONTENT_LENGTH);
+          scrapeMethod = 'basic-fetch';
+          console.log('Basic fetch success, content length:', pageContent.length);
+        } catch (fetchError) {
+          console.error('Error fetching URL:', fetchError);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Failed to fetch job page. Please check the URL.',
+              requiresManualEntry: true,
+              source_url: url
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
@@ -564,11 +611,25 @@ IMPORTANT: Extract the company name even from job board posts - look for "at [Co
       );
     }
 
+    // Check if critical fields are missing - signal for manual completion
+    const missingFields: string[] = [];
+    if (!jobDetails.company_name || jobDetails.company_name === 'Unknown' || jobDetails.company_name.length < 2) {
+      missingFields.push('company_name');
+    }
+    if (!jobDetails.job_title || jobDetails.job_title === 'Unknown' || jobDetails.job_title.length < 2) {
+      missingFields.push('job_title');
+    }
+    
+    const requiresCompletion = missingFields.length > 0;
+
     // Return preview only
     return new Response(
       JSON.stringify({
         success: true,
         saved: false,
+        requiresCompletion,
+        missingFields,
+        scrapeMethod,
         job: {
           ...jobDetails,
           source_url: url
