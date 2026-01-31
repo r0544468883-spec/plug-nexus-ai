@@ -1,199 +1,324 @@
 
-# כרטיס אישי (Personal Card) למחפשי עבודה
+# תמיכה מורחבת בסריקת משרות + יבוא מרובה מקבצים
 
 ## סקירה כללית
-יצירת "כרטיס אישי" ויזואלי ועשיר למחפשי עבודה שמאפשר להם להציג את עצמם באופן אישי ואנושי יותר - לא רק מידע מקצועי, אלא גם "מי אני" עם תמונה, סרטון קצר, וכמה מילים על החיים.
 
-הכרטיס הזה יהיה החשיפה העיקרית למגייסות - מה שהן רואות כשהן מסתכלות על מועמד.
+הפתרון כולל שתי יכולות חדשות:
+1. **זיהוי אוטומטי של פלטפורמות** - LinkedIn, AllJobs, Drushim עם הגדרות סריקה מותאמות לכל פלטפורמה
+2. **יבוא מרובה של משרות** - העלאת קובץ Excel/CSV עם לינקים, ניתוח אוטומטי, והוספה לקהילה ולמועמדויות
 
 ---
 
-## מה כולל הכרטיס האישי?
+## חלק 1: זיהוי אוטומטי של פלטפורמות
+
+### לוגיקה חדשה ב-Edge Function
+
+| פלטפורמה | דומיין | הגדרות מיוחדות |
+|----------|--------|-----------------|
+| LinkedIn | `linkedin.com` | waitFor: 5000ms, חיפוש company-name בפורמט ספציפי |
+| AllJobs | `alljobs.co.il` | waitFor: 3000ms, תמיכה בעברית |
+| Drushim | `drushim.co.il` | waitFor: 3000ms, תמיכה בעברית |
+| כללי | כל שאר האתרים | waitFor: 2000ms |
+
+### שיפורים ב-AI Prompt לפי פלטפורמה
+
+```text
+// LinkedIn
+"For LinkedIn: Look for company name after 'at ' or in the 'company' section."
+
+// AllJobs / Drushim
+"Content may be in Hebrew. Extract company name even if in Hebrew characters."
+```
+
+---
+
+## חלק 2: יבוא מרובה של משרות (Multiple Links Import)
+
+### Flow חדש למשתמש
+
+```text
++--------------------------------------------+
+|  [לחצן: יבוא מרובה של משרות]               |
++--------------------------------------------+
+        |
+        v
++--------------------------------------------+
+|  [דיאלוג יבוא]                             |
+|                                            |
+|  1. גרור קובץ Excel/CSV עם לינקים          |
+|     או הדבק לינקים (אחד בכל שורה)          |
+|                                            |
+|  2. פלאג מנתח את כל הלינקים               |
+|                                            |
+|  3. תצוגה מקדימה של המשרות שנמצאו         |
+|                                            |
+|  4. בחר: [ ] שתף לקהילה                    |
+|          [x] הוסף למועמדויות שלי           |
+|          [x] סמן כ-"הוגש קו"ח" בתאריך היום|
++--------------------------------------------+
+```
+
+### פורמטים נתמכים
+
+| פורמט | סיומת | ספרייה לפענוח |
+|-------|-------|---------------|
+| Excel | .xlsx, .xls | SheetJS (xlsx) |
+| CSV | .csv | Native parsing |
+| Text | .txt | Native parsing |
+| הדבקה ישירה | - | Split by newline |
+
+### עמודות נתמכות בקובץ
+
+הפייסר יחפש לינקים ב:
+- עמודה A (ראשונה)
+- עמודה בשם "URL", "Link", "קישור"
+- כל תא שמתחיל ב-`http`
+
+---
+
+## שלב 1: עדכון Edge Function - זיהוי פלטפורמות
+
+### שינויים ב-`supabase/functions/scrape-job/index.ts`
+
+```typescript
+// Platform detection helper
+function detectPlatform(url: string): PlatformConfig {
+  const hostname = new URL(url).hostname.toLowerCase();
+  
+  if (hostname.includes('linkedin.com')) {
+    return {
+      name: 'linkedin',
+      waitFor: 5000,
+      promptHint: 'For LinkedIn: company name appears after "at " or in job header.'
+    };
+  }
+  if (hostname.includes('alljobs.co.il')) {
+    return {
+      name: 'alljobs',
+      waitFor: 3000,
+      promptHint: 'Hebrew job board. Company name may be in Hebrew.'
+    };
+  }
+  if (hostname.includes('drushim.co.il')) {
+    return {
+      name: 'drushim',
+      waitFor: 3000,
+      promptHint: 'Hebrew job board. Look for company in structured data.'
+    };
+  }
+  
+  return { name: 'generic', waitFor: 2000, promptHint: '' };
+}
+```
+
+### שימוש ב-Firecrawl עם הגדרות מותאמות
+
+```typescript
+const platform = detectPlatform(url);
+console.log(`Detected platform: ${platform.name}`);
+
+const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    url: url,
+    formats: ['markdown'],
+    onlyMainContent: true,
+    waitFor: platform.waitFor, // Dynamic wait time
+  }),
+});
+```
+
+---
+
+## שלב 2: Edge Function חדש - יבוא מרובה
+
+### קובץ חדש: `supabase/functions/bulk-import-jobs/index.ts`
+
+```typescript
+// Endpoint: POST /bulk-import-jobs
+// Body: { urls: string[], addToApplications: boolean, markAsApplied: boolean }
+
+interface BulkImportResult {
+  success: boolean;
+  totalUrls: number;
+  processed: number;
+  failed: number;
+  results: {
+    url: string;
+    status: 'success' | 'error';
+    job?: { id: string; title: string; company: string };
+    application_id?: string;
+    error?: string;
+  }[];
+}
+```
+
+### לוגיקת העיבוד
+
+1. קבלת רשימת URLs
+2. עיבוד מקבילי (עד 5 בו-זמנית)
+3. לכל URL:
+   - קריאה ל-scrape-job logic
+   - שמירת Job לקהילה
+   - אם addToApplications=true: יצירת Application
+   - אם markAsApplied=true: current_stage='applied', הוספת timeline event
+
+---
+
+## שלב 3: קומפוננטת UI חדשה
+
+### `src/components/applications/BulkImportDialog.tsx`
 
 ```text
 +------------------------------------------+
-|  [תמונת פרופיל גדולה]                     |
+|  יבוא מרובה של משרות                     |
+|  Import Multiple Jobs                     |
+|------------------------------------------|
 |                                          |
-|  שם מלא                                  |
-|  "כותרת אישית" (לא בהכרח תפקיד)          |
+|  [Tabs: קובץ | הדבק לינקים]              |
 |                                          |
-|  [סרטון היכרות קצר - 60 שניות]           |
+|  [Tab: קובץ]                             |
+|  +--------------------------------------+|
+|  |  גרור קובץ Excel או CSV לכאן        ||
+|  |  [icon: Upload]                       ||
+|  |  תומך ב: .xlsx, .csv, .txt           ||
+|  +--------------------------------------+|
 |                                          |
-|  "כמה מילים על עצמי" - טקסט אישי         |
-|  (על החיים, תחביבים, ערכים - לא רק קריירה)|
+|  [Tab: הדבק לינקים]                      |
+|  +--------------------------------------+|
+|  | https://linkedin.com/jobs/123        ||
+|  | https://alljobs.co.il/job/456        ||
+|  | https://drushim.co.il/job/789        ||
+|  +--------------------------------------+|
 |                                          |
-|  [קישורים מקצועיים: LinkedIn, GitHub, etc]|
+|  נמצאו: 15 לינקים                        |
 |                                          |
-|  [כפתורי פעולה: הודעה, WhatsApp, פרופיל מלא]|
+|  [x] שתף את המשרות לקהילה               |
+|  [x] הוסף למועמדויות שלי                |
+|  [x] סמן כ"הוגש קו"ח" בתאריך היום       |
+|                                          |
+|  [כפתור: התחל יבוא]                      |
++------------------------------------------+
+```
+
+### מצב עיבוד
+
+```text
++------------------------------------------+
+|  מעבד משרות...                           |
+|------------------------------------------|
+|                                          |
+|  [=========>          ] 7/15             |
+|                                          |
+|  ✓ Frontend Developer @ Google           |
+|  ✓ Backend Engineer @ Meta               |
+|  ⏳ Product Manager @ Apple              |
+|  ⏳ Designer @ Netflix                   |
+|  ...                                     |
++------------------------------------------+
+```
+
+### סיכום לאחר סיום
+
+```text
++------------------------------------------+
+|  יבוא הושלם! 🎉                          |
+|------------------------------------------|
+|                                          |
+|  ✓ 12 משרות נוספו בהצלחה                |
+|  ✗ 3 משרות נכשלו                        |
+|                                          |
+|  [רשימת הכשלונות עם סיבה]               |
+|                                          |
+|  [כפתור: סגור]                           |
 +------------------------------------------+
 ```
 
 ---
 
-## שלב 1: עדכון בסיס הנתונים
+## שלב 4: התקנת ספריית Excel
 
-### שדות חדשים בטבלת `profiles`:
-| שדה | סוג | תיאור |
-|-----|-----|-------|
-| `personal_tagline` | TEXT | כותרת אישית קצרה (במקום title מקצועי) |
-| `about_me` | TEXT | טקסט אישי על החיים (לא bio מקצועי) |
-| `intro_video_url` | TEXT | קישור לסרטון ההיכרות |
+### שינויים ב-`package.json`
 
-### Storage Bucket חדש:
-- שם: `profile-videos`
-- גודל מקסימלי: 50MB
-- פורמטים: MP4, WebM, MOV
-- RLS: בעלים יכולים להעלות/לצפות, מגייסות יכולות לצפות (לפי visible_to_hr או הגשה)
-
-### עדכון View המאובטח:
-הוספת השדות החדשים ל-`profiles_secure` view
-
----
-
-## שלב 2: קומפוננטות עריכה (Frontend - Job Seeker)
-
-### 2.1 PersonalCardEditor
-קומפוננטה חדשה לעריכת הכרטיס האישי:
-
-```text
-src/components/profile/
-├── PersonalCardEditor.tsx      # עורך הכרטיס
-├── PersonalCardPreview.tsx     # תצוגה מקדימה
-├── IntroVideoUpload.tsx        # העלאת סרטון
-└── PhotoUpload.tsx             # העלאת תמונת פרופיל
+```json
+{
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
 ```
 
-**מיקום בממשק**: 
-- קטע חדש בדף הפרופיל (`/profile`)
-- יופיע ראשון, לפני קורות חיים והעדפות קריירה
+### שימוש לפענוח קובץ
 
-### 2.2 IntroVideoUpload
-- גרירת קובץ וידאו
-- תצוגה מקדימה לפני העלאה
-- מגבלה: 60 שניות, 50MB
-- אפשרות להסיר סרטון קיים
+```typescript
+import * as XLSX from 'xlsx';
 
-### 2.3 PhotoUpload (שדרוג)
-- שדרוג כפתור "שנה תמונה" הקיים
-- תמיכה ב-crop ו-resize
-- Storage bucket: `avatars` (חדש)
-
----
-
-## שלב 3: תצוגת הכרטיס למגייסות
-
-### 3.1 PersonalCard Component
-כרטיס ויזואלי שמציג:
-- תמונה גדולה יותר
-- שם + כותרת אישית
-- נגן וידאו מובנה (אם קיים)
-- טקסט "על עצמי"
-- קישורים מקצועיים
-- כפתורי פעולה
-
-### 3.2 שילוב בממשק המגייסות
-| מיקום | תיאור |
-|-------|-------|
-| `CandidateCard` | הוספת תצוגת סרטון/about בכרטיס |
-| `CandidateProfile` | הכרטיס האישי מלא בראש העמוד |
-| `MatchingCandidatesTab` | תצוגת כרטיסים עם תוכן אישי |
-| `PublicProfile` | הכרטיס בפרופיל הציבורי |
-
----
-
-## שלב 4: שדרוג תצוגת פרופיל ציבורי
-
-עדכון `/p/:userId` להציג:
-1. הכרטיס האישי בראש
-2. סרטון היכרות (אם קיים)
-3. טקסט אישי
-4. המלצות (Vouches)
-
----
-
-## שלב 5: אבטחה ופרטיות
-
-### RLS Policies לסרטונים:
-- בעלים: CREATE, READ, DELETE
-- מגייסות: READ (אם visible_to_hr=true או הגשה קיימת)
-
-### עדכון profiles_secure view:
-```sql
--- הוספת השדות החדשים
-personal_tagline,
-about_me,
-intro_video_url
+const parseExcelFile = async (file: File): Promise<string[]> => {
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { header: 1 });
+  
+  const urls: string[] = [];
+  for (const row of rows) {
+    for (const cell of Object.values(row)) {
+      if (typeof cell === 'string' && cell.startsWith('http')) {
+        urls.push(cell.trim());
+      }
+    }
+  }
+  return [...new Set(urls)]; // Remove duplicates
+};
 ```
 
 ---
 
-## פירוט טכני
+## שלב 5: אינטגרציה בממשק
+
+### עדכון `ApplicationsPage.tsx`
+
+```typescript
+// הוספת כפתור "יבוא מרובה" ליד Add Application
+<Button onClick={() => setShowBulkImport(true)} variant="outline">
+  <FileSpreadsheet className="w-4 h-4" />
+  {isRTL ? 'יבוא מרובה' : 'Bulk Import'}
+</Button>
+
+<BulkImportDialog 
+  open={showBulkImport} 
+  onOpenChange={setShowBulkImport}
+  onComplete={fetchApplications}
+/>
+```
+
+---
+
+## סיכום קבצים
 
 ### קבצים חדשים:
-```text
-src/components/profile/
-├── PersonalCardEditor.tsx
-├── PersonalCardPreview.tsx
-├── IntroVideoUpload.tsx
-├── PhotoUpload.tsx
-└── PersonalCard.tsx
-```
+| קובץ | תיאור |
+|------|-------|
+| `supabase/functions/bulk-import-jobs/index.ts` | Edge function לעיבוד מרובה |
+| `src/components/applications/BulkImportDialog.tsx` | דיאלוג יבוא |
+| `src/lib/excel-parser.ts` | פונקציות עזר לפענוח קבצים |
 
 ### קבצים לעדכון:
 | קובץ | שינוי |
 |------|-------|
-| `src/pages/Profile.tsx` | הוספת PersonalCardEditor |
-| `src/pages/PublicProfile.tsx` | הצגת הכרטיס האישי |
-| `src/pages/CandidateProfile.tsx` | הכרטיס האישי למגייסות |
-| `src/components/candidates/CandidateCard.tsx` | תצוגה מקוצרת |
-| `profiles_secure` view | הוספת שדות חדשים |
-
-### Migration SQL:
-```sql
--- 1. Add new columns to profiles
-ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS personal_tagline TEXT,
-ADD COLUMN IF NOT EXISTS about_me TEXT,
-ADD COLUMN IF NOT EXISTS intro_video_url TEXT;
-
--- 2. Create profile-videos storage bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('profile-videos', 'profile-videos', false);
-
--- 3. Create avatars storage bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('avatars', 'avatars', true);
-
--- 4. Storage RLS policies for videos
--- 5. Update profiles_secure view
-```
+| `supabase/functions/scrape-job/index.ts` | זיהוי פלטפורמות + הגדרות מותאמות |
+| `src/components/applications/ApplicationsPage.tsx` | כפתור יבוא מרובה |
+| `package.json` | הוספת ספריית xlsx |
 
 ---
 
-## UX Flow
+## יתרונות הפתרון
 
-### עבור מחפש עבודה:
-1. נכנס לעמוד הפרופיל
-2. רואה את עורך הכרטיס האישי
-3. מעלה תמונה
-4. כותב כותרת אישית ("חובב טיולים, אוהב אתגרים")
-5. כותב "על עצמי" (טקסט חופשי)
-6. (אופציונלי) מעלה סרטון היכרות
-7. רואה תצוגה מקדימה
-8. שומר
-
-### עבור מגייסת:
-1. רואה מועמד ברשימה
-2. לוחצת על הכרטיס
-3. רואה את הכרטיס האישי עם כל המידע
-4. יכולה לצפות בסרטון ההיכרות
-5. מקבלת תחושה אישית יותר על המועמד
-
----
-
-## סיכום יתרונות
-
-- **אנושיות**: המועמד נתפס כאדם, לא רק כקורות חיים
-- **בידול**: סרטון + טקסט אישי מייחדים
-- **חיבור**: מגייסות מרגישות קרבה למועמד
-- **שקיפות**: מה שהמועמד רואה = מה שהמגייסת רואה
+- **זיהוי חכם**: Firecrawl + הגדרות מותאמות לכל פלטפורמה
+- **חוויית משתמש**: יבוא מאסיבי בלחיצה אחת
+- **גמישות**: תמיכה בקבצים שונים או הדבקה ידנית
+- **אוטומציה**: סימון אוטומטי של "הוגש קו"ח"
+- **שיתוף**: אפשרות להוסיף גם לקהילה וגם למועמדויות אישיות
