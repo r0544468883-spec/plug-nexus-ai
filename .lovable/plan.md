@@ -15,7 +15,7 @@
 
 | פלטפורמה | דומיין | הגדרות מיוחדות |
 |----------|--------|-----------------|
-| LinkedIn | `linkedin.com` | waitFor: 5000ms, חיפוש company-name בפורמט ספציפי |
+| LinkedIn | `linkedin.com` | waitFor: 5000ms, הנחיות חיפוש company ספציפיות |
 | AllJobs | `alljobs.co.il` | waitFor: 3000ms, תמיכה בעברית |
 | Drushim | `drushim.co.il` | waitFor: 3000ms, תמיכה בעברית |
 | כללי | כל שאר האתרים | waitFor: 2000ms |
@@ -38,7 +38,7 @@
 
 ```text
 +--------------------------------------------+
-|  [לחצן: יבוא מרובה של משרות]               |
+|  [כפתור: יבוא מרובה של משרות]               |
 +--------------------------------------------+
         |
         v
@@ -54,7 +54,9 @@
 |                                            |
 |  4. בחר: [ ] שתף לקהילה                    |
 |          [x] הוסף למועמדויות שלי           |
-|          [x] סמן כ-"הוגש קו"ח" בתאריך היום|
+|          [x] סמן כ"הוגש קו"ח" בתאריך היום  |
+|                                            |
+|  [כפתור: התחל יבוא]                        |
 +--------------------------------------------+
 ```
 
@@ -67,21 +69,25 @@
 | Text | .txt | Native parsing |
 | הדבקה ישירה | - | Split by newline |
 
-### עמודות נתמכות בקובץ
-
-הפייסר יחפש לינקים ב:
-- עמודה A (ראשונה)
-- עמודה בשם "URL", "Link", "קישור"
-- כל תא שמתחיל ב-`http`
-
 ---
 
-## שלב 1: עדכון Edge Function - זיהוי פלטפורמות
+## פרטים טכניים
 
-### שינויים ב-`supabase/functions/scrape-job/index.ts`
+### שלב 1: עדכון Edge Function - זיהוי פלטפורמות
 
+שינויים ב-`supabase/functions/scrape-job/index.ts`:
+
+1. הוספת interface להגדרות פלטפורמה:
 ```typescript
-// Platform detection helper
+interface PlatformConfig {
+  name: string;
+  waitFor: number;
+  promptHint: string;
+}
+```
+
+2. פונקציית זיהוי פלטפורמה:
+```typescript
 function detectPlatform(url: string): PlatformConfig {
   const hostname = new URL(url).hostname.toLowerCase();
   
@@ -111,36 +117,38 @@ function detectPlatform(url: string): PlatformConfig {
 }
 ```
 
-### שימוש ב-Firecrawl עם הגדרות מותאמות
-
+3. שימוש ב-waitFor דינמי ב-Firecrawl:
 ```typescript
 const platform = detectPlatform(url);
 console.log(`Detected platform: ${platform.name}`);
 
-const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${FIRECRAWL_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    url: url,
-    formats: ['markdown'],
-    onlyMainContent: true,
-    waitFor: platform.waitFor, // Dynamic wait time
-  }),
-});
+body: JSON.stringify({
+  url: url,
+  formats: ['markdown'],
+  onlyMainContent: true,
+  waitFor: platform.waitFor, // Dynamic wait time
+})
+```
+
+4. שיפור ה-AI Prompt עם ההנחיה הספציפית:
+```typescript
+content: `... ${platform.promptHint}`
 ```
 
 ---
 
-## שלב 2: Edge Function חדש - יבוא מרובה
+### שלב 2: Edge Function חדש - יבוא מרובה
 
-### קובץ חדש: `supabase/functions/bulk-import-jobs/index.ts`
+קובץ חדש: `supabase/functions/bulk-import-jobs/index.ts`
 
 ```typescript
 // Endpoint: POST /bulk-import-jobs
-// Body: { urls: string[], addToApplications: boolean, markAsApplied: boolean }
+// Body: { 
+//   urls: string[], 
+//   addToApplications: boolean, 
+//   markAsApplied: boolean,
+//   shareToComm: boolean
+// }
 
 interface BulkImportResult {
   success: boolean;
@@ -157,143 +165,61 @@ interface BulkImportResult {
 }
 ```
 
-### לוגיקת העיבוד
-
+לוגיקת העיבוד:
 1. קבלת רשימת URLs
-2. עיבוד מקבילי (עד 5 בו-זמנית)
+2. עיבוד מקבילי (עד 3 בו-זמנית)
 3. לכל URL:
-   - קריאה ל-scrape-job logic
-   - שמירת Job לקהילה
+   - קריאה ללוגיקה הקיימת של scrape-job
+   - שמירת Job לקהילה (אם shareToComm=true)
    - אם addToApplications=true: יצירת Application
    - אם markAsApplied=true: current_stage='applied', הוספת timeline event
 
 ---
 
-## שלב 3: קומפוננטת UI חדשה
+### שלב 3: קומפוננטת UI חדשה
 
-### `src/components/applications/BulkImportDialog.tsx`
+`src/components/applications/BulkImportDialog.tsx`:
 
-```text
-+------------------------------------------+
-|  יבוא מרובה של משרות                     |
-|  Import Multiple Jobs                     |
-|------------------------------------------|
-|                                          |
-|  [Tabs: קובץ | הדבק לינקים]              |
-|                                          |
-|  [Tab: קובץ]                             |
-|  +--------------------------------------+|
-|  |  גרור קובץ Excel או CSV לכאן        ||
-|  |  [icon: Upload]                       ||
-|  |  תומך ב: .xlsx, .csv, .txt           ||
-|  +--------------------------------------+|
-|                                          |
-|  [Tab: הדבק לינקים]                      |
-|  +--------------------------------------+|
-|  | https://linkedin.com/jobs/123        ||
-|  | https://alljobs.co.il/job/456        ||
-|  | https://drushim.co.il/job/789        ||
-|  +--------------------------------------+|
-|                                          |
-|  נמצאו: 15 לינקים                        |
-|                                          |
-|  [x] שתף את המשרות לקהילה               |
-|  [x] הוסף למועמדויות שלי                |
-|  [x] סמן כ"הוגש קו"ח" בתאריך היום       |
-|                                          |
-|  [כפתור: התחל יבוא]                      |
-+------------------------------------------+
-```
-
-### מצב עיבוד
-
-```text
-+------------------------------------------+
-|  מעבד משרות...                           |
-|------------------------------------------|
-|                                          |
-|  [=========>          ] 7/15             |
-|                                          |
-|  ✓ Frontend Developer @ Google           |
-|  ✓ Backend Engineer @ Meta               |
-|  ⏳ Product Manager @ Apple              |
-|  ⏳ Designer @ Netflix                   |
-|  ...                                     |
-+------------------------------------------+
-```
-
-### סיכום לאחר סיום
-
-```text
-+------------------------------------------+
-|  יבוא הושלם! 🎉                          |
-|------------------------------------------|
-|                                          |
-|  ✓ 12 משרות נוספו בהצלחה                |
-|  ✗ 3 משרות נכשלו                        |
-|                                          |
-|  [רשימת הכשלונות עם סיבה]               |
-|                                          |
-|  [כפתור: סגור]                           |
-+------------------------------------------+
-```
+- Tabs: קובץ | הדבק לינקים
+- Drop zone לקבצים
+- Textarea להדבקת לינקים
+- Checkboxes לאפשרויות
+- Progress bar עם סטטוס לכל URL
+- סיכום סופי עם הצלחות/כשלונות
 
 ---
 
-## שלב 4: התקנת ספריית Excel
+### שלב 4: ספריית Excel
 
-### שינויים ב-`package.json`
+שימוש בספריית `xlsx` (SheetJS) לפענוח קבצי Excel:
 
-```json
-{
-  "dependencies": {
-    "xlsx": "^0.18.5"
-  }
-}
-```
-
-### שימוש לפענוח קובץ
-
+`src/lib/excel-parser.ts`:
 ```typescript
 import * as XLSX from 'xlsx';
 
-const parseExcelFile = async (file: File): Promise<string[]> => {
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { header: 1 });
+export const parseFile = async (file: File): Promise<string[]> => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
   
-  const urls: string[] = [];
-  for (const row of rows) {
-    for (const cell of Object.values(row)) {
-      if (typeof cell === 'string' && cell.startsWith('http')) {
-        urls.push(cell.trim());
-      }
-    }
+  if (extension === 'xlsx' || extension === 'xls') {
+    return parseExcelFile(file);
+  } else if (extension === 'csv') {
+    return parseCsvFile(file);
+  } else if (extension === 'txt') {
+    return parseTextFile(file);
   }
-  return [...new Set(urls)]; // Remove duplicates
+  
+  throw new Error('Unsupported file format');
 };
 ```
 
 ---
 
-## שלב 5: אינטגרציה בממשק
+### שלב 5: אינטגרציה בממשק
 
-### עדכון `ApplicationsPage.tsx`
-
-```typescript
-// הוספת כפתור "יבוא מרובה" ליד Add Application
-<Button onClick={() => setShowBulkImport(true)} variant="outline">
-  <FileSpreadsheet className="w-4 h-4" />
-  {isRTL ? 'יבוא מרובה' : 'Bulk Import'}
-</Button>
-
-<BulkImportDialog 
-  open={showBulkImport} 
-  onOpenChange={setShowBulkImport}
-  onComplete={fetchApplications}
-/>
-```
+עדכון `ApplicationsPage.tsx`:
+- הוספת כפתור "יבוא מרובה" ליד Add Application
+- State חדש: showBulkImport
+- הוספת BulkImportDialog component
 
 ---
 
@@ -311,13 +237,14 @@ const parseExcelFile = async (file: File): Promise<string[]> => {
 |------|-------|
 | `supabase/functions/scrape-job/index.ts` | זיהוי פלטפורמות + הגדרות מותאמות |
 | `src/components/applications/ApplicationsPage.tsx` | כפתור יבוא מרובה |
+| `supabase/config.toml` | הוספת bulk-import-jobs |
 | `package.json` | הוספת ספריית xlsx |
 
 ---
 
 ## יתרונות הפתרון
 
-- **זיהוי חכם**: Firecrawl + הגדרות מותאמות לכל פלטפורמה
+- **זיהוי חכם**: Firecrawl + הגדרות מותאמות לכל פלטפורמה (LinkedIn, AllJobs, Drushim)
 - **חוויית משתמש**: יבוא מאסיבי בלחיצה אחת
 - **גמישות**: תמיכה בקבצים שונים או הדבקה ידנית
 - **אוטומציה**: סימון אוטומטי של "הוגש קו"ח"
