@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link2, Loader2, Sparkles, Check, X, PenLine, ChevronDown, ChevronUp } from 'lucide-react';
+import { Link2, Loader2, Sparkles, Check, X, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,7 +33,7 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<JobPreview | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  
   const [isSaving, setIsSaving] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   
@@ -195,7 +195,6 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   const handleCancel = () => {
     setPreview(null);
     setUrl('');
-    setIsExpanded(false);
   };
 
   const handleManualFormSuccess = () => {
@@ -315,51 +314,26 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
                 )}
               </div>
 
-              {/* Description - collapsed/expanded */}
+              {/* Description - always scrollable */}
               {preview.description && (
-                <div>
-                  {isExpanded ? (
-                    <ScrollArea className="max-h-48">
-                      <div className="space-y-3 text-sm text-muted-foreground">
-                        <div>
-                          <p className="font-medium text-foreground mb-1">{isRTL ? 'תיאור:' : 'Description:'}</p>
-                          <p className="whitespace-pre-wrap">{preview.description}</p>
-                        </div>
-                        {preview.requirements && (
-                          <div>
-                            <p className="font-medium text-foreground mb-1">{isRTL ? 'דרישות:' : 'Requirements:'}</p>
-                            <p className="whitespace-pre-wrap">{preview.requirements}</p>
-                          </div>
-                        )}
+                <div className="border border-border/50 rounded-lg overflow-hidden">
+                  <ScrollArea className="h-32 md:h-40">
+                    <div className="p-3 space-y-3 text-sm text-muted-foreground">
+                      <div>
+                        <p className="font-medium text-foreground mb-1">{isRTL ? 'תיאור:' : 'Description:'}</p>
+                        <p className="whitespace-pre-wrap leading-relaxed">{preview.description}</p>
                       </div>
-                    </ScrollArea>
-                  ) : (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{preview.description}</p>
-                  )}
+                      {preview.requirements && (
+                        <div>
+                          <p className="font-medium text-foreground mb-1">{isRTL ? 'דרישות:' : 'Requirements:'}</p>
+                          <p className="whitespace-pre-wrap leading-relaxed">{preview.requirements}</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               )}
 
-              {/* Expand/Collapse button */}
-              {(preview.description || preview.requirements) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="w-full gap-2 text-muted-foreground hover:text-foreground"
-                >
-                  {isExpanded ? (
-                    <>
-                      <ChevronUp className="h-4 w-4" />
-                      {isRTL ? 'צמצם' : 'Show less'}
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4" />
-                      {isRTL ? 'הרחב פרטים' : 'Show more details'}
-                    </>
-                  )}
-                </Button>
-              )}
 
               {/* Save button */}
               <Button
