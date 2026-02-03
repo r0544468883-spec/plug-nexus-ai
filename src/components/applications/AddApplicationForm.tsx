@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link2, Loader2, Sparkles, Check, X, PenLine } from 'lucide-react';
+import { Link2, Loader2, Sparkles, Check, X, PenLine, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ManualApplicationForm } from './ManualApplicationForm';
 import { PartialJobCompleteDialog } from './PartialJobCompleteDialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface JobPreview {
   company_name: string;
@@ -32,6 +33,7 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<JobPreview | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   
@@ -193,6 +195,7 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
   const handleCancel = () => {
     setPreview(null);
     setUrl('');
+    setIsExpanded(false);
   };
 
   const handleManualFormSuccess = () => {
@@ -282,23 +285,24 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
         {preview && (
           <Card className="border-primary/30 bg-primary/5 overflow-hidden">
             <CardContent className="p-4 space-y-3">
+              {/* Header with title and close button */}
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg text-foreground">{preview.job_title}</h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg text-foreground truncate">{preview.job_title}</h3>
                   <p className="text-primary font-medium">{preview.company_name}</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleCancel}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancel}
+                  className="text-muted-foreground hover:text-destructive shrink-0 -mt-1 -mr-2"
+                  title={isRTL ? 'סגור' : 'Close'}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
 
+              {/* Tags */}
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                 {preview.location && (
                   <span className="bg-secondary/50 px-2 py-1 rounded">📍 {preview.location}</span>
@@ -311,10 +315,53 @@ const AddApplicationForm = ({ onApplicationAdded }: AddApplicationFormProps) => 
                 )}
               </div>
 
+              {/* Description - collapsed/expanded */}
               {preview.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{preview.description}</p>
+                <div>
+                  {isExpanded ? (
+                    <ScrollArea className="max-h-48">
+                      <div className="space-y-3 text-sm text-muted-foreground">
+                        <div>
+                          <p className="font-medium text-foreground mb-1">{isRTL ? 'תיאור:' : 'Description:'}</p>
+                          <p className="whitespace-pre-wrap">{preview.description}</p>
+                        </div>
+                        {preview.requirements && (
+                          <div>
+                            <p className="font-medium text-foreground mb-1">{isRTL ? 'דרישות:' : 'Requirements:'}</p>
+                            <p className="whitespace-pre-wrap">{preview.requirements}</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{preview.description}</p>
+                  )}
+                </div>
               )}
 
+              {/* Expand/Collapse button */}
+              {(preview.description || preview.requirements) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4" />
+                      {isRTL ? 'צמצם' : 'Show less'}
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4" />
+                      {isRTL ? 'הרחב פרטים' : 'Show more details'}
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Save button */}
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
