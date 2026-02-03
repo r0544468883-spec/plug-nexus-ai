@@ -3,8 +3,61 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// Platform detection for optimized scraping
+interface PlatformConfig {
+  name: string;
+  waitFor: number;
+  promptHint: string;
+}
+
+function detectPlatform(url: string): PlatformConfig {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    
+    if (hostname.includes('linkedin.com')) {
+      return {
+        name: 'linkedin',
+        waitFor: 5000,
+        promptHint: 'For LinkedIn: company name typically appears after "at " in the job title, or in the "Company" section. Look for patterns like "Software Engineer at Google" or explicit company fields.'
+      };
+    }
+    if (hostname.includes('alljobs.co.il')) {
+      return {
+        name: 'alljobs',
+        waitFor: 3000,
+        promptHint: 'This is a Hebrew job board (AllJobs). Company name may be in Hebrew characters. Look for the employer/מעסיק field. Extract all text even if in Hebrew.'
+      };
+    }
+    if (hostname.includes('drushim.co.il')) {
+      return {
+        name: 'drushim',
+        waitFor: 3000,
+        promptHint: 'This is a Hebrew job board (Drushim). Company name may be in Hebrew. Look for structured data or company logo alt text. The company often appears in the header section.'
+      };
+    }
+    if (hostname.includes('glassdoor.com')) {
+      return {
+        name: 'glassdoor',
+        waitFor: 4000,
+        promptHint: 'For Glassdoor: company name is usually prominent in the header. Look for employer ratings section which includes company name.'
+      };
+    }
+    if (hostname.includes('indeed.com')) {
+      return {
+        name: 'indeed',
+        waitFor: 3000,
+        promptHint: 'For Indeed: look for the company name near the job title, often in a separate line or link.'
+      };
+    }
+    
+    return { name: 'generic', waitFor: 2000, promptHint: '' };
+  } catch {
+    return { name: 'generic', waitFor: 2000, promptHint: '' };
+  }
+}
 
 // Job taxonomy for AI matching
 const JOB_FIELDS = [
@@ -306,6 +359,10 @@ serve(async (req) => {
       // Try Firecrawl first for better scraping, fallback to basic fetch
       const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
       
+      // Detect platform for optimized scraping
+      const platform = detectPlatform(url);
+      console.log(`Detected platform: ${platform.name} (waitFor: ${platform.waitFor}ms)`);
+      
       if (FIRECRAWL_API_KEY) {
         try {
           console.log('Attempting Firecrawl scrape for:', url);
@@ -319,7 +376,7 @@ serve(async (req) => {
               url: url,
               formats: ['markdown'],
               onlyMainContent: true,
-              waitFor: 3000, // Wait for dynamic content
+              waitFor: platform.waitFor, // Dynamic wait time based on platform
             }),
           });
           
@@ -374,6 +431,11 @@ serve(async (req) => {
 
     // Use Lovable AI to extract job details
     const sourceInfo = isPastedContent ? 'Pasted job description text' : `URL: ${url}`;
+    
+    // Get platform hint for AI prompt (if URL scraping)
+    const platformForAI = isPastedContent ? { name: 'pasted', waitFor: 0, promptHint: '' } : detectPlatform(url);
+    const platformHint = platformForAI.promptHint ? `\n\nPLATFORM HINT: ${platformForAI.promptHint}` : '';
+    
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -398,7 +460,8 @@ Always respond with valid JSON in this exact format:
   "years_of_experience": "number or null (estimated years required)"
 }
 If you cannot extract a field, use null. Always return valid JSON.
-IMPORTANT: Extract the company name even from job board posts - look for "at [Company]", "Company: [Name]", or similar patterns.`
+IMPORTANT: Extract the company name even from job board posts - look for "at [Company]", "Company: [Name]", or similar patterns.
+The content may be in Hebrew - extract all information even if in Hebrew characters.${platformHint}`
           },
           {
             role: 'user',

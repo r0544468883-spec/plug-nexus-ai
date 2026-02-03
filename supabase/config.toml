@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.recommend-companies]
 verify_jwt = false
+
+[functions.bulk-import-jobs]
+verify_jwt = false

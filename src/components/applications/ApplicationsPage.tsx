@@ -10,9 +10,10 @@ import AddApplicationForm from './AddApplicationForm';
 import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
 import PlugBubble from './PlugBubble';
 import { EmptyApplicationsState } from './EmptyApplicationsState';
+import { BulkImportDialog } from './BulkImportDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Loader2, Sparkles, BarChart3, X } from 'lucide-react';
+import { Briefcase, Loader2, Sparkles, BarChart3, X, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -52,6 +53,7 @@ export function ApplicationsPage() {
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [showInsights, setShowInsights] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   
   // Sheet state
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -307,11 +309,22 @@ export function ApplicationsPage() {
       {/* Add Application Form - Always Visible */}
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-accent" />
-            <span className="font-medium">
-              {isRTL ? 'הדבק לינק ופלאג יעשה את השאר' : 'Paste a link and Plug will do the rest'}
-            </span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-accent" />
+              <span className="font-medium">
+                {isRTL ? 'הדבק לינק ופלאג יעשה את השאר' : 'Paste a link and Plug will do the rest'}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowBulkImport(true)}
+              className="gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {isRTL ? 'יבוא מרובה' : 'Bulk Import'}
+            </Button>
           </div>
           <AddApplicationForm onApplicationAdded={fetchApplications} />
         </CardContent>
@@ -413,6 +426,13 @@ export function ApplicationsPage() {
       <PlugBubble 
         suggestions={plugSuggestions}
         onActionClick={handlePlugAction}
+      />
+      
+      {/* Bulk Import Dialog */}
+      <BulkImportDialog
+        open={showBulkImport}
+        onOpenChange={setShowBulkImport}
+        onComplete={fetchApplications}
       />
     </div>
   );
