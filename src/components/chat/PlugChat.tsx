@@ -28,10 +28,13 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [uploadedAttachmentSummary, setUploadedAttachmentSummary] = useState<any>(null);
   const [hasProcessedInitial, setHasProcessedInitial] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch user's resume for context
   const { data: existingResume } = useQuery({
@@ -174,6 +177,108 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
       });
   };
 
+  const analyzeUploadedFile = async (documentId: string, filePath: string, fileName: string) => {
+    // Reuse the existing resume analyzer to extract structured content.
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+
+    if (!accessToken) throw new Error('No active session - please log in');
+
+    const { data: signedData, error: signedErr } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(filePath, 60 * 5);
+
+    if (signedErr || !signedData?.signedUrl) {
+      throw new Error('Failed to get file URL');
+    }
+
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-resume`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        fileUrl: signedData.signedUrl,
+        fileName,
+        documentId,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || 'Failed to analyze file');
+    }
+
+    const json = await res.json();
+    return json?.analysis;
+  };
+
+  const handleAttachmentPicked = async (file: File) => {
+    if (!user?.id) {
+      toast.error(direction === 'rtl' ? 'צריך להתחבר כדי להעלות קובץ' : 'Please log in to upload files');
+      return;
+    }
+
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+    ];
+
+    if (!validTypes.includes(file.type)) {
+      toast.error(direction === 'rtl' ? 'אפשר להעלות PDF / Word / Excel / TXT' : 'Please upload PDF / Word / Excel / TXT');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(direction === 'rtl' ? 'הקובץ גדול מדי (מקסימום 10MB)' : 'File is too large (max 10MB)');
+      return;
+    }
+
+    setIsUploadingAttachment(true);
+    setUploadedAttachmentSummary(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const storagePath = `${user.id}/plug/${Date.now()}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(storagePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: newDoc, error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          owner_id: user.id,
+          file_name: file.name,
+          file_path: storagePath,
+          file_type: fileExt,
+          doc_type: 'plug_attachment',
+        })
+        .select('id')
+        .single();
+
+      if (dbError) throw dbError;
+
+      // Analyze (best effort) so Plug can use a structured summary
+      const analysis = await analyzeUploadedFile(newDoc.id, storagePath, file.name);
+      setUploadedAttachmentSummary({ fileName: file.name, analysis });
+
+      toast.success(direction === 'rtl' ? 'הקובץ הועלה ונותח ✅' : 'File uploaded & analyzed ✅');
+    } catch (e) {
+      console.error('Plug attachment upload error:', e);
+      toast.error(direction === 'rtl' ? 'שגיאה בהעלאת/ניתוח הקובץ' : 'Failed to upload/analyze file');
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
   const streamAIResponse = async (userMessages: { role: string; content: string }[]): Promise<string> => {
     abortControllerRef.current = new AbortController();
     
@@ -220,6 +325,11 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
         }, {} as Record<string, number>),
         skills: [...new Set(userVouches.flatMap(v => v.skills || []))],
       };
+    }
+
+    // Add any uploaded attachment summary (from Plug attachments)
+    if (uploadedAttachmentSummary?.analysis) {
+      context.uploadedAttachment = uploadedAttachmentSummary;
     }
 
     // Get the user's session token for authentication
@@ -490,11 +600,27 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => toast.info(direction === 'rtl' ? 'העלאת קבצים - בקרוב!' : 'File upload - coming soon!')}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingAttachment}
           >
             <Paperclip className="w-4 h-4 me-1" />
-            <span className="text-xs">{direction === 'rtl' ? 'קובץ' : 'File'}</span>
+            <span className="text-xs">
+              {isUploadingAttachment
+                ? (direction === 'rtl' ? 'מעלה…' : 'Uploading…')
+                : (direction === 'rtl' ? 'קובץ' : 'File')}
+            </span>
           </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleAttachmentPicked(f);
+              e.target.value = '';
+            }}
+          />
           <Button
             type="button"
             variant="ghost"
