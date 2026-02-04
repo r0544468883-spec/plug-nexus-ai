@@ -424,25 +424,29 @@ export const CVBuilder = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4 min-h-[400px] relative">
-            {/* Render the template for preview - always visible for ref capture */}
-            <div 
-              ref={cvRenderRef}
-              className="bg-white shadow-xl overflow-hidden"
-              style={{
-                width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
-                minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
-                fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
-                transform: 'scale(0.4)',
-                transformOrigin: 'top center',
-              }}
-            >
-              {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
+          <div className="flex-1 overflow-auto bg-muted/30 rounded-lg p-4 min-h-[500px] max-h-[60vh] relative">
+            {/* Scrollable container for the preview */}
+            <div className="flex justify-center">
+              {/* Render the template for preview - always visible for ref capture */}
+              <div 
+                ref={cvRenderRef}
+                className="bg-white shadow-xl overflow-visible"
+                style={{
+                  width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
+                  minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
+                  fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
+                  transform: 'scale(0.45)',
+                  transformOrigin: 'top center',
+                  marginBottom: '-40%', // Compensate for the scale transform to reduce empty space
+                }}
+              >
+                {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
+              </div>
             </div>
             
             {/* Overlay loading indicator */}
             {isExporting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm rounded-lg">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm rounded-lg z-10">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-muted-foreground mt-3">
                   {language === 'he' ? 'מייצר PDF...' : 'Generating PDF...'}
