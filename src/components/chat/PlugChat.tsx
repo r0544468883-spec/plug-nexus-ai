@@ -139,9 +139,12 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
     }
   }, [initialMessage]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change - ONLY within chat container, not the page
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      // Scroll only within the chat container, not the whole page
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const loadChatHistory = async () => {
