@@ -133,13 +133,15 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
       
       const result = await response.json();
       
-      if (result.summary) {
-        const cvData = convertSummaryToCVData(result.summary);
+      // The result contains 'analysis' not 'summary'
+      if (result.analysis) {
+        console.log('Received analysis:', result.analysis);
+        const cvData = convertSummaryToCVData(result.analysis);
         setExtractedData(cvData);
         toast.success(isHe ? 'קורות החיים נותחו בהצלחה!' : 'CV analyzed successfully!');
         setStep('design');
       } else {
-        throw new Error('No summary returned');
+        throw new Error('No analysis returned');
       }
     } catch (error) {
       console.error('Error analyzing file:', error);
