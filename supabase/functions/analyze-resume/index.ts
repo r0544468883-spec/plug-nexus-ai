@@ -343,15 +343,20 @@ Before responding, verify:
     const data = await response.json();
     const analysisContent = data.choices?.[0]?.message?.content;
     
+    console.log("Raw AI response content length:", analysisContent?.length || 0);
+    
     let analysis;
     try {
       analysis = JSON.parse(analysisContent);
-    } catch {
+      console.log("Parsed analysis - has positions:", !!analysis?.experience?.positions, "count:", analysis?.experience?.positions?.length || 0);
+      console.log("Parsed analysis - has institutions:", !!analysis?.education?.institutions, "count:", analysis?.education?.institutions?.length || 0);
+    } catch (parseErr) {
+      console.error("JSON parse error:", parseErr);
       // If JSON parsing fails, create a basic structure
       analysis = {
         skills: { technical: [], soft: [], languages: [] },
-        experience: { totalYears: 0, summary: analysisContent, recentRole: "" },
-        education: { highest: "", certifications: [] },
+        experience: { totalYears: 0, summary: analysisContent, recentRole: "", positions: [] },
+        education: { highest: "", certifications: [], institutions: [] },
         strengths: [],
         suggestedRoles: [],
         improvementTips: [],
@@ -359,6 +364,22 @@ Before responding, verify:
         rawAnalysis: analysisContent,
       };
     }
+
+    // Ensure positions and institutions arrays exist even if AI didn't return them
+    if (!analysis.experience) {
+      analysis.experience = { totalYears: 0, summary: "", recentRole: "", positions: [] };
+    }
+    if (!analysis.experience.positions) {
+      analysis.experience.positions = [];
+    }
+    if (!analysis.education) {
+      analysis.education = { highest: "", certifications: [], institutions: [] };
+    }
+    if (!analysis.education.institutions) {
+      analysis.education.institutions = [];
+    }
+
+    console.log("Final analysis to save - positions:", analysis.experience.positions.length, "institutions:", analysis.education.institutions.length);
 
     // Update the document with the AI summary (using admin client since we verified ownership)
     if (documentId) {
@@ -370,6 +391,8 @@ Before responding, verify:
 
       if (updateError) {
         console.error("Error updating document:", updateError);
+      } else {
+        console.log("Document updated successfully with ai_summary");
       }
     }
 

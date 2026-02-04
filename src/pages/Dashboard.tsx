@@ -94,13 +94,13 @@ export default function Dashboard() {
 
   const isRTL = language === 'he';
 
+  // Map current section to Plug context - use currentSection so it updates immediately on navigation
   const plugContextPage = useMemo(() => {
-    // Map dashboard sections to PlugChat contextPage
-    if (chatContextSection === 'cv-builder') return 'cv-builder' as const;
-    if (chatContextSection === 'applications') return 'applications' as const;
-    if (chatContextSection === 'job-search') return 'jobs' as const;
+    if (currentSection === 'cv-builder') return 'cv-builder' as const;
+    if (currentSection === 'applications') return 'applications' as const;
+    if (currentSection === 'job-search') return 'jobs' as const;
     return 'dashboard' as const;
-  }, [chatContextSection]);
+  }, [currentSection]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -538,6 +538,8 @@ export default function Dashboard() {
           setChatContextSection(sourceSection);
         }
         if (initialMessage) setPendingMessage(initialMessage);
+        // Navigate to chat section when opened via Quick Actions
+        setCurrentSection('chat');
       }}
     >
       {/* Interactive tour for job seekers */}
