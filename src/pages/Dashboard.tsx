@@ -19,7 +19,7 @@ import { MessageInbox } from '@/components/messaging/MessageInbox';
 import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
-import { CVChatBuilder } from '@/components/cv-builder/CVChatBuilder';
+import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
@@ -485,7 +485,7 @@ export default function Dashboard() {
       case 'post-job':
         return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
       case 'cv-builder':
-        return <CVChatBuilder />;
+        return <CVBuilder />;
       case 'job-crawler':
         return renderCrawlerContent();
       default:
