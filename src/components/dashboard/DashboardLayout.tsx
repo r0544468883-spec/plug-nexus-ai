@@ -25,13 +25,12 @@ import {
   ArrowRight,
   Heart,
   FileEdit,
-  Route,
-  Bot
+  Route
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'job-crawler';
+export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -82,7 +81,6 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
         { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
         { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
-        { icon: Bot, label: 'Job Crawler', section: 'job-crawler', tooltipHe: 'סורק אוטומטי שמוצא משרות חדשות מ-LinkedIn, AllJobs ו-Drushim', tooltipEn: 'Automatic crawler finding new jobs from LinkedIn, AllJobs & Drushim' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות מקבלים ומגייסים', tooltipEn: 'Internal messages from recruiters and contacts' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל, פרטיות והעדפות', tooltipEn: 'Profile settings, privacy, and preferences' },
       ];

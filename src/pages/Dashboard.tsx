@@ -25,11 +25,11 @@ import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
-import { CrawlerSettings } from '@/components/crawler/CrawlerSettings';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Bot } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -454,15 +454,6 @@ export default function Dashboard() {
     );
   };
 
-  const renderCrawlerContent = () => (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
-      <h2 className="text-2xl font-bold flex items-center gap-3">
-        <Bot className="w-6 h-6 text-primary" />
-        {isRTL ? 'סורק משרות אוטומטי' : 'Automatic Job Crawler'}
-      </h2>
-      <CrawlerSettings />
-    </div>
-  );
 
   const renderSectionContent = () => {
     switch (currentSection) {
@@ -486,8 +477,6 @@ export default function Dashboard() {
         return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
       case 'cv-builder':
         return <CVBuilder />;
-      case 'job-crawler':
-        return renderCrawlerContent();
       default:
         return renderOverviewContent();
     }
