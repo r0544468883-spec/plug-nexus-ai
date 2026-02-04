@@ -25,6 +25,36 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   const [isDismissed, setIsDismissed] = useState(false);
   const isForceShownRef = useRef(false);
 
+  // DEBUG: track visibility transitions
+  useEffect(() => {
+    console.log('[PlugFloatingHint] visibility', { contextPage, isVisible, isDismissed });
+  }, [contextPage, isVisible, isDismissed]);
+
+  const safeSessionGet = (key: string) => {
+    try {
+      return sessionStorage.getItem(key);
+    } catch (e) {
+      console.warn('[PlugFloatingHint] sessionStorage.getItem failed', { key, e });
+      return null;
+    }
+  };
+
+  const safeSessionSet = (key: string, value: string) => {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('[PlugFloatingHint] sessionStorage.setItem failed', { key, e });
+    }
+  };
+
+  const safeSessionRemove = (key: string) => {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      console.warn('[PlugFloatingHint] sessionStorage.removeItem failed', { key, e });
+    }
+  };
+
   // Show hint after a short delay on page load
   useEffect(() => {
     // Reset dismissed state when context changes
@@ -32,12 +62,13 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
     isForceShownRef.current = false;
     
     const sessionKey = `plug-hint-shown-${contextPage}`;
-    const alreadyShown = sessionStorage.getItem(sessionKey);
+    const alreadyShown = safeSessionGet(sessionKey);
     
     if (!alreadyShown) {
       const timer = setTimeout(() => {
+        console.log('[PlugFloatingHint] auto-show', { contextPage });
         setIsVisible(true);
-        sessionStorage.setItem(sessionKey, 'true');
+        safeSessionSet(sessionKey, 'true');
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -48,10 +79,12 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   // and keeps it visible until the user closes it.
   useEffect(() => {
     if (!forceShowSignal) return;
-    // Clear the session storage so the hint can show again
-    sessionStorage.removeItem(`plug-hint-shown-${contextPage}`);
-    setIsDismissed(false);
+    console.log('[PlugFloatingHint] force-show', { contextPage, forceShowSignal });
+    // Make it visible even if sessionStorage is blocked.
     setIsVisible(true);
+    // Clear the session storage so the hint can show again
+    safeSessionRemove(`plug-hint-shown-${contextPage}`);
+    setIsDismissed(false);
     isForceShownRef.current = true;
   }, [forceShowSignal, contextPage]);
 
@@ -201,6 +234,18 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
             mass: 0.8,
           }}
           data-testid="plug-floating-hint"
+          onPointerDownCapture={(e) => {
+            console.log('[PlugFloatingHint] pointerdown capture', {
+              contextPage,
+              target: (e.target as HTMLElement | null)?.tagName,
+            });
+          }}
+          onClickCapture={(e) => {
+            console.log('[PlugFloatingHint] click capture', {
+              contextPage,
+              target: (e.target as HTMLElement | null)?.tagName,
+            });
+          }}
           className={`pointer-events-auto fixed bottom-24 ${isRTL ? 'left-4' : 'right-4'} z-[1000] max-w-xs`}
         >
           {/* Glow effect */}
@@ -218,7 +263,7 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
           />
           
           <motion.div 
-            className="pointer-events-auto relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4"
+              className="pointer-events-auto relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4 outline outline-1 outline-transparent"
             initial={{ rotate: -2 }}
             animate={{ rotate: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
@@ -283,7 +328,13 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
                     >
                       <button
                         type="button"
-                        onClick={() => handleQuickAction(qa)}
+                        onClick={() => {
+                          console.log('[PlugFloatingHint] quick action click', {
+                            contextPage,
+                            label: isRTL ? qa.labelHe : qa.label,
+                          });
+                          handleQuickAction(qa);
+                        }}
                         className="inline-flex items-center gap-1.5 text-xs h-7 px-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-105 transition-transform"
                       >
                         {qa.icon}
