@@ -178,6 +178,11 @@ export function CrawlerSettings() {
     );
   }
   
+  // Calculate stats
+  const totalJobsFound = recentRuns.reduce((acc, run) => acc + (run.jobs_found || 0), 0);
+  const totalJobsAdded = recentRuns.reduce((acc, run) => acc + (run.jobs_added || 0), 0);
+  const lastSuccessfulRun = recentRuns.find(r => r.status === 'completed' && (r.jobs_found || 0) > 0);
+  
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
       {/* Header */}
@@ -205,7 +210,45 @@ export function CrawlerSettings() {
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-background/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-primary">{totalJobsFound}</p>
+              <p className="text-xs text-muted-foreground">
+                {isHebrew ? 'משרות נמצאו' : 'Jobs Found'}
+              </p>
+            </div>
+            <div className="bg-background/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-accent">{totalJobsAdded}</p>
+              <p className="text-xs text-muted-foreground">
+                {isHebrew ? 'נוספו למערכת' : 'Added'}
+              </p>
+            </div>
+            <div className="bg-background/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">{recentRuns.length}</p>
+              <p className="text-xs text-muted-foreground">
+                {isHebrew ? 'סריקות' : 'Crawls'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Last successful crawl */}
+          {lastSuccessfulRun && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-accent/10 rounded-lg px-3 py-2">
+              <CheckCircle2 className="h-4 w-4 text-accent" />
+              <span>
+                {isHebrew ? 'סריקה מוצלחת אחרונה:' : 'Last successful crawl:'}{' '}
+                {formatDistanceToNow(new Date(lastSuccessfulRun.created_at), { 
+                  addSuffix: true,
+                  locale: isHebrew ? he : undefined,
+                })}
+                {' - '}
+                {lastSuccessfulRun.jobs_added} {isHebrew ? 'משרות חדשות' : 'new jobs'}
+              </span>
+            </div>
+          )}
+          
           <div className="flex flex-wrap gap-2">
             <Button
               variant="default"
@@ -232,6 +275,14 @@ export function CrawlerSettings() {
               {isHebrew ? 'רענן' : 'Refresh'}
             </Button>
           </div>
+          
+          {/* Schedule info */}
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {isHebrew 
+              ? 'סריקה אוטומטית: 07:00, 13:00, 19:00 (שעון ישראל)'
+              : 'Auto crawl: 05:00, 11:00, 17:00 UTC'}
+          </p>
         </CardContent>
       </Card>
       

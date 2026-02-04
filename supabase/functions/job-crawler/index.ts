@@ -35,38 +35,85 @@ const PLATFORM_CONFIGS: Record<string, PlatformConfig> = {
 };
 
 // Extract job URLs from search results page
-function extractJobUrls(content: string, platform: string): string[] {
+function extractJobUrls(content: string, platform: string, links?: string[]): string[] {
   const urls: string[] = [];
   
-  // LinkedIn job URLs
+  console.log(`Extracting URLs for platform: ${platform}`);
+  console.log(`Content length: ${content.length}`);
+  console.log(`Links array length: ${links?.length || 0}`);
+  
+  // First, check the links array (more reliable)
+  if (links && links.length > 0) {
+    for (const link of links) {
+      const url = typeof link === 'string' ? link : (link as any).url || '';
+      if (!url) continue;
+      
+      if (platform === 'linkedin' && url.includes('/jobs/view/')) {
+        const cleanUrl = url.split('?')[0];
+        if (!urls.includes(cleanUrl)) urls.push(cleanUrl);
+      }
+      if (platform === 'alljobs' && (url.includes('/Job/') || url.includes('/jobs/') || url.includes('ShowJob'))) {
+        if (!urls.includes(url)) urls.push(url);
+      }
+      if (platform === 'drushim' && url.includes('/job/')) {
+        if (!urls.includes(url)) urls.push(url);
+      }
+    }
+  }
+  
+  // Fallback: extract from content using regex
+  // LinkedIn job URLs - multiple patterns
   if (platform === 'linkedin') {
-    const linkedinMatches = content.matchAll(/https:\\\/(?:www\.)?linkedin\.com\/jobs\/view\/[^\s\"'<>]+/gi);
-    for (const match of linkedinMatches) {
-      const url = match[0].split('?')[0]; // Remove query params
+    // Pattern 1: Full URLs
+    const fullUrlMatches = content.matchAll(/https?:\/\/(?:www\.)?linkedin\.com\/jobs\/view\/(\d+)/gi);
+    for (const match of fullUrlMatches) {
+      const url = `https://www.linkedin.com/jobs/view/${match[1]}`;
+      if (!urls.includes(url)) urls.push(url);
+    }
+    // Pattern 2: Escaped URLs in JSON
+    const escapedMatches = content.matchAll(/linkedin\.com\\?\/jobs\\?\/view\\?\/(\d+)/gi);
+    for (const match of escapedMatches) {
+      const url = `https://www.linkedin.com/jobs/view/${match[1]}`;
       if (!urls.includes(url)) urls.push(url);
     }
   }
   
-  // AllJobs job URLs
+  // AllJobs job URLs - Israeli job board
   if (platform === 'alljobs') {
-    const alljobsMatches = content.matchAll(/https:\\\/\/www\.alljobs\.co\.il\/jobs\/[^\s\"'<>]+/gi);
-    for (const match of alljobsMatches) {
+    // Pattern 1: /Job/ URLs (new format)
+    const jobMatches = content.matchAll(/https?:\/\/(?:www\.)?alljobs\.co\.il\/Job\/(\d+)/gi);
+    for (const match of jobMatches) {
+      const url = `https://www.alljobs.co.il/Job/${match[1]}`;
+      if (!urls.includes(url)) urls.push(url);
+    }
+    // Pattern 2: ShowJob URLs (old format)
+    const showJobMatches = content.matchAll(/https?:\/\/(?:www\.)?alljobs\.co\.il\/ShowJob\.asp[^"'\s<>]*/gi);
+    for (const match of showJobMatches) {
       if (!urls.includes(match[0])) urls.push(match[0]);
     }
-    // Also try ShowJob pattern
-    const showJobMatches = content.matchAll(/https:\\\/\/www\.alljobs\.co\.il\/ShowJob\.asp[^\s\"'<>]+/gi);
-    for (const match of showJobMatches) {
+    // Pattern 3: /jobs/ URLs
+    const jobsMatches = content.matchAll(/https?:\/\/(?:www\.)?alljobs\.co\.il\/jobs\/[^"'\s<>]+/gi);
+    for (const match of jobsMatches) {
       if (!urls.includes(match[0])) urls.push(match[0]);
     }
   }
   
-  // Drushim job URLs
+  // Drushim job URLs - Israeli job board  
   if (platform === 'drushim') {
-    const drushimMatches = content.matchAll(/https:\\\/\/www\.drushim\.co\.il\/job\/[^\s\"'<>]+/gi);
-    for (const match of drushimMatches) {
+    // Pattern 1: /job/ URLs
+    const jobMatches = content.matchAll(/https?:\/\/(?:www\.)?drushim\.co\.il\/job\/(\d+)/gi);
+    for (const match of jobMatches) {
+      const url = `https://www.drushim.co.il/job/${match[1]}`;
+      if (!urls.includes(url)) urls.push(url);
+    }
+    // Pattern 2: Jobs with slugs
+    const slugMatches = content.matchAll(/https?:\/\/(?:www\.)?drushim\.co\.il\/jobs\/[^"'\s<>]+/gi);
+    for (const match of slugMatches) {
       if (!urls.includes(match[0])) urls.push(match[0]);
     }
   }
+  
+  console.log(`Found ${urls.length} URLs for ${platform}:`, urls.slice(0, 5));
   
   return urls.slice(0, 20); // Limit to 20 jobs per search
 }
@@ -349,7 +396,11 @@ async function crawlPlatform(
   try {
     // Step 1: Search for jobs using Firecrawl Map
     const searchUrl = config.searchUrlTemplate(query, location);
-    console.log('Mapping URL:', searchUrl);
+    console.log('=== CRAWL START ===');
+    console.log('Platform:', platform);
+    console.log('Query:', query);
+    console.log('Location:', location);
+    console.log('Search URL:', searchUrl);
     
     const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
       method: 'POST',
@@ -359,21 +410,28 @@ async function crawlPlatform(
       },
       body: JSON.stringify({
         url: searchUrl,
-        limit: 50,
+        limit: 100,
+        includeSubdomains: false,
       }),
     });
     
     const mapData = await mapResponse.json();
     let jobUrls: string[] = [];
     
+    console.log('Map response status:', mapResponse.status);
+    console.log('Map success:', mapData.success);
+    console.log('Map links count:', mapData.links?.length || 0);
+    
     if (mapResponse.ok && mapData.success && mapData.links) {
-      // Filter for job-specific URLs
+      // Filter for job-specific URLs directly from links
       jobUrls = mapData.links.filter((url: string) => {
         if (platform === 'linkedin') return url.includes('/jobs/view/');
-        if (platform === 'alljobs') return url.includes('/jobs/') || url.includes('ShowJob');
+        if (platform === 'alljobs') return url.includes('/Job/') || url.includes('/jobs/') || url.includes('ShowJob');
         if (platform === 'drushim') return url.includes('/job/');
         return false;
-      }).slice(0, 15);
+      }).slice(0, 20);
+      
+      console.log('Filtered job URLs from map:', jobUrls.length);
     }
     
     // Fallback: scrape the search page and extract URLs
@@ -390,33 +448,28 @@ async function crawlPlatform(
           url: searchUrl,
           formats: ['markdown', 'links'],
           waitFor: config.waitFor,
+          onlyMainContent: false,
         }),
       });
       
       const scrapeData = await scrapeResponse.json();
       
+      console.log('Scrape response status:', scrapeResponse.status);
+      console.log('Scrape success:', scrapeData.success);
+      
       if (scrapeResponse.ok && scrapeData.success) {
         const content = scrapeData.data?.markdown || '';
         const links = scrapeData.data?.links || [];
         
-        // Extract from content
-        jobUrls = extractJobUrls(content, platform);
+        console.log('Scrape content length:', content.length);
+        console.log('Scrape links count:', links.length);
         
-        // Also check links array
-        for (const link of links) {
-          const url = typeof link === 'string' ? link : link.url;
-          if (url && !jobUrls.includes(url)) {
-            if (platform === 'linkedin' && url.includes('/jobs/view/')) jobUrls.push(url);
-            if (platform === 'alljobs' && (url.includes('/jobs/') || url.includes('ShowJob'))) jobUrls.push(url);
-            if (platform === 'drushim' && url.includes('/job/')) jobUrls.push(url);
-          }
-        }
-        
-        jobUrls = jobUrls.slice(0, 15);
+        // Extract from content and links
+        jobUrls = extractJobUrls(content, platform, links);
       }
     }
     
-    console.log(`Found ${jobUrls.length} job URLs`);
+    console.log(`=== FOUND ${jobUrls.length} JOB URLs ===`);
     
     // Step 2: Filter out already discovered jobs
     const newUrls: string[] = [];
