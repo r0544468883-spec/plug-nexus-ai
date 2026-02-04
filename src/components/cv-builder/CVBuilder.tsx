@@ -411,7 +411,7 @@ export const CVBuilder = () => {
 
       {/* Export Dialog - Using Template Rendering */}
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col min-h-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
@@ -424,7 +424,7 @@ export const CVBuilder = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-auto bg-muted/30 rounded-lg p-4 min-h-[500px] max-h-[60vh] relative">
+          <div className="flex-1 min-h-0 overflow-auto bg-muted/30 rounded-lg p-4 min-h-[500px] max-h-[60vh] relative">
             {/* Scrollable container for the preview */}
             <div className="flex justify-center">
               {/* Render the template for preview - always visible for ref capture */}
@@ -464,18 +464,18 @@ export const CVBuilder = () => {
             </div>
           )}
           
-          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setShowExportDialog(false)}>
               {language === 'he' ? 'סגור' : 'Close'}
             </Button>
             
-            <div className="flex gap-2 flex-wrap flex-1 justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 flex-wrap flex-1 justify-end">
               {/* Save to Profile */}
               <Button 
                 variant="outline" 
                 onClick={handleSaveToProfile} 
                 disabled={isSavingToProfile || !!savedCVUrl || isExporting || !exportedPdfBlob}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 {isSavingToProfile ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -491,7 +491,7 @@ export const CVBuilder = () => {
               <Button 
                 onClick={handleDownloadPDF} 
                 disabled={isExporting || !exportedPdfBlob}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 {isExporting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
