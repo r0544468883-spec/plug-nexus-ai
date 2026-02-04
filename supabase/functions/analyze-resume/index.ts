@@ -198,36 +198,66 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert HR analyst specializing in resume analysis. Analyze the provided resume and extract:
+    const systemPrompt = `You are an expert HR analyst specializing in resume analysis. Analyze the provided resume and extract ALL available information.
 
-1. **Skills** - Technical and soft skills
-2. **Experience Summary** - Years of experience and key roles
-3. **Education** - Degrees and certifications
-4. **Strengths** - What makes this candidate stand out
-5. **Suggested Roles** - Job titles this person would be suited for
-6. **Improvement Tips** - Suggestions to improve the resume
+IMPORTANT: Extract as much detail as possible from the resume including:
+- Full name, email, phone, location
+- All work experience with company names, roles, dates, and descriptions
+- All education with institution names, degrees, fields of study, and dates
+- Technical skills, soft skills, and languages
 
-Respond in JSON format with this exact structure:
+Respond in JSON format with this EXACT structure:
 {
+  "personalInfo": {
+    "name": "Full Name",
+    "email": "email@example.com",
+    "phone": "+1234567890",
+    "location": "City, Country"
+  },
   "skills": {
-    "technical": ["skill1", "skill2"],
-    "soft": ["skill1", "skill2"],
-    "languages": ["language1", "language2"]
+    "technical": ["JavaScript", "Python", "React"],
+    "soft": ["Leadership", "Communication"],
+    "languages": ["English", "Hebrew", "Spanish"]
   },
   "experience": {
-    "totalYears": number,
-    "summary": "brief summary",
-    "recentRole": "most recent job title"
+    "totalYears": 5,
+    "summary": "Brief professional summary",
+    "recentRole": "Most recent job title",
+    "positions": [
+      {
+        "company": "Company Name",
+        "role": "Job Title",
+        "startDate": "2020-01",
+        "endDate": "2023-12 or Present",
+        "description": "Key responsibilities and achievements as bullet points separated by newlines"
+      }
+    ]
   },
   "education": {
-    "highest": "degree name",
-    "certifications": ["cert1", "cert2"]
+    "highest": "Highest degree name",
+    "certifications": ["Cert1", "Cert2"],
+    "institutions": [
+      {
+        "name": "University Name",
+        "degree": "Bachelor's/Master's/PhD",
+        "field": "Field of Study",
+        "startDate": "2015",
+        "endDate": "2019"
+      }
+    ]
   },
   "strengths": ["strength1", "strength2"],
   "suggestedRoles": ["role1", "role2"],
   "improvementTips": ["tip1", "tip2"],
-  "overallScore": number (1-100)
-}`;
+  "overallScore": 85
+}
+
+CRITICAL: 
+- Extract ALL positions from work history, not just the most recent
+- Extract ALL education entries, not just the highest degree
+- Include dates in YYYY-MM format when available
+- If end date is current/present, use "Present"
+- For descriptions, include key achievements and responsibilities`;
 
     // Use Gemini's vision capabilities to analyze the document
     console.log("Sending to AI for analysis...");
