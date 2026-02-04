@@ -88,6 +88,7 @@ export default function Dashboard() {
   const { t, language } = useLanguage();
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [pendingMessageKey, setPendingMessageKey] = useState(0);
   const [chatContextSection, setChatContextSection] = useState<DashboardSection>('overview');
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -252,6 +253,7 @@ export default function Dashboard() {
   const handleWelcomeMessage = (message: string) => {
     setChatContextSection(currentSection);
     setPendingMessage(message);
+    setPendingMessageKey((k) => k + 1);
     // Scroll to chat after a brief delay
     setTimeout(() => {
       chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -322,6 +324,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2" ref={chatRef}>
           <PlugChat 
             initialMessage={pendingMessage || undefined}
+            initialMessageKey={pendingMessageKey}
             onMessageSent={handleMessageSent}
             contextPage={plugContextPage}
           />
@@ -429,6 +432,7 @@ export default function Dashboard() {
       </h2>
       <PlugChat
         initialMessage={pendingMessage || undefined}
+        initialMessageKey={pendingMessageKey}
         onMessageSent={handleMessageSent}
         contextPage={plugContextPage}
       />
@@ -548,7 +552,10 @@ export default function Dashboard() {
         if (sourceSection && sourceSection !== 'chat') {
           setChatContextSection(sourceSection);
         }
-        if (initialMessage) setPendingMessage(initialMessage);
+        if (initialMessage) {
+          setPendingMessage(initialMessage);
+          setPendingMessageKey((k) => k + 1);
+        }
         // Navigate to chat section when opened via Quick Actions
         setCurrentSection('chat');
       }}

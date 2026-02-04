@@ -19,11 +19,13 @@ interface Message {
 
 interface PlugChatProps {
   initialMessage?: string;
+  /** A monotonically increasing key to force re-processing of the same initialMessage (e.g. repeated Quick Action clicks) */
+  initialMessageKey?: number;
   onMessageSent?: () => void;
   contextPage?: 'dashboard' | 'cv-builder' | 'applications' | 'jobs' | 'default';
 }
 
-export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default' }: PlugChatProps) {
+export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, contextPage = 'default' }: PlugChatProps) {
   const { t, direction } = useLanguage();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -132,19 +134,23 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
       // Don't call onMessageSent here - it clears pendingMessage in parent
       // We only want to clear it after the user actually sends
     }
-  }, [initialMessage, hasProcessedInitial, user]);
+  }, [initialMessage, initialMessageKey, hasProcessedInitial, user]);
 
-  // Reset hasProcessedInitial when initialMessage changes to a new value
+  // Reset hasProcessedInitial when initialMessage changes (or when a new key is provided)
   const prevInitialMessageRef = useRef<string | undefined>(undefined);
+  const prevInitialMessageKeyRef = useRef<number | undefined>(undefined);
   useEffect(() => {
-    if (initialMessage !== prevInitialMessageRef.current) {
+    const messageChanged = initialMessage !== prevInitialMessageRef.current;
+    const keyChanged = initialMessageKey !== prevInitialMessageKeyRef.current;
+    if (messageChanged || keyChanged) {
       prevInitialMessageRef.current = initialMessage;
+      prevInitialMessageKeyRef.current = initialMessageKey;
       if (initialMessage) {
         // New message arrived, reset so we can process it
         setHasProcessedInitial(false);
       }
     }
-  }, [initialMessage]);
+  }, [initialMessage, initialMessageKey]);
 
   // Scroll to bottom when messages change - ONLY within chat container, not the page
   useEffect(() => {
