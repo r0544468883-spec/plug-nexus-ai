@@ -20,9 +20,10 @@ interface Message {
 interface PlugChatProps {
   initialMessage?: string;
   onMessageSent?: () => void;
+  contextPage?: 'dashboard' | 'cv-builder' | 'applications' | 'jobs' | 'default';
 }
 
-export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) {
+export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default' }: PlugChatProps) {
   const { t, direction } = useLanguage();
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -486,6 +487,44 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
 
   const showGreeting = messages.length === 0;
 
+  // Contextual greeting messages based on page
+  const getContextualGreeting = () => {
+    const isRTL = direction === 'rtl';
+    switch (contextPage) {
+      case 'cv-builder':
+        return {
+          title: isRTL ? 'היי! אני כאן לשפר את קורות החיים שלך 📄' : "Hey! I'm here to improve your CV 📄",
+          subtitle: isRTL 
+            ? 'איך אני יכול לעזור? אוכל לשפר ניסוחים, להציע מילות מפתח, או לסקור את התוכן שלך.'
+            : 'How can I help? I can improve phrasing, suggest keywords, or review your content.',
+        };
+      case 'applications':
+        return {
+          title: isRTL ? 'מה שלום המשרות שלך? 💼' : 'How are your applications going? 💼',
+          subtitle: isRTL 
+            ? 'רוצה שאסכם את המשרות ששלחת? או אולי להכין אותך לראיון?'
+            : 'Want me to summarize your applications? Or maybe prepare you for an interview?',
+        };
+      case 'jobs':
+        return {
+          title: isRTL ? 'בוא נמצא לך את המשרה המושלמת! 🎯' : "Let's find you the perfect job! 🎯",
+          subtitle: isRTL 
+            ? 'ספר לי מה אתה מחפש ואני אעזור למצוא התאמות.'
+            : 'Tell me what you are looking for and I will help find matches.',
+        };
+      case 'dashboard':
+      default:
+        return {
+          title: t('plug.greeting') || "Hey there! I'm Plug 👋",
+          subtitle: isRTL 
+            ? 'שאל אותי על משרות, קורות חיים, ראיונות או כל דבר אחר!'
+            : 'Ask me about jobs, resumes, interviews, or anything else!',
+        };
+    }
+  };
+
+  const greeting = getContextualGreeting();
+
   return (
     <div ref={chatContainerRef} data-tour="plug-chat" className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
       {/* Header */}
@@ -512,9 +551,9 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-8 h-8 text-primary-foreground" />
               </div>
-              <h4 className="font-semibold text-lg mb-2">{t('plug.greeting')}</h4>
+              <h4 className="font-semibold text-lg mb-2">{greeting.title}</h4>
               <p className="text-muted-foreground text-sm">
-                Ask me anything about candidates, jobs, documents, or HR processes!
+                {greeting.subtitle}
               </p>
             </div>
           </div>

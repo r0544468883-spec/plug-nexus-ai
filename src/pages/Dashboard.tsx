@@ -306,6 +306,7 @@ export default function Dashboard() {
           <PlugChat 
             initialMessage={pendingMessage || undefined}
             onMessageSent={handleMessageSent}
+            contextPage="dashboard"
           />
         </div>
 
@@ -409,7 +410,7 @@ export default function Dashboard() {
         <MessageSquare className="w-6 h-6 text-primary" />
         {t('plug.title') || 'Chat with Plug'}
       </h2>
-      <PlugChat />
+      <PlugChat contextPage="dashboard" />
     </div>
   );
 

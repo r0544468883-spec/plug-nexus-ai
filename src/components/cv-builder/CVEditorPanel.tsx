@@ -120,7 +120,7 @@ export const CVEditorPanel = ({ data, onChange }: CVEditorPanelProps) => {
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4" dir={isHe ? 'rtl' : 'ltr'}>
-        <Accordion type="multiple" defaultValue={['personal', 'experience']} className="space-y-2">
+        <Accordion type="multiple" defaultValue={['personal', 'experience', 'education', 'skills']} className="space-y-2">
           {/* Personal Info */}
           <AccordionItem value="personal" className="border rounded-lg px-3">
             <AccordionTrigger className="font-semibold">

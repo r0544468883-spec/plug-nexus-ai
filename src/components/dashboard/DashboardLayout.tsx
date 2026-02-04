@@ -9,6 +9,7 @@ import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { MessageBadge } from '@/components/messaging/MessageBadge';
 import { NavTooltip } from '@/components/ui/nav-tooltip';
 import { VisibleToHRBanner } from '@/components/sidebar/VisibleToHRBanner';
+import { PlugFloatingHint } from '@/components/chat/PlugFloatingHint';
 import { 
   LayoutDashboard, 
   Users, 
@@ -44,9 +45,10 @@ interface DashboardLayoutProps {
   children: ReactNode;
   currentSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
+  onChatOpen?: () => void;
 }
 
-export function DashboardLayout({ children, currentSection, onSectionChange }: DashboardLayoutProps) {
+export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
   const { t, direction } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -267,6 +269,20 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         <main id="dashboard-scroll" className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
         </main>
+
+        {/* Floating Plug Hint - contextual based on current section */}
+        <PlugFloatingHint 
+          contextPage={
+            currentSection === 'cv-builder' ? 'cv-builder' :
+            currentSection === 'applications' ? 'applications' :
+            currentSection === 'job-search' ? 'jobs' :
+            'dashboard'
+          }
+          onChatOpen={() => {
+            onChatOpen?.();
+            onSectionChange('chat');
+          }}
+        />
       </div>
     </div>
   );
