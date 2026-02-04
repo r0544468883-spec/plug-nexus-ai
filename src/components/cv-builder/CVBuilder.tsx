@@ -236,16 +236,27 @@ export const CVBuilder = () => {
   // Open export dialog and generate PDF from template
   const handleExportClick = async () => {
     setShowExportDialog(true);
-    setIsExporting(true);
+    setIsExporting(false); // Start with false so template renders immediately
     setSavedCVUrl(null);
     setExportedPdfBlob(null);
     
+    // Wait for dialog and template to render
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    setIsExporting(true); // Show loading state while generating PDF
+    
     try {
-      // Wait for dialog to render the template
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait a bit more for the isExporting state to not affect the ref
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      if (!cvRenderRef.current) {
-        throw new Error('CV render element not found');
+      const renderElement = cvRenderRef.current;
+      if (!renderElement) {
+        console.error('CV render element not found, retrying...');
+        // Retry after a delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (!cvRenderRef.current) {
+          throw new Error('CV render element not found');
+        }
       }
       
       // Capture the template as canvas
@@ -402,27 +413,31 @@ export const CVBuilder = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4 min-h-[400px]">
-            {isExporting ? (
-              <div className="flex flex-col items-center gap-3">
+          <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4 min-h-[400px] relative">
+            {/* Always render the template for ref capture, but overlay loading state */}
+            <div 
+              ref={cvRenderRef}
+              className="bg-white shadow-xl"
+              style={{
+                width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
+                minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
+                fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
+                transform: 'scale(0.5)',
+                transformOrigin: 'top center',
+                opacity: isExporting ? 0 : 1,
+                transition: 'opacity 0.3s',
+              }}
+            >
+              {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
+            </div>
+            
+            {/* Overlay loading indicator */}
+            {isExporting && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 rounded-lg">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mt-3">
                   {language === 'he' ? 'מייצר PDF...' : 'Generating PDF...'}
                 </p>
-              </div>
-            ) : (
-              <div 
-                ref={cvRenderRef}
-                className="bg-white shadow-xl"
-                style={{
-                  width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
-                  minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
-                  fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
-                  transform: 'scale(0.5)',
-                  transformOrigin: 'top center',
-                }}
-              >
-                {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
               </div>
             )}
           </div>
