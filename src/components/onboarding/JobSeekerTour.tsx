@@ -97,7 +97,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   // Step 5: Documents - Resume Upload
   {
-    section: 'documents',
+    section: 'profile-docs',
     targetSelector: '[data-tour="resume-upload"]',
     titleHe: 'ניתוח קו"ח עם AI 🧠',
     titleEn: 'AI Resume Analysis 🧠',
@@ -118,7 +118,7 @@ const TOUR_STEPS: TourStep[] = [
   },
   // Step 7: Portfolio & Links - NEW!
   {
-    section: 'documents',
+    section: 'profile-docs',
     targetSelector: '[data-tour="portfolio-links"]',
     titleHe: 'קישורים מקצועיים 🔗',
     titleEn: 'Professional Links 🔗',

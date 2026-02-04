@@ -143,7 +143,7 @@ export function useTourTips() {
     // Personalized tips based on user data
     if (data) {
       // Resume-related tips
-      if (toSection === 'documents') {
+      if (toSection === 'profile-docs') {
         if (!data.hasResume) {
           return isHebrew 
             ? '📄 טיפ: העלה קו"ח כדי ש-AI יתאים לך משרות אוטומטית!'
@@ -155,7 +155,6 @@ export function useTourTips() {
             : '🔄 Your resume is waiting to be analyzed - this will help find better matches';
         }
       }
-
       // Applications tips
       if (toSection === 'applications' && data.applicationsCount > 0) {
         return isHebrew
