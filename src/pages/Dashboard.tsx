@@ -94,13 +94,20 @@ export default function Dashboard() {
 
   const isRTL = language === 'he';
 
-  // Map current section to Plug context - use currentSection so it updates immediately on navigation
-  const plugContextPage = useMemo(() => {
-    if (currentSection === 'cv-builder') return 'cv-builder' as const;
-    if (currentSection === 'applications') return 'applications' as const;
-    if (currentSection === 'job-search') return 'jobs' as const;
+  const mapSectionToPlugContext = (section: DashboardSection) => {
+    if (section === 'cv-builder') return 'cv-builder' as const;
+    if (section === 'applications') return 'applications' as const;
+    if (section === 'job-search') return 'jobs' as const;
     return 'dashboard' as const;
-  }, [currentSection]);
+  };
+
+  // Map section to Plug context.
+  // IMPORTANT: when viewing the dedicated Chat section, keep the *source* section
+  // (chatContextSection) so Plug's greeting matches where the user came from.
+  const plugContextPage = useMemo(() => {
+    const sectionForContext = currentSection === 'chat' ? chatContextSection : currentSection;
+    return mapSectionToPlugContext(sectionForContext);
+  }, [currentSection, chatContextSection]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -420,7 +427,11 @@ export default function Dashboard() {
         <MessageSquare className="w-6 h-6 text-primary" />
         {t('plug.title') || 'Chat with Plug'}
       </h2>
-      <PlugChat contextPage={plugContextPage} />
+      <PlugChat
+        initialMessage={pendingMessage || undefined}
+        onMessageSent={handleMessageSent}
+        contextPage={plugContextPage}
+      />
     </div>
   );
 
