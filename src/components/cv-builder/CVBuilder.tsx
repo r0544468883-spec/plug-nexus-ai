@@ -1,19 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { CVData, defaultCVData, Experience, colorPresets, fontFamilies } from './types';
+import { CVData, defaultCVData, Experience, fontFamilies } from './types';
 import { CVEditorPanel } from './CVEditorPanel';
 import { CVPreviewPanel } from './CVPreviewPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Loader2, Monitor, Sparkles, Download, Copy, Edit2, FileText, Upload as UploadIcon } from 'lucide-react';
+import { Save, CheckCircle, Loader2, Monitor, FileText, Upload as UploadIcon, Download } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { getTemplateById } from './templates';
 
 interface ResumeSummary {
   skills?: {
@@ -54,80 +55,6 @@ interface ResumeSummary {
   suggestedRoles?: string[];
 }
 
-// Build prompt from CV data for AI generation
-function buildCVPrompt(data: CVData, language: string): string {
-  const isHebrew = language === 'he';
-  const preset = colorPresets[data.settings?.colorPreset] || colorPresets['default'] || { name: 'Default', primary: '#3b82f6', accent: '#10b981' };
-  const font = fontFamilies[data.settings?.fontFamily] || fontFamilies['inter'] || { name: 'Inter' };
-  
-  let prompt = isHebrew 
-    ? `צור קורות חיים מקצועיים ויזואליים בעברית עבור:\n\n`
-    : `Create a professional, visually stunning CV for:\n\n`;
-  
-  // Personal Info
-  prompt += `**${isHebrew ? 'פרטים אישיים' : 'Personal Information'}:**\n`;
-  prompt += `- ${isHebrew ? 'שם' : 'Name'}: ${data.personalInfo.fullName || 'N/A'}\n`;
-  prompt += `- ${isHebrew ? 'תפקיד' : 'Title'}: ${data.personalInfo.title || 'N/A'}\n`;
-  prompt += `- ${isHebrew ? 'אימייל' : 'Email'}: ${data.personalInfo.email || 'N/A'}\n`;
-  prompt += `- ${isHebrew ? 'טלפון' : 'Phone'}: ${data.personalInfo.phone || 'N/A'}\n`;
-  prompt += `- ${isHebrew ? 'מיקום' : 'Location'}: ${data.personalInfo.location || 'N/A'}\n`;
-  if (data.personalInfo.summary) {
-    prompt += `- ${isHebrew ? 'תקציר' : 'Summary'}: ${data.personalInfo.summary}\n`;
-  }
-  
-  // Experience
-  if (data.experience.length > 0) {
-    prompt += `\n**${isHebrew ? 'ניסיון תעסוקתי' : 'Work Experience'}:**\n`;
-    data.experience.forEach((exp, i) => {
-      prompt += `${i + 1}. ${exp.role} ${isHebrew ? 'ב' : 'at'} ${exp.company} (${exp.startDate} - ${exp.current ? (isHebrew ? 'היום' : 'Present') : exp.endDate})\n`;
-      if (exp.bullets.length > 0) {
-        exp.bullets.forEach(b => prompt += `   • ${b}\n`);
-      }
-    });
-  }
-  
-  // Education
-  if (data.education.length > 0) {
-    prompt += `\n**${isHebrew ? 'השכלה' : 'Education'}:**\n`;
-    data.education.forEach((edu, i) => {
-      prompt += `${i + 1}. ${edu.degree} ${isHebrew ? 'ב' : 'in'} ${edu.field} - ${edu.institution} (${edu.startDate} - ${edu.endDate})\n`;
-    });
-  }
-  
-  // Skills
-  if (data.skills.technical.length > 0 || data.skills.soft.length > 0) {
-    prompt += `\n**${isHebrew ? 'כישורים' : 'Skills'}:**\n`;
-    if (data.skills.technical.length > 0) {
-      prompt += `- ${isHebrew ? 'טכניים' : 'Technical'}: ${data.skills.technical.join(', ')}\n`;
-    }
-    if (data.skills.soft.length > 0) {
-      prompt += `- ${isHebrew ? 'רכים' : 'Soft'}: ${data.skills.soft.join(', ')}\n`;
-    }
-  }
-  
-  // Languages
-  if (data.skills.languages.length > 0) {
-    prompt += `\n**${isHebrew ? 'שפות' : 'Languages'}:**\n`;
-    data.skills.languages.forEach(lang => {
-      prompt += `- ${lang.name}: ${lang.level}\n`;
-    });
-  }
-  
-  // Design instructions
-  prompt += `\n**${isHebrew ? 'הנחיות עיצוב' : 'Design Instructions'}:**\n`;
-  prompt += `- ${isHebrew ? 'פלטת צבעים' : 'Color Palette'}: ${preset?.name || 'Default'} (Primary: ${preset?.primary || '#3b82f6'}, Accent: ${preset?.accent || '#10b981'})\n`;
-  prompt += `- ${isHebrew ? 'פונט' : 'Font'}: ${font?.name || 'Inter'}\n`;
-  prompt += `- ${isHebrew ? 'ריווח' : 'Spacing'}: ${data.settings?.spacing || 'comfortable'}\n`;
-  prompt += `- ${isHebrew ? 'כיוון' : 'Orientation'}: ${data.settings?.orientation || 'portrait'}\n`;
-  prompt += `- ${isHebrew ? 'גודל טקסט' : 'Font Size'}: ${data.settings?.fontSize || 'medium'}\n`;
-  
-  prompt += `\n${isHebrew 
-    ? 'צור תמונה של קורות חיים מקצועיים, נקיים ומודרניים בפורמט A4. השתמש בצבעים ובפונט שצוינו.'
-    : 'Create a professional, clean, modern CV image in A4 format. Use the specified colors and font.'}`;
-  
-  return prompt;
-}
-
 export const CVBuilder = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -139,14 +66,15 @@ export const CVBuilder = () => {
   const [showMobileWarning, setShowMobileWarning] = useState(false);
   const [viewOnlyMode, setViewOnlyMode] = useState(false);
   
-  // Prompt preview dialog state
-  const [showPromptDialog, setShowPromptDialog] = useState(false);
-  const [editablePrompt, setEditablePrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [showResultDialog, setShowResultDialog] = useState(false);
+  // Export dialog state
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isSavingToProfile, setIsSavingToProfile] = useState(false);
   const [savedCVUrl, setSavedCVUrl] = useState<string | null>(null);
+  const [exportedPdfBlob, setExportedPdfBlob] = useState<Blob | null>(null);
+  
+  // Ref for the CV preview rendering
+  const cvRenderRef = useRef<HTMLDivElement>(null);
 
   // Show mobile warning on mount if on mobile
   useEffect(() => {
@@ -293,135 +221,84 @@ export const CVBuilder = () => {
     setShowMobileWarning(false);
   };
 
-  // Open prompt preview dialog
-  const handleFinishClick = () => {
-    const prompt = buildCVPrompt(cvData, language);
-    setEditablePrompt(prompt);
-    setShowPromptDialog(true);
-  };
-
-  // Generate CV image with AI
-  const handleGenerateCV = async () => {
-    setIsGenerating(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error(language === 'he' ? 'יש להתחבר לחשבון' : 'Please log in');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cv-generate-visual`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          cvData,
-          prompt: editablePrompt,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Generation failed');
-      }
-
-      if (result.imageUrl) {
-        setGeneratedImage(result.imageUrl);
-        setSavedCVUrl(null); // Reset saved state for new generation
-        setShowPromptDialog(false);
-        setShowResultDialog(true);
-        toast.success(language === 'he' ? 'קורות החיים נוצרו בהצלחה!' : 'CV generated successfully!');
-      } else {
-        throw new Error(language === 'he' ? 'לא התקבלה תמונה' : 'No image received');
-      }
-    } catch (error) {
-      console.error('CV generation error:', error);
-      toast.error(error instanceof Error ? error.message : 'Generation failed');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  // Download generated image as PNG
-  const handleDownloadCV = () => {
-    if (!generatedImage) return;
-    const link = document.createElement('a');
-    link.href = generatedImage;
-    link.download = `${cvData.personalInfo.fullName || 'CV'}_resume.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(language === 'he' ? 'הקובץ הורד בהצלחה!' : 'File downloaded!');
-  };
-
-  // Download generated image as PDF
-  const handleDownloadPDF = async () => {
-    if (!generatedImage) return;
+  // Open export dialog and generate PDF from template
+  const handleExportClick = async () => {
+    setShowExportDialog(true);
+    setIsExporting(true);
+    setSavedCVUrl(null);
+    setExportedPdfBlob(null);
     
     try {
-      // Create a new image to get dimensions
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+      // Wait for dialog to render the template
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = generatedImage;
+      if (!cvRenderRef.current) {
+        throw new Error('CV render element not found');
+      }
+      
+      // Capture the template as canvas
+      const canvas = await html2canvas(cvRenderRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
       });
-
-      // A4 dimensions in points (72 dpi)
-      const a4Width = 595.28;
-      const a4Height = 841.89;
       
-      // Calculate scaling to fit A4
-      const scale = Math.min(a4Width / img.width, a4Height / img.height);
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
-      
-      // Center on page
-      const x = (a4Width - scaledWidth) / 2;
-      const y = (a4Height - scaledHeight) / 2;
-      
+      // Create PDF from canvas
+      const isLandscape = cvData.settings.orientation === 'landscape';
       const pdf = new jsPDF({
-        orientation: cvData.settings?.orientation === 'landscape' ? 'landscape' : 'portrait',
-        unit: 'pt',
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
         format: 'a4',
       });
       
-      pdf.addImage(generatedImage, 'PNG', x, y, scaledWidth, scaledHeight);
-      pdf.save(`${cvData.personalInfo.fullName || 'CV'}_resume.pdf`);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png');
       
-      toast.success(language === 'he' ? 'ה-PDF הורד בהצלחה!' : 'PDF downloaded!');
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      
+      // Store blob for later download/save
+      const pdfBlob = pdf.output('blob');
+      setExportedPdfBlob(pdfBlob);
+      
+      toast.success(language === 'he' ? 'קורות החיים מוכנים להורדה!' : 'CV ready for download!');
     } catch (error) {
       console.error('PDF generation error:', error);
       toast.error(language === 'he' ? 'שגיאה ביצירת PDF' : 'Error creating PDF');
+    } finally {
+      setIsExporting(false);
     }
+  };
+
+  // Download PDF
+  const handleDownloadPDF = () => {
+    if (!exportedPdfBlob) return;
+    
+    const url = URL.createObjectURL(exportedPdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${cvData.personalInfo.fullName || 'CV'}_resume.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success(language === 'he' ? 'ה-PDF הורד בהצלחה!' : 'PDF downloaded!');
   };
 
   // Save CV to profile (storage)
   const handleSaveToProfile = async () => {
-    if (!generatedImage || !user) return;
+    if (!exportedPdfBlob || !user) return;
     
     setIsSavingToProfile(true);
     try {
-      // Convert base64 to blob
-      const base64Data = generatedImage.split(',')[1];
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'image/png' });
-      
-      // Upload to storage
-      const fileName = `${user.id}/${Date.now()}_cv.png`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload PDF to storage
+      const fileName = `${user.id}/${Date.now()}_cv.pdf`;
+      const { error: uploadError } = await supabase.storage
         .from('generated-cvs')
-        .upload(fileName, blob, {
-          contentType: 'image/png',
+        .upload(fileName, exportedPdfBlob, {
+          contentType: 'application/pdf',
           upsert: true,
         });
       
@@ -442,11 +319,9 @@ export const CVBuilder = () => {
     }
   };
 
-  // Copy prompt to clipboard
-  const handleCopyPrompt = async () => {
-    await navigator.clipboard.writeText(editablePrompt);
-    toast.success(language === 'he' ? 'הפרומפט הועתק!' : 'Prompt copied!');
-  };
+  // Get current template component
+  const currentTemplate = getTemplateById(cvData.settings.templateId);
+  const TemplateComponent = currentTemplate?.component;
 
   if (isLoadingResume) {
     return (
@@ -487,95 +362,57 @@ export const CVBuilder = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Prompt Preview Dialog */}
-      <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      {/* Export Dialog - Using Template Rendering */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              {language === 'he' ? 'תצוגת פרומפט' : 'Preview Prompt'}
+              <FileText className="w-5 h-5 text-primary" />
+              {language === 'he' ? 'ייצוא קורות חיים' : 'Export CV'}
             </DialogTitle>
             <DialogDescription>
               {language === 'he' 
-                ? 'זה הפרומפט שיישלח ל-AI ליצירת קורות החיים. ניתן לערוך אותו לפני השליחה.'
-                : 'This is the prompt that will be sent to AI to generate your CV. You can edit it before sending.'}
+                ? 'קורות החיים שלך מוכנים להורדה או שמירה לפרופיל'
+                : 'Your CV is ready for download or saving to your profile'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-hidden">
-            <Textarea
-              value={editablePrompt}
-              onChange={(e) => setEditablePrompt(e.target.value)}
-              className="h-[300px] resize-none font-mono text-sm"
-              dir={language === 'he' ? 'rtl' : 'ltr'}
-            />
-          </div>
-          
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleCopyPrompt} className="gap-2">
-              <Copy className="w-4 h-4" />
-              {language === 'he' ? 'העתק' : 'Copy'}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditablePrompt(buildCVPrompt(cvData, language))}
-              className="gap-2"
-            >
-              <Edit2 className="w-4 h-4" />
-              {language === 'he' ? 'אפס' : 'Reset'}
-            </Button>
-            <div className="flex-1" />
-            <Button variant="ghost" onClick={() => setShowPromptDialog(false)}>
-              {language === 'he' ? 'ביטול' : 'Cancel'}
-            </Button>
-            <Button onClick={handleGenerateCV} disabled={isGenerating} className="gap-2">
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              {language === 'he' ? 'צור קורות חיים' : 'Generate CV'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Result Dialog */}
-      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              {language === 'he' ? 'קורות החיים נוצרו!' : 'CV Generated!'}
-            </DialogTitle>
-            <DialogDescription>
-              {language === 'he' 
-                ? 'הורד את קורות החיים או שמור לפרופיל שלך'
-                : 'Download your CV or save it to your profile'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4">
-            {generatedImage && (
-              <img 
-                src={generatedImage} 
-                alt="Generated CV" 
-                className="max-w-full max-h-[50vh] object-contain rounded shadow-lg"
-              />
+          <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4 min-h-[400px]">
+            {isExporting ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">
+                  {language === 'he' ? 'מייצר PDF...' : 'Generating PDF...'}
+                </p>
+              </div>
+            ) : (
+              <div 
+                ref={cvRenderRef}
+                className="bg-white shadow-xl"
+                style={{
+                  width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
+                  minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
+                  fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
+                  transform: 'scale(0.5)',
+                  transformOrigin: 'top center',
+                }}
+              >
+                {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
+              </div>
             )}
           </div>
 
           {savedCVUrl && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-green-700 dark:text-green-300">
+            <div className="flex items-center gap-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
+              <CheckCircle className="w-4 h-4 text-accent" />
+              <span className="text-sm text-accent">
                 {language === 'he' ? 'נשמר לפרופיל!' : 'Saved to profile!'}
               </span>
             </div>
           )}
           
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowResultDialog(false)}>
+            <Button variant="outline" onClick={() => setShowExportDialog(false)}>
               {language === 'he' ? 'סגור' : 'Close'}
             </Button>
             
@@ -584,29 +421,27 @@ export const CVBuilder = () => {
               <Button 
                 variant="outline" 
                 onClick={handleSaveToProfile} 
-                disabled={isSavingToProfile || !!savedCVUrl}
+                disabled={isSavingToProfile || !!savedCVUrl || isExporting || !exportedPdfBlob}
                 className="gap-2"
               >
                 {isSavingToProfile ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : savedCVUrl ? (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="w-4 h-4 text-accent" />
                 ) : (
                   <UploadIcon className="w-4 h-4" />
                 )}
                 {language === 'he' ? 'שמור לפרופיל' : 'Save to Profile'}
               </Button>
 
-              {/* Download as PNG */}
-              <Button variant="outline" onClick={handleDownloadCV} className="gap-2">
-                <Download className="w-4 h-4" />
-                PNG
-              </Button>
-
               {/* Download as PDF */}
-              <Button onClick={handleDownloadPDF} className="gap-2">
-                <FileText className="w-4 h-4" />
-                PDF
+              <Button 
+                onClick={handleDownloadPDF} 
+                disabled={isExporting || !exportedPdfBlob}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                {language === 'he' ? 'הורד PDF' : 'Download PDF'}
               </Button>
             </div>
           </DialogFooter>
@@ -640,10 +475,10 @@ export const CVBuilder = () => {
             ) : null}
           </div>
           
-          {/* Finish Button */}
-          <Button onClick={handleFinishClick} className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            {language === 'he' ? 'סיימתי - צור עם AI' : 'Finish - Generate with AI'}
+          {/* Export Button */}
+          <Button onClick={handleExportClick} className="gap-2">
+            <FileText className="w-4 h-4" />
+            {language === 'he' ? 'סיימתי - ייצא PDF' : 'Finish - Export PDF'}
           </Button>
         </div>
       </div>
