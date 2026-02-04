@@ -413,15 +413,57 @@ export const CVBuilder = () => {
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col min-h-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              {language === 'he' ? 'ייצוא קורות חיים' : 'Export CV'}
-            </DialogTitle>
-            <DialogDescription>
-              {language === 'he' 
-                ? 'קורות החיים שלך מוכנים להורדה או שמירה לפרופיל'
-                : 'Your CV is ready for download or saving to your profile'}
-            </DialogDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  {language === 'he' ? 'צפיה מראש' : 'Preview CV'}
+                </DialogTitle>
+                <DialogDescription className="mt-1">
+                  {language === 'he' 
+                    ? 'קורות החיים שלך מוכנים להורדה או שמירה לפרופיל'
+                    : 'Your CV is ready for download or saving to your profile'}
+                </DialogDescription>
+              </div>
+              
+              {/* Action buttons in header - prominent placement */}
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {/* Save to Profile */}
+                <Button 
+                  variant="outline" 
+                  onClick={handleSaveToProfile} 
+                  disabled={isSavingToProfile || !!savedCVUrl || isExporting || !exportedPdfBlob}
+                  className="gap-2"
+                  size="sm"
+                >
+                  {isSavingToProfile ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : savedCVUrl ? (
+                    <CheckCircle className="w-4 h-4 text-accent" />
+                  ) : (
+                    <UploadIcon className="w-4 h-4" />
+                  )}
+                  {language === 'he' ? 'שמור לפרופיל' : 'Save to Profile'}
+                </Button>
+
+                {/* Download as PDF */}
+                <Button 
+                  onClick={handleDownloadPDF} 
+                  disabled={isExporting || !exportedPdfBlob}
+                  className="gap-2"
+                  size="sm"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isExporting 
+                    ? (language === 'he' ? 'מייצר...' : 'Generating...') 
+                    : (language === 'he' ? 'הורד PDF' : 'Download PDF')}
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
           
           <div className="flex-1 min-h-0 overflow-auto bg-muted/30 rounded-lg p-4 min-h-[500px] max-h-[60vh] relative">
@@ -464,45 +506,10 @@ export const CVBuilder = () => {
             </div>
           )}
           
-          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t shrink-0">
+          <DialogFooter className="pt-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setShowExportDialog(false)}>
               {language === 'he' ? 'סגור' : 'Close'}
             </Button>
-            
-            <div className="flex flex-col sm:flex-row gap-2 flex-wrap flex-1 justify-end">
-              {/* Save to Profile */}
-              <Button 
-                variant="outline" 
-                onClick={handleSaveToProfile} 
-                disabled={isSavingToProfile || !!savedCVUrl || isExporting || !exportedPdfBlob}
-                className="gap-2 w-full sm:w-auto"
-              >
-                {isSavingToProfile ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : savedCVUrl ? (
-                  <CheckCircle className="w-4 h-4 text-accent" />
-                ) : (
-                  <UploadIcon className="w-4 h-4" />
-                )}
-                {language === 'he' ? 'שמור לפרופיל' : 'Save to Profile'}
-              </Button>
-
-              {/* Download as PDF */}
-              <Button 
-                onClick={handleDownloadPDF} 
-                disabled={isExporting || !exportedPdfBlob}
-                className="gap-2 w-full sm:w-auto"
-              >
-                {isExporting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                {isExporting 
-                  ? (language === 'he' ? 'מייצר...' : 'Generating...') 
-                  : (language === 'he' ? 'הורד PDF' : 'Download PDF')}
-              </Button>
-            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
