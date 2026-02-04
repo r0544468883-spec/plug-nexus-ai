@@ -128,24 +128,49 @@ export const CVBuilder = () => {
         if (resumeDoc?.ai_summary) {
           const summary = resumeDoc.ai_summary as ResumeSummary;
           
+          // Helper function to normalize date format
+          const normalizeDate = (dateStr: string | undefined): string => {
+            if (!dateStr) return '';
+            const date = dateStr.trim();
+            // Check if it's "Present" or similar
+            if (/present|current|now|היום|עד היום/i.test(date)) {
+              return 'Present';
+            }
+            // Try to extract YYYY-MM format
+            const yyyyMmMatch = date.match(/^(\d{4})-(\d{2})$/);
+            if (yyyyMmMatch) return date;
+            // Try to extract just year
+            const yearMatch = date.match(/^(\d{4})$/);
+            if (yearMatch) return `${yearMatch[1]}-01`;
+            // Try MM/YYYY format
+            const mmYyyyMatch = date.match(/^(\d{1,2})\/(\d{4})$/);
+            if (mmYyyyMatch) return `${mmYyyyMatch[2]}-${mmYyyyMatch[1].padStart(2, '0')}`;
+            // Return as-is if no pattern matches
+            return date;
+          };
+          
           // Convert resume analysis to CV data
-          const experiences: Experience[] = summary.experience?.positions?.map((pos, idx) => ({
-            id: `exp-${idx}`,
-            company: pos.company || '',
-            role: pos.role || '',
-            startDate: pos.startDate || '',
-            endDate: pos.endDate || null,
-            current: !pos.endDate || pos.endDate.toLowerCase().includes('present'),
-            bullets: pos.description ? pos.description.split('\n').filter(Boolean) : [],
-          })) || [];
+          const experiences: Experience[] = summary.experience?.positions?.map((pos, idx) => {
+            const endDate = normalizeDate(pos.endDate);
+            const isCurrent = endDate === 'Present' || !pos.endDate;
+            return {
+              id: `exp-${idx}`,
+              company: pos.company || '',
+              role: pos.role || '',
+              startDate: normalizeDate(pos.startDate),
+              endDate: isCurrent ? null : endDate,
+              current: isCurrent,
+              bullets: pos.description ? pos.description.split('\n').filter(Boolean) : [],
+            };
+          }) || [];
           
           const educations = summary.education?.institutions?.map((inst, idx) => ({
             id: `edu-${idx}`,
             institution: inst.name || '',
             degree: inst.degree || '',
             field: inst.field || '',
-            startDate: inst.startDate || '',
-            endDate: inst.endDate || '',
+            startDate: normalizeDate(inst.startDate),
+            endDate: normalizeDate(inst.endDate),
           })) || [];
           
           const newCvData: CVData = {
