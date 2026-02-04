@@ -514,6 +514,9 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    // Let parent clear pendingMessage only when the user actually sends.
+    // This keeps Quick Actions reliable across repeated opens.
+    onMessageSent?.();
 
     try {
       await saveMessage(userMessage.content, 'user');
