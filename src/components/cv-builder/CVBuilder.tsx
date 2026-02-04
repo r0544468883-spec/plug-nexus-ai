@@ -570,10 +570,10 @@ export const CVBuilder = () => {
             {language === 'he' ? 'עיצוב AI' : 'AI Design'}
           </Button>
           
-          {/* Export Button */}
+          {/* Preview Button */}
           <Button onClick={handleExportClick} className="gap-2">
             <FileText className="w-4 h-4" />
-            {language === 'he' ? 'ייצא PDF' : 'Export PDF'}
+            {language === 'he' ? 'צפיה מראש' : 'Preview'}
           </Button>
         </div>
       </div>
