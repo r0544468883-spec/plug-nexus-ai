@@ -519,6 +519,11 @@ export default function Dashboard() {
     <DashboardLayout 
       currentSection={currentSection} 
       onSectionChange={setCurrentSection}
+      onChatOpen={(initialMessage) => {
+        if (initialMessage) {
+          setPendingMessage(initialMessage);
+        }
+      }}
     >
       {/* Interactive tour for job seekers */}
       <JobSeekerTour 

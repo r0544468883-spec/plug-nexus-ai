@@ -8,16 +8,16 @@ interface QuickAction {
   icon: React.ReactNode;
   label: string;
   labelHe: string;
-  action: string;
+  message: string;
+  messageHe: string;
 }
 
 interface PlugFloatingHintProps {
   contextPage?: 'dashboard' | 'cv-builder' | 'applications' | 'jobs' | 'default';
-  onChatOpen?: () => void;
-  onQuickAction?: (action: string) => void;
+  onChatOpen?: (initialMessage?: string) => void;
 }
 
-export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickAction }: PlugFloatingHintProps) => {
+export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen }: PlugFloatingHintProps) => {
   const { direction } = useLanguage();
   const isRTL = direction === 'rtl';
   const [isVisible, setIsVisible] = useState(false);
@@ -73,24 +73,72 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickA
     switch (contextPage) {
       case 'cv-builder':
         return [
-          { icon: <PenLine className="w-3 h-3" />, label: 'Improve CV', labelHe: 'שפר קו״ח', action: 'improve-cv' },
-          { icon: <Upload className="w-3 h-3" />, label: 'Import', labelHe: 'ייבוא', action: 'import-cv' },
+          { 
+            icon: <PenLine className="w-3 h-3" />, 
+            label: 'Improve CV', 
+            labelHe: 'שפר קו״ח',
+            message: 'Help me improve my CV - suggest better wording and structure',
+            messageHe: 'עזור לי לשפר את קורות החיים שלי - הצע ניסוחים ומבנה טוב יותר'
+          },
+          { 
+            icon: <Upload className="w-3 h-3" />, 
+            label: 'Tips', 
+            labelHe: 'טיפים',
+            message: 'Give me professional tips to make my CV stand out',
+            messageHe: 'תן לי טיפים מקצועיים כדי שקורות החיים שלי יבלטו'
+          },
         ];
       case 'applications':
         return [
-          { icon: <BarChart3 className="w-3 h-3" />, label: 'Summary', labelHe: 'סיכום', action: 'summarize-applications' },
-          { icon: <FileText className="w-3 h-3" />, label: 'Follow-ups', labelHe: 'מעקב', action: 'follow-ups' },
+          { 
+            icon: <BarChart3 className="w-3 h-3" />, 
+            label: 'Summary', 
+            labelHe: 'סיכום',
+            message: 'Summarize my job application progress and status',
+            messageHe: 'סכם לי את ההתקדמות שלי במועמדויות לעבודה'
+          },
+          { 
+            icon: <FileText className="w-3 h-3" />, 
+            label: 'Follow-ups', 
+            labelHe: 'מעקב',
+            message: 'Which applications should I follow up on?',
+            messageHe: 'על אילו מועמדויות כדאי לי לעקוב?'
+          },
         ];
       case 'jobs':
         return [
-          { icon: <Search className="w-3 h-3" />, label: 'Match me', labelHe: 'התאם לי', action: 'match-jobs' },
-          { icon: <Briefcase className="w-3 h-3" />, label: 'Trending', labelHe: 'טרנדים', action: 'trending-jobs' },
+          { 
+            icon: <Search className="w-3 h-3" />, 
+            label: 'Match me', 
+            labelHe: 'התאם לי',
+            message: 'Find jobs that match my skills and experience',
+            messageHe: 'מצא לי משרות שמתאימות לכישורים ולניסיון שלי'
+          },
+          { 
+            icon: <Briefcase className="w-3 h-3" />, 
+            label: 'Trending', 
+            labelHe: 'טרנדים',
+            message: 'What are the trending job opportunities in my field?',
+            messageHe: 'מהן המשרות המובילות בתחום שלי?'
+          },
         ];
       case 'dashboard':
       default:
         return [
-          { icon: <FileText className="w-3 h-3" />, label: 'My status', labelHe: 'הסטטוס שלי', action: 'my-status' },
-          { icon: <Search className="w-3 h-3" />, label: 'Find jobs', labelHe: 'חפש משרות', action: 'find-jobs' },
+          { 
+            icon: <FileText className="w-3 h-3" />, 
+            label: 'My status', 
+            labelHe: 'הסטטוס שלי',
+            message: 'Give me an overview of my job search status',
+            messageHe: 'תן לי סקירה על מצב חיפוש העבודה שלי'
+          },
+          { 
+            icon: <Search className="w-3 h-3" />, 
+            label: 'Find jobs', 
+            labelHe: 'חפש משרות',
+            message: 'Help me find new job opportunities',
+            messageHe: 'עזור לי למצוא הזדמנויות עבודה חדשות'
+          },
         ];
     }
   };
@@ -105,9 +153,9 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickA
     setIsVisible(false);
   };
 
-  const handleQuickAction = (action: string) => {
-    onQuickAction?.(action);
-    onChatOpen?.();
+  const handleQuickAction = (action: QuickAction) => {
+    const message = isRTL ? action.messageHe : action.message;
+    onChatOpen?.(message);
     setIsVisible(false);
   };
 
@@ -117,10 +165,19 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickA
     <AnimatePresence>
       {isVisible && !isDismissed && (
         <motion.div
-          initial={{ opacity: 0, x: isRTL ? -100 : 100, scale: 0.8 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: isRTL ? -50 : 50, scale: 0.8 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          initial={{ opacity: 0, y: 50, scale: 0.8 }}
+          animate={{ 
+            opacity: 1, 
+            y: 0, 
+            scale: 1,
+          }}
+          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          transition={{ 
+            type: 'spring', 
+            stiffness: 400, 
+            damping: 15,
+            mass: 0.8,
+          }}
           className={`fixed bottom-24 ${isRTL ? 'left-4' : 'right-4'} z-50 max-w-xs`}
         >
           {/* Glow effect */}
@@ -137,7 +194,12 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickA
             }}
           />
           
-          <div className="relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4">
+          <motion.div 
+            className="relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4"
+            initial={{ rotate: -2 }}
+            animate={{ rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+          >
             {/* Close button */}
             <button
               onClick={handleDismiss}
@@ -150,58 +212,87 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, onQuickA
             <div className="flex items-start gap-3">
               <motion.div 
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0"
-                animate={{
-                  boxShadow: [
-                    '0 0 10px hsl(var(--primary) / 0.3)',
-                    '0 0 20px hsl(var(--primary) / 0.5)',
-                    '0 0 10px hsl(var(--primary) / 0.3)',
-                  ],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ 
+                  type: 'spring', 
+                  stiffness: 300, 
+                  damping: 15, 
+                  delay: 0.2,
                 }}
               >
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
+                <motion.div
+                  animate={{
+                    scale: [1, 1.2, 1],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                >
+                  <Sparkles className="w-5 h-5 text-primary-foreground" />
+                </motion.div>
               </motion.div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-foreground mb-3">
+                <motion.p 
+                  className="text-sm font-medium text-foreground mb-3"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
                   {getHintMessage()}
-                </p>
+                </motion.p>
                 
                 {/* Quick Actions */}
-                <div className="flex flex-wrap gap-2 mb-2">
+                <motion.div 
+                  className="flex flex-wrap gap-2 mb-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
                   {quickActions.map((qa, index) => (
-                    <Button
+                    <motion.div
                       key={index}
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleQuickAction(qa.action)}
-                      className="gap-1.5 text-xs h-7 px-2"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
                     >
-                      {qa.icon}
-                      {isRTL ? qa.labelHe : qa.label}
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleQuickAction(qa)}
+                        className="gap-1.5 text-xs h-7 px-2 hover:scale-105 transition-transform"
+                      >
+                        {qa.icon}
+                        {isRTL ? qa.labelHe : qa.label}
+                      </Button>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
                 
                 {/* Open Chat button */}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleClick}
-                  className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
                 >
-                  <Sparkles className="w-3 h-3" />
-                  {isRTL ? 'או שאל אותי כל דבר...' : 'Or ask me anything...'}
-                </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleClick}
+                    className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {isRTL ? 'או שאל אותי כל דבר...' : 'Or ask me anything...'}
+                  </Button>
+                </motion.div>
               </div>
             </div>
 
             {/* Decorative tail */}
             <div className={`absolute bottom-4 ${isRTL ? '-left-2' : '-right-2'} w-4 h-4 bg-card border-r border-b border-primary/30 transform rotate-45`} />
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
