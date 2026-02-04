@@ -153,14 +153,26 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
   // so the chat feels page-aware even when there is existing history.
   useEffect(() => {
     if (!user) return;
+    // Skip if context didn't change
     if (lastContextPageRef.current === contextPage) return;
 
+    console.log("PlugChat: context changed from", lastContextPageRef.current, "to", contextPage);
     lastContextPageRef.current = contextPage;
+    
+    // Always add a context message when navigating to a new page (except on initial load)
     setMessages((prev) => {
-      // If there are no messages yet, we already show the greeting panel.
+      // Skip if no messages yet - greeting panel handles it
       if (prev.length === 0) return prev;
+      
       const g = getContextualGreeting();
       const content = `${g.title}\n${g.subtitle}`;
+      
+      // Avoid duplicate context messages
+      const lastMsg = prev[prev.length - 1];
+      if (lastMsg?.id?.startsWith('ctx-') && lastMsg.content === content) {
+        return prev;
+      }
+      
       return [
         ...prev,
         {
