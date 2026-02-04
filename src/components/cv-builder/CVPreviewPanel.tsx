@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CVData } from './types';
+import { CVData, colorPresets, fontFamilies, ColorPreset, FontFamily, Spacing, Orientation } from './types';
 import { templates, getTemplateById } from './templates';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Palette, Type, FileText } from 'lucide-react';
+import { Download, Palette, Type, FileText, LayoutTemplate, Maximize2, AlignJustify } from 'lucide-react';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -26,10 +26,22 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
   const currentTemplate = getTemplateById(data.settings.templateId);
   const TemplateComponent = currentTemplate?.component || templates[0].component;
 
-  const updateSettings = (field: keyof CVData['settings'], value: string) => {
+  const updateSettings = <K extends keyof CVData['settings']>(field: K, value: CVData['settings'][K]) => {
     onChange({
       ...data,
       settings: { ...data.settings, [field]: value },
+    });
+  };
+
+  const applyColorPreset = (preset: ColorPreset) => {
+    const colors = colorPresets[preset];
+    onChange({
+      ...data,
+      settings: { 
+        ...data.settings, 
+        colorPreset: preset,
+        accentColor: colors.primary,
+      },
     });
   };
 
@@ -40,6 +52,8 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
     toast.info(isHe ? 'מייצר PDF...' : 'Generating PDF...');
     
     try {
+      const isLandscape = data.settings.orientation === 'landscape';
+      
       const canvas = await html2canvas(previewRef.current, {
         scale: 2,
         useCORS: true,
@@ -48,7 +62,7 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
       
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: isLandscape ? 'landscape' : 'portrait',
         unit: 'mm',
         format: 'a4',
       });
@@ -67,41 +81,87 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
     }
   };
 
+  const pageWidth = data.settings.orientation === 'landscape' ? '297mm' : '210mm';
+  const pageHeight = data.settings.orientation === 'landscape' ? '210mm' : '297mm';
+
   return (
     <div className="h-full flex flex-col bg-muted/30">
-      {/* Controls */}
-      <div className="p-3 border-b bg-background flex flex-wrap gap-3 items-center">
-        {/* Template Selector */}
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-muted-foreground" />
-          <Select value={data.settings.templateId} onValueChange={(v) => updateSettings('templateId', v)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {isHe ? t.nameHe : t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Controls - 2 rows */}
+      <div className="p-3 border-b bg-background space-y-2">
+        {/* Row 1: Template, Preset, Accent Color */}
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Template Selector */}
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <Select value={data.settings.templateId} onValueChange={(v) => updateSettings('templateId', v)}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {isHe ? t.nameHe : t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Color Preset */}
+          <div className="flex items-center gap-2">
+            <LayoutTemplate className="w-4 h-4 text-muted-foreground" />
+            <Select value={data.settings.colorPreset} onValueChange={(v) => applyColorPreset(v as ColorPreset)}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(colorPresets).map(([key, preset]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full border" 
+                        style={{ backgroundColor: preset.primary }}
+                      />
+                      {isHe ? preset.nameHe : preset.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Accent Color */}
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="color"
+              value={data.settings.accentColor}
+              onChange={(e) => updateSettings('accentColor', e.target.value)}
+              className="w-10 h-8 p-0 border-0 cursor-pointer"
+            />
+          </div>
         </div>
 
-        {/* Accent Color */}
-        <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4 text-muted-foreground" />
-          <Input
-            type="color"
-            value={data.settings.accentColor}
-            onChange={(e) => updateSettings('accentColor', e.target.value)}
-            className="w-10 h-8 p-0 border-0 cursor-pointer"
-          />
-        </div>
+        {/* Row 2: Font, Size, Spacing, Orientation, Export */}
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Font Family */}
+          <div className="flex items-center gap-2">
+            <Type className="w-4 h-4 text-muted-foreground" />
+            <Select value={data.settings.fontFamily} onValueChange={(v) => updateSettings('fontFamily', v as FontFamily)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(fontFamilies).map(([key, font]) => (
+                  <SelectItem key={key} value={key}>
+                    {isHe ? font.nameHe : font.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Font Size */}
-        <div className="flex items-center gap-2">
-          <Type className="w-4 h-4 text-muted-foreground" />
+          {/* Font Size */}
           <Select value={data.settings.fontSize} onValueChange={(v) => updateSettings('fontSize', v as 'small' | 'medium' | 'large')}>
             <SelectTrigger className="w-24">
               <SelectValue />
@@ -112,13 +172,42 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
               <SelectItem value="large">{isHe ? 'גדול' : 'Large'}</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        {/* Export Button */}
-        <Button onClick={exportToPDF} disabled={isExporting} className="ml-auto">
-          <Download className="w-4 h-4 mr-2" />
-          {isHe ? 'הורד PDF' : 'Download PDF'}
-        </Button>
+          {/* Spacing */}
+          <div className="flex items-center gap-2">
+            <AlignJustify className="w-4 h-4 text-muted-foreground" />
+            <Select value={data.settings.spacing} onValueChange={(v) => updateSettings('spacing', v as Spacing)}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="compact">{isHe ? 'צפוף' : 'Compact'}</SelectItem>
+                <SelectItem value="normal">{isHe ? 'רגיל' : 'Normal'}</SelectItem>
+                <SelectItem value="spacious">{isHe ? 'מרווח' : 'Spacious'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Orientation */}
+          <div className="flex items-center gap-2">
+            <Maximize2 className="w-4 h-4 text-muted-foreground" />
+            <Select value={data.settings.orientation} onValueChange={(v) => updateSettings('orientation', v as Orientation)}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="portrait">{isHe ? 'לאורך' : 'Portrait'}</SelectItem>
+                <SelectItem value="landscape">{isHe ? 'לרוחב' : 'Landscape'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Export Button */}
+          <Button onClick={exportToPDF} disabled={isExporting} className="ml-auto">
+            <Download className="w-4 h-4 mr-2" />
+            {isHe ? 'הורד PDF' : 'Download PDF'}
+          </Button>
+        </div>
       </div>
 
       {/* Preview */}
@@ -127,7 +216,11 @@ export const CVPreviewPanel = ({ data, onChange }: CVPreviewPanelProps) => {
           <div 
             ref={previewRef}
             className="shadow-xl bg-white"
-            style={{ width: '210mm', minHeight: '297mm' }}
+            style={{ 
+              width: pageWidth, 
+              minHeight: pageHeight,
+              fontFamily: fontFamilies[data.settings.fontFamily]?.stack || "'Inter', sans-serif",
+            }}
           >
             <TemplateComponent data={data} scale={1} />
           </div>
