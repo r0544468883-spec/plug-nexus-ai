@@ -138,23 +138,38 @@ serve(async (req) => {
     // Create admin client for updating documents
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Download the file content
+    // Download the file content - REQUIRED for AI analysis
     let fileContent = "";
     
     try {
+      console.log("Downloading file from:", fileUrl);
       const response = await fetch(fileUrl);
       if (!response.ok) {
-        throw new Error("Failed to download file");
+        console.error("File download failed with status:", response.status);
+        return new Response(
+          JSON.stringify({ error: 'Failed to download resume file. Please ensure the file is accessible.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      // For text-based analysis, we'll extract what we can
-      // Note: For PDFs, we'd need a PDF parser. For now, we'll send the URL to Gemini
-      // which can analyze documents directly
       const blob = await response.blob();
       const base64 = await blobToBase64(blob);
       fileContent = base64;
+      console.log("File downloaded and converted, size:", blob.size, "type:", blob.type);
     } catch (e) {
       console.error("Error downloading file:", e);
+      return new Response(
+        JSON.stringify({ error: 'Failed to process resume file. Please try uploading again.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate we have content
+    if (!fileContent || !fileContent.startsWith('data:')) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to read resume file content.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const systemPrompt = `You are an expert HR analyst specializing in resume analysis. Analyze the provided resume and extract:
@@ -189,6 +204,7 @@ Respond in JSON format with this exact structure:
 }`;
 
     // Use Gemini's vision capabilities to analyze the document
+    console.log("Sending to AI for analysis...");
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -205,7 +221,7 @@ Respond in JSON format with this exact structure:
               { type: "text", text: `Please analyze this resume (${fileName || 'resume'}):` },
               { 
                 type: "image_url", 
-                image_url: { url: fileContent.startsWith("data:") ? fileContent : fileUrl } 
+                image_url: { url: fileContent } 
               }
             ]
           },
