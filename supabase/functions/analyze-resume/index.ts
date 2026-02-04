@@ -206,6 +206,14 @@ IMPORTANT: Extract as much detail as possible from the resume including:
 - All education with institution names, degrees, fields of study, and dates
 - Technical skills, soft skills, and languages
 
+CRITICAL DATE EXTRACTION RULES:
+- ALWAYS extract start and end dates for EVERY position and education entry
+- Look for date formats like: "2020-2023", "Jan 2020 - Dec 2023", "2020 - Present", "01/2020 - 12/2023", "2020-01 to 2023-12"
+- Convert all dates to YYYY-MM format (e.g., "2020-01", "2023-12")
+- If only year is available, use January: "2020" → "2020-01"
+- If end date says "Present", "Current", "Now", "היום", "עד היום", use the literal string "Present"
+- Calculate totalYears based on the extracted dates from ALL positions
+
 Respond in JSON format with this EXACT structure:
 {
   "personalInfo": {
@@ -228,8 +236,15 @@ Respond in JSON format with this EXACT structure:
         "company": "Company Name",
         "role": "Job Title",
         "startDate": "2020-01",
-        "endDate": "2023-12 or Present",
+        "endDate": "2023-12",
         "description": "Key responsibilities and achievements as bullet points separated by newlines"
+      },
+      {
+        "company": "Previous Company",
+        "role": "Previous Title",
+        "startDate": "2018-06",
+        "endDate": "2019-12",
+        "description": "Previous role description"
       }
     ]
   },
@@ -241,8 +256,8 @@ Respond in JSON format with this EXACT structure:
         "name": "University Name",
         "degree": "Bachelor's/Master's/PhD",
         "field": "Field of Study",
-        "startDate": "2015",
-        "endDate": "2019"
+        "startDate": "2015-09",
+        "endDate": "2019-06"
       }
     ]
   },
@@ -255,9 +270,11 @@ Respond in JSON format with this EXACT structure:
 CRITICAL: 
 - Extract ALL positions from work history, not just the most recent
 - Extract ALL education entries, not just the highest degree
-- Include dates in YYYY-MM format when available
-- If end date is current/present, use "Present"
-- For descriptions, include key achievements and responsibilities`;
+- ALWAYS include dates in YYYY-MM format - this is REQUIRED for every position and education entry
+- If dates are missing from the resume, make a reasonable estimate based on context
+- If end date is current/present, use "Present" (string)
+- For descriptions, include key achievements and responsibilities
+- Look carefully for Hebrew date formats (ינואר, פברואר, etc.) and convert them properly`;
 
     // Use Gemini's vision capabilities to analyze the document
     console.log("Sending to AI for analysis...");
