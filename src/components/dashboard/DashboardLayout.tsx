@@ -299,8 +299,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
           contextPage={hintContextPage}
           forceShowSignal={plugHintSignal}
           onChatOpen={(initialMessage) => {
+            // Let the parent decide how/when to navigate to chat.
+            // We pass the source section so Plug can keep correct context.
             onChatOpen?.(initialMessage, currentSection);
-            onSectionChange('chat');
           }}
         />
       </div>

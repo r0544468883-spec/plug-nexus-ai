@@ -99,18 +99,35 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
     try {
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}_import.${fileExt}`;
+      const storagePath = `${user.id}/${Date.now()}_import.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('resumes')
-        .upload(fileName, file);
+        .upload(storagePath, file);
       
       if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+
+      // Create a documents row so the analysis can be persisted (ai_summary)
+      const { data: newDoc, error: docErr } = await supabase
+        .from('documents')
+        .insert({
+          owner_id: user.id,
+          file_name: file.name,
+          file_path: storagePath,
+          file_type: fileExt,
+          doc_type: 'cv',
+        })
+        .select('id')
+        .single();
+
+      if (docErr || !newDoc?.id) throw docErr || new Error('Failed creating document record');
+
+      // Signed URL (works for private buckets)
+      const { data: signed, error: signedErr } = await supabase.storage
         .from('resumes')
-        .getPublicUrl(fileName);
+        .createSignedUrl(storagePath, 60 * 5);
+
+      if (signedErr || !signed?.signedUrl) throw signedErr || new Error('Failed to create signed URL');
       
       // Call analyze-resume edge function
       const { data: { session } } = await supabase.auth.getSession();
@@ -122,8 +139,9 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
           'Authorization': `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({
-          fileUrl: publicUrl,
+          fileUrl: signed.signedUrl,
           fileName: file.name,
+          documentId: newDoc.id,
         }),
       });
       
