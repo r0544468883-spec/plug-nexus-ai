@@ -15,9 +15,11 @@ interface QuickAction {
 interface PlugFloatingHintProps {
   contextPage?: 'dashboard' | 'cv-builder' | 'applications' | 'jobs' | 'default';
   onChatOpen?: (initialMessage?: string) => void;
+  /** Increment to force show the hint (e.g. via a button) */
+  forceShowSignal?: number;
 }
 
-export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen }: PlugFloatingHintProps) => {
+export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceShowSignal }: PlugFloatingHintProps) => {
   const { direction } = useLanguage();
   const isRTL = direction === 'rtl';
   const [isVisible, setIsVisible] = useState(false);
@@ -36,6 +38,13 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen }: PlugFl
       return () => clearTimeout(timer);
     }
   }, [contextPage]);
+
+  // Allow the parent to force-show the hint via a signal.
+  useEffect(() => {
+    if (!forceShowSignal) return;
+    setIsDismissed(false);
+    setIsVisible(true);
+  }, [forceShowSignal]);
 
   // Auto-hide after 10 seconds (extended for quick actions)
   useEffect(() => {

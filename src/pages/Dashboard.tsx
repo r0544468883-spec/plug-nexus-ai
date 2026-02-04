@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -88,10 +88,19 @@ export default function Dashboard() {
   const { t, language } = useLanguage();
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [chatContextSection, setChatContextSection] = useState<DashboardSection>('overview');
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === 'he';
+
+  const plugContextPage = useMemo(() => {
+    // Map dashboard sections to PlugChat contextPage
+    if (chatContextSection === 'cv-builder') return 'cv-builder' as const;
+    if (chatContextSection === 'applications') return 'applications' as const;
+    if (chatContextSection === 'job-search') return 'jobs' as const;
+    return 'dashboard' as const;
+  }, [chatContextSection]);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -234,6 +243,7 @@ export default function Dashboard() {
   const quickActions = getQuickActions();
 
   const handleWelcomeMessage = (message: string) => {
+    setChatContextSection(currentSection);
     setPendingMessage(message);
     // Scroll to chat after a brief delay
     setTimeout(() => {
@@ -306,7 +316,7 @@ export default function Dashboard() {
           <PlugChat 
             initialMessage={pendingMessage || undefined}
             onMessageSent={handleMessageSent}
-            contextPage="dashboard"
+            contextPage={plugContextPage}
           />
         </div>
 
@@ -410,7 +420,7 @@ export default function Dashboard() {
         <MessageSquare className="w-6 h-6 text-primary" />
         {t('plug.title') || 'Chat with Plug'}
       </h2>
-      <PlugChat contextPage="dashboard" />
+      <PlugChat contextPage={plugContextPage} />
     </div>
   );
 
@@ -518,11 +528,16 @@ export default function Dashboard() {
   return (
     <DashboardLayout 
       currentSection={currentSection} 
-      onSectionChange={setCurrentSection}
-      onChatOpen={(initialMessage) => {
-        if (initialMessage) {
-          setPendingMessage(initialMessage);
+      onSectionChange={(next) => {
+        // Track last non-chat section so Plug can greet per page
+        if (next !== 'chat') setChatContextSection(next);
+        setCurrentSection(next);
+      }}
+      onChatOpen={(initialMessage, sourceSection) => {
+        if (sourceSection && sourceSection !== 'chat') {
+          setChatContextSection(sourceSection);
         }
+        if (initialMessage) setPendingMessage(initialMessage);
       }}
     >
       {/* Interactive tour for job seekers */}
