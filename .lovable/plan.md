@@ -1,186 +1,126 @@
 
+# תוכנית תיקון: Plug אינטואיטיבי ו-CV Builder עם נתונים מלאים
 
-# תוכנית: CV Builder משודרג עם יצירת עיצוב AI ושיפורי UX
+## סקירת הבעיות
 
-## סיכום
-שיפור מקיף ל-CV Builder שכולל:
-1. יצירת עיצוב קורות חיים באמצעות AI (Gemini Canvas-style בתוך האפליקציה)
-2. Skills & Soft Skills עם רובריקות לבחירה מרובה
-3. Languages עם רובריקות ותיקון בעיית הצבע הלבן
-4. שילוב Smart Import עם יצירת העיצוב
+### בעיה 1: ניסיון ולימודים לא מופיעים ב-CV Builder
+- ה-AI מחזיר `positions` ו-`institutions` אבל הם לא נשמרים ב-database
+- הפורמט שנשמר חסר את הרשימות המפורטות
 
----
+### בעיה 2: הודעת פתיחה של Plug לא מתחלפת במעבר עמודים  
+- `chatContextSection` לא מתעדכן בזמן מעבר בין sections
+- `plugContextPage` לא משקף את הסקשן הנוכחי
 
-## שלב 1: רובריקות Skills עם בחירה מרובה
-
-### מה ישתנה
-במקום שדה טקסט חופשי, יוצגו רשימות מוכנות של מיומנויות לבחירה:
-
-**Technical Skills** - רובריקות לפי קטגוריות:
-- Programming: JavaScript, Python, TypeScript, Java, C++, Go, Ruby, PHP
-- Frontend: React, Vue, Angular, HTML/CSS, Tailwind, Next.js
-- Backend: Node.js, Django, FastAPI, Spring Boot, .NET
-- Database: PostgreSQL, MongoDB, MySQL, Redis, Elasticsearch
-- Cloud: AWS, Azure, GCP, Docker, Kubernetes
-- Tools: Git, CI/CD, Jira, Figma, Slack
-
-**Soft Skills** - רובריקות:
-- Leadership, Communication, Teamwork, Problem Solving
-- Time Management, Creativity, Adaptability, Critical Thinking
-- Negotiation, Presentation, Conflict Resolution, Decision Making
-
-### עיצוב UI
-- כפתורי Chip/Badge לכל מיומנות
-- סימון מרובה בלחיצה
-- אפשרות להוסיף מיומנות custom
-- צבע שונה למיומנויות נבחרות
+### בעיה 3: Quick Actions לא עובדים כמצופה
+- לחיצה על Quick Action לא פותחת את הצ'אט עם ההודעה
 
 ---
 
-## שלב 2: רובריקות שפות + תיקון צבע
+## פתרון מוצע
 
-### שפות מוכנות לבחירה
-- עברית, English, Arabic, Russian, French, Spanish, German, Chinese, Portuguese, Italian, Hindi, Japanese, Korean
+### שלב 1: תיקון Edge Function `analyze-resume`
+**קובץ:** `supabase/functions/analyze-resume/index.ts`
 
-### תיקון בעיית הצבע הלבן
-ה-select הנוכחי:
-```html
-<select className="border rounded px-2 py-2 text-sm">
-```
-חסר עיצוב לטקסט - יתוקן ל:
-```html
-<Select> component מ-shadcn עם סגנון נכון
-```
+- לוודא שה-prompt מחזיר `positions` ו-`institutions` בפורמט הנכון
+- להוסיף לוגים לבדיקה שהנתונים מגיעים מה-AI
+- לוודא שכל הנתונים נשמרים ב-database ב-`ai_summary`
 
----
+### שלב 2: תיקון זרימת Context של Plug
+**קובץ:** `src/pages/Dashboard.tsx`
 
-## שלב 3: יצירת עיצוב AI (Canvas-style בתוך האפליקציה)
+- לשנות את `plugContextPage` להיות תלוי ב-`currentSection` ישירות (לא ב-`chatContextSection`)
+- לוודא שכש-section משתנה, ה-Plug יודע על כך
 
-### Flow חדש
-1. משתמש ממלא את הטופס (או מייבא דרך Smart Import)
-2. לוחץ על **"צור עיצוב עם AI"**
-3. נפתח Dialog עם:
-   - תצוגה מקדימה של ה-Prompt שיישלח
-   - אפשרות לערוך את ה-Prompt
-   - בחירת סגנון (Professional, Creative, Modern, Minimal)
-4. AI מייצר **עיצוב HTML/CSS** מותאם אישית
-5. התוצאה מוצגת לעריכה בתוך האפליקציה
-6. אפשרות להוריד כ-PDF או לשמור לפרופיל
+**קובץ:** `src/components/chat/PlugChat.tsx`
 
-### Edge Function: cv-generate-design
-במקום ייצור תמונה, ה-AI ייצר:
-```json
-{
-  "html": "<div class='cv-container'>...</div>",
-  "css": ".cv-container { ... }",
-  "metadata": { "style": "professional", "colors": [...] }
-}
-```
+- לתקן את הלוגיקה שמזהה מעבר בין pages
+- להוסיף הודעת context חדשה בכל מעבר section
 
-### עורך תוצאה
-- תצוגה WYSIWYG של ה-HTML שנוצר
-- אפשרות לערוך טקסט ישירות
-- כפתור "בקש שינוי" לשליחת הוראה נוספת ל-AI
-- Export ל-PDF
+### שלב 3: תיקון Quick Actions Flow
+**קובץ:** `src/components/dashboard/DashboardLayout.tsx`
+
+- לוודא שב-Quick Action לחיצה:
+  1. נשמרת ההודעה
+  2. ה-section עובר ל-'chat'
+  3. הצ'אט מקבל את ההודעה
+
+**קובץ:** `src/pages/Dashboard.tsx`
+
+- לוודא ש-`pendingMessage` מועבר ל-PlugChat בכל מקום
+- לנווט ל-section chat אחרי לחיצה על Quick Action
+
+### שלב 4: תיקון PlugFloatingHint
+**קובץ:** `src/components/chat/PlugFloatingHint.tsx`
+
+- לוודא שכפתור ה-Sparkles באמת מציג את ההינט מחדש
+- לבדוק את ה-`forceShowSignal` effect
 
 ---
 
-## שלב 4: שילוב Smart Import עם יצירת AI
+## פרטים טכניים
 
-### Flow משופר
+### שינוי ב-Dashboard.tsx (זרימת context):
 ```text
-1. Smart Import → ניתוח קובץ
-2. הצגת נתונים שחולצו → שאלות עיצוב
-3. לחיצה על "צור עם AI"
-4. פתיחת עורך Prompt → עריכה
-5. יצירה → תצוגה מקדימה → עריכה
-6. Export / Save
+// לפני:
+const plugContextPage = useMemo(() => {
+  if (chatContextSection === 'cv-builder') return 'cv-builder';
+  // ...
+}, [chatContextSection]);
+
+// אחרי:
+const plugContextPage = useMemo(() => {
+  if (currentSection === 'cv-builder') return 'cv-builder';
+  if (currentSection === 'applications') return 'applications';
+  if (currentSection === 'job-search') return 'jobs';
+  return 'dashboard';
+}, [currentSection]);
 ```
 
----
-
-## שינויים טכניים
-
-### קבצים חדשים
-| קובץ | תיאור |
-|------|--------|
-| `src/components/cv-builder/SkillsSelector.tsx` | רובריקות Skills עם בחירה מרובה |
-| `src/components/cv-builder/LanguageSelector.tsx` | רובריקות שפות עם Select מתוקן |
-| `src/components/cv-builder/AIDesignDialog.tsx` | Dialog ליצירת עיצוב AI |
-| `src/components/cv-builder/AIDesignPreview.tsx` | תצוגה ועריכה של עיצוב שנוצר |
-
-### קבצים שיעודכנו
-| קובץ | שינוי |
-|------|-------|
-| `src/components/cv-builder/CVEditorPanel.tsx` | החלפת שדות Skills ו-Languages ברכיבים החדשים |
-| `src/components/cv-builder/CVBuilder.tsx` | הוספת כפתור "צור עיצוב AI" ו-Dialog |
-| `src/components/cv-builder/CVImportWizard.tsx` | הוספת אפשרות "צור עם AI" בסיום |
-| `supabase/functions/cv-generate-visual/index.ts` | שינוי ליצירת HTML במקום תמונה |
-
-### מבנה נתונים חדש לרובריקות
-```typescript
-// src/lib/cv-skills-taxonomy.ts
-export const TECHNICAL_SKILLS = {
-  programming: ['JavaScript', 'Python', 'TypeScript', ...],
-  frontend: ['React', 'Vue', 'Angular', ...],
-  backend: ['Node.js', 'Django', ...],
-  // ...
-};
-
-export const SOFT_SKILLS = [
-  'Leadership', 'Communication', 'Teamwork', ...
-];
-
-export const LANGUAGES = [
-  { code: 'he', name: 'עברית', nameEn: 'Hebrew' },
-  { code: 'en', name: 'English', nameEn: 'English' },
-  // ...
-];
-```
-
----
-
-## Prompt ל-AI Design
-
+### שינוי ב-DashboardLayout.tsx (Quick Actions):
 ```text
-You are a professional CV/resume designer. Create a clean, ATS-friendly CV design.
+// ב-PlugFloatingHint:
+onChatOpen={(initialMessage) => {
+  onChatOpen?.(initialMessage, currentSection);
+  // לא מחליפים ל-'chat' כאן - נותנים ל-Dashboard לטפל
+}}
+```
 
-CANDIDATE INFO:
-- Name: {fullName}
-- Title: {title}
-- Summary: {summary}
+### שינוי ב-Dashboard.tsx (פתיחת צ'אט):
+```text
+onChatOpen={(initialMessage, sourceSection) => {
+  if (sourceSection) setChatContextSection(sourceSection);
+  if (initialMessage) setPendingMessage(initialMessage);
+  // לנווט לצ'אט
+  setCurrentSection('chat');
+}}
+```
 
-EXPERIENCE:
-{experience formatted}
-
-EDUCATION:
-{education formatted}
-
-SKILLS:
-Technical: {technical skills}
-Soft: {soft skills}
-
-DESIGN PREFERENCES:
-- Style: {style - Professional/Creative/Modern/Minimal}
-- Color: {accentColor}
-- Font: {fontFamily}
-- Layout: {orientation}
-
-Generate a complete HTML document with inline CSS for a printable A4 resume.
-Use modern, clean design. Ensure good contrast and readability.
-Support both LTR and RTL text.
+### שינוי ב-PlugChat.tsx (מעבר pages):
+```text
+useEffect(() => {
+  if (!user) return;
+  // תמיד להוסיף הודעה כשה-context משתנה
+  if (lastContextPageRef.current !== contextPage) {
+    lastContextPageRef.current = contextPage;
+    // הוסף הודעת פתיחה חדשה
+    const g = getContextualGreeting();
+    // ...
+  }
+}, [contextPage]);
 ```
 
 ---
 
-## אבטחה ו-RLS
-- ללא שינויים נדרשים - ה-Edge Function קיים ואין גישה ל-DB
+## בדיקות נדרשות לאחר התיקון
+
+1. **CV Builder:** העלאת קובץ חדש ובדיקה שניסיון והשכלה מופיעים עם תאריכים
+2. **Plug Context:** מעבר בין Dashboard → CV Builder → Applications ובדיקה שהודעת הפתיחה משתנה
+3. **Quick Actions:** לחיצה על "שפר קו״ח" ובדיקה שהצ'אט נפתח עם ההודעה
+4. **Sparkles Button:** לחיצה על ✨ ובדיקה שהנוטיפיקציה מופיעה שוב
 
 ---
 
-## סיכום יתרונות
-1. **UX משופר** - רובריקות במקום טקסט חופשי = מהיר יותר ופחות שגיאות
-2. **עיצוב AI אמיתי** - לא תמונה אלא HTML ניתן לעריכה
-3. **תיקון באגים** - צבע לבן ב-Languages נפתר
-4. **Flow אחיד** - Smart Import → AI Design → Export
-
+## הערות
+- התיקונים לא ישברו פונקציונליות קיימת
+- נדרש Deploy מחדש של ה-Edge Function
+- מומלץ לבדוק end-to-end אחרי כל שלב
