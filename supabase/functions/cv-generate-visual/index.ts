@@ -67,65 +67,40 @@ serve(async (req) => {
       );
     }
 
-    // Build a comprehensive prompt for generating a professional CV image
-    const colorPresetName = cvData.settings.colorPreset || 'default';
+    // Build a simplified prompt for generating a professional CV image
     const accentColor = cvData.settings.accentColor || '#3b82f6';
     const orientation = cvData.settings.orientation || 'portrait';
-    const fontFamily = cvData.settings.fontFamily || 'inter';
     
-    const experienceText = cvData.experience.map(exp => 
-      `- ${exp.role} at ${exp.company} (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}): ${exp.bullets.join('; ')}`
-    ).join('\n');
+    // Truncate text to keep prompt shorter for better image generation
+    const name = cvData.personalInfo.fullName || 'John Doe';
+    const title = cvData.personalInfo.title || 'Professional';
+    const email = cvData.personalInfo.email || '';
+    const phone = cvData.personalInfo.phone || '';
+    const location = cvData.personalInfo.location || '';
     
-    const educationText = cvData.education.map(edu =>
-      `- ${edu.degree} in ${edu.field} from ${edu.institution} (${edu.startDate} - ${edu.endDate})`
-    ).join('\n');
+    const experienceSummary = cvData.experience.slice(0, 2).map(exp => 
+      `${exp.role} at ${exp.company}`
+    ).join(', ') || 'Experienced Professional';
     
-    const skillsText = [
-      cvData.skills.technical.length ? `Technical: ${cvData.skills.technical.join(', ')}` : '',
-      cvData.skills.soft.length ? `Soft skills: ${cvData.skills.soft.join(', ')}` : '',
-      cvData.skills.languages.length ? `Languages: ${cvData.skills.languages.map(l => `${l.name} (${l.level})`).join(', ')}` : '',
-    ].filter(Boolean).join('\n');
+    const skillsSummary = cvData.skills.technical.slice(0, 5).join(', ') || 'Various skills';
+    
+    const prompt = `Generate a professional CV/resume document image.
 
-    const projectsText = cvData.projects.map(p => 
-      `- ${p.name}: ${p.description}${p.url ? ` (${p.url})` : ''}`
-    ).join('\n');
+DESIGN: Modern, clean, ATS-friendly resume layout with ${orientation === 'landscape' ? 'landscape' : 'portrait'} A4 format.
+COLOR: Primary accent color ${accentColor}, professional styling.
 
-    const prompt = `Create a professional, modern, visually stunning CV/Resume image.
+CONTENT TO DISPLAY:
+- Name: ${name}
+- Title: ${title}
+- Contact: ${email} | ${phone} | ${location}
+- Experience: ${experienceSummary}
+- Skills: ${skillsSummary}
 
-CANDIDATE INFORMATION:
-Name: ${cvData.personalInfo.fullName}
-Title: ${cvData.personalInfo.title}
-Email: ${cvData.personalInfo.email}
-Phone: ${cvData.personalInfo.phone}
-Location: ${cvData.personalInfo.location}
-Summary: ${cvData.personalInfo.summary}
-
-EXPERIENCE:
-${experienceText || 'No experience listed'}
-
-EDUCATION:
-${educationText || 'No education listed'}
-
-SKILLS:
-${skillsText || 'No skills listed'}
-
-PROJECTS:
-${projectsText || 'No projects listed'}
-
-DESIGN SPECIFICATIONS:
-- Style: ${style || colorPresetName} theme
-- Primary accent color: ${accentColor}
-- Orientation: ${orientation} (A4 paper)
-- Font style: ${fontFamily} - clean and professional
-- Layout: Modern, clean design with clear sections
-- Include subtle design elements, professional icons for sections
-- Make it visually impressive but ATS-friendly readable
-
-Generate a complete, professional CV image that looks like a real printed resume. The design should be elegant, modern, and immediately convey professionalism.`;
+Create a realistic, printable resume image with clear typography, proper sections (header, experience, skills), and professional formatting. Ultra high resolution.`;
 
     console.log("Generating CV image with Gemini...");
 
+    // Use gemini-3-pro-image-preview for better image generation
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -133,7 +108,7 @@ Generate a complete, professional CV image that looks like a real printed resume
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           {
             role: "user",
