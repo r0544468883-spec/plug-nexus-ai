@@ -139,23 +139,49 @@ serve(async (req) => {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Download the file content - REQUIRED for AI analysis
+    // Since the resumes bucket is private, we need to download using the service role
     let fileContent = "";
     
     try {
-      console.log("Downloading file from:", fileUrl);
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        console.error("File download failed with status:", response.status);
+      // Extract the file path from the URL
+      // URL format: https://xxx.supabase.co/storage/v1/object/public/resumes/user-id/filename.pdf
+      const urlParts = fileUrl.split('/storage/v1/object/public/');
+      if (urlParts.length !== 2) {
+        // Try signed URL format
+        const signedUrlParts = fileUrl.split('/storage/v1/object/sign/');
+        if (signedUrlParts.length !== 2) {
+          console.error("Invalid file URL format:", fileUrl);
+          return new Response(
+            JSON.stringify({ error: 'Invalid file URL format.' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      // Parse bucket and path
+      const pathPart = urlParts[1] || fileUrl.split('/storage/v1/object/sign/')[1]?.split('?')[0];
+      const [bucket, ...pathParts] = pathPart.split('/');
+      const filePath = pathParts.join('/');
+      
+      console.log("Downloading from bucket:", bucket, "path:", filePath);
+      
+      // Use supabase admin client to download from private bucket
+      const { data: fileData, error: downloadError } = await supabaseAdmin
+        .storage
+        .from(bucket)
+        .download(filePath);
+      
+      if (downloadError || !fileData) {
+        console.error("Storage download error:", downloadError);
         return new Response(
-          JSON.stringify({ error: 'Failed to download resume file. Please ensure the file is accessible.' }),
+          JSON.stringify({ error: 'Failed to download resume file from storage.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      const blob = await response.blob();
-      const base64 = await blobToBase64(blob);
+      const base64 = await blobToBase64(fileData);
       fileContent = base64;
-      console.log("File downloaded and converted, size:", blob.size, "type:", blob.type);
+      console.log("File downloaded and converted, size:", fileData.size, "type:", fileData.type);
     } catch (e) {
       console.error("Error downloading file:", e);
       return new Response(
