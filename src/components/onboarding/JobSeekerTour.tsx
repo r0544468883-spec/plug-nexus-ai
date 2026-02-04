@@ -9,7 +9,7 @@ import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
   Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
-  Link, SlidersHorizontal, Building2, Lightbulb, CheckCircle, Target
+  Link, SlidersHorizontal, Building2, Lightbulb, CheckCircle, Target, Trash2
 } from 'lucide-react';
 import onboardingNotesImage from '@/assets/onboarding-notes-new.png';
 
@@ -85,15 +85,15 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Found an interesting job? Share it with the community! Help others find work and build your professional network.',
     icon: Share2,
   },
-  // Step 5: Company Recommendations - NEW!
+  // Step 5: Company Recommendations
   {
     section: 'job-search',
     targetSelector: '[data-tour="company-recommendations"]',
-    titleHe: 'חברות מומלצות עבורך 🏢',
-    titleEn: 'Recommended Companies 🏢',
-    descriptionHe: 'לאחר העלאת קו"ח, Plug ממליץ על חברות שמתאימות לפרופיל שלך! סנן לפי תחום וגלה הזדמנויות חדשות.',
-    descriptionEn: 'After uploading your CV, Plug recommends companies that match your profile! Filter by field and discover new opportunities.',
-    icon: Sparkles,
+    titleHe: 'חברות מומלצות + התאמה 🎯',
+    titleEn: 'Recommendations + Match Me 🎯',
+    descriptionHe: 'לחץ על "מתאים לי" כדי לסנן משרות לפי הפרופיל שלך! ראה סטטיסטיקות וחברות מומלצות.',
+    descriptionEn: 'Click "Match Me" to filter jobs by your profile! View stats and recommended companies.',
+    icon: Target,
   },
   // Step 5: Documents - Resume Upload
   {

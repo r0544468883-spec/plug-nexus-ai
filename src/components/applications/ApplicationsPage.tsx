@@ -247,6 +247,24 @@ export function ApplicationsPage() {
     }
   }, [user?.id, isRTL, t]);
 
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', id)
+        .eq('candidate_id', user?.id);
+
+      if (error) throw error;
+
+      setApplications((prev) => prev.filter((app) => app.id !== id));
+      toast.success(isRTL ? 'המועמדות נמחקה' : 'Application deleted');
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast.error(t('common.error') || 'Failed to delete application');
+    }
+  }, [user?.id, isRTL, t]);
+
   const handlePlugAction = useCallback((action: string) => {
     if (action === 'interview_prep') {
       toast.info(isRTL ? 'הכנה לראיון - בקרוב!' : 'Interview prep - Coming soon!');
@@ -408,6 +426,7 @@ export function ApplicationsPage() {
                 onViewDetails={() => handleViewDetails(application)}
                 onWithdraw={() => handleWithdraw(application.id)}
                 onStageChange={(stage) => handleStageChange(application.id, stage)}
+                onDelete={() => handleDelete(application.id)}
               />
             )
           ))}

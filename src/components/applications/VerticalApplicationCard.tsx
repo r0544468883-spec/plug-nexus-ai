@@ -1,8 +1,9 @@
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInMonths } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
-import { MapPin, Briefcase, Clock, Building2 } from 'lucide-react';
+import { MapPin, Briefcase, Clock, Building2, Trash2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -10,6 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import MatchScoreCircle from './MatchScoreCircle';
 import SwipeableCard from './SwipeableCard';
@@ -41,6 +53,7 @@ interface VerticalApplicationCardProps {
   onViewDetails: () => void;
   onWithdraw: () => void;
   onStageChange?: (stage: string) => void;
+  onDelete?: () => void;
 }
 
 const stageConfig: Record<string, { label: { en: string; he: string }; color: string }> = {
@@ -75,6 +88,7 @@ const VerticalApplicationCard = ({
   onViewDetails,
   onWithdraw,
   onStageChange,
+  onDelete,
 }: VerticalApplicationCardProps) => {
   const { language } = useLanguage();
   const isMobile = useIsMobile();
@@ -88,6 +102,10 @@ const VerticalApplicationCard = ({
 
   // Check if interview is upcoming (today or tomorrow)
   const isUrgent = application.hasUpcomingInterview || application.current_stage === 'interview';
+
+  // Check if application is older than 3 months
+  const monthsOld = differenceInMonths(new Date(), new Date(application.created_at));
+  const isOlderThan3Months = monthsOld >= 3;
 
   const cardContent = (
     <Card 
@@ -183,6 +201,93 @@ const VerticalApplicationCard = ({
             <p className="text-xs text-muted-foreground line-clamp-1" dir={isRTL ? 'rtl' : 'ltr'}>
               📝 {application.notes}
             </p>
+          </div>
+        )}
+
+        {/* 3-month warning banner */}
+        {isOlderThan3Months && (
+          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-xs">
+                {isRTL ? 'עברו 3 חודשים - מומלץ לעדכן או למחוק' : '3+ months old - consider updating or removing'}
+              </span>
+            </div>
+            {onDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {isRTL ? 'מחיקת מועמדות' : 'Delete Application'}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {isRTL 
+                        ? `האם אתה בטוח שברצונך למחוק את המועמדות ל-${application.job.title}? פעולה זו לא ניתנת לביטול.`
+                        : `Are you sure you want to delete your application for ${application.job.title}? This action cannot be undone.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{isRTL ? 'ביטול' : 'Cancel'}</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={onDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isRTL ? 'מחק' : 'Delete'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        )}
+
+        {/* Delete button for all cards (not just old ones) */}
+        {!isOlderThan3Months && onDelete && (
+          <div className="mt-3 pt-3 border-t border-border flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Trash2 className="w-3.5 h-3.5 me-1" />
+                  <span className="text-xs">{isRTL ? 'מחק' : 'Delete'}</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {isRTL ? 'מחיקת מועמדות' : 'Delete Application'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {isRTL 
+                      ? `האם אתה בטוח שברצונך למחוק את המועמדות ל-${application.job.title}?`
+                      : `Are you sure you want to delete your application for ${application.job.title}?`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{isRTL ? 'ביטול' : 'Cancel'}</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={onDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isRTL ? 'מחק' : 'Delete'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </CardContent>
