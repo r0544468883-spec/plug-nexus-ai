@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Loader2, Monitor, Sparkles, Download, Copy, Edit2 } from 'lucide-react';
+import { Save, CheckCircle, Loader2, Monitor, Sparkles, Download, Copy, Edit2, FileText, Upload as UploadIcon } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import jsPDF from 'jspdf';
 
 interface ResumeSummary {
   skills?: {
@@ -144,6 +145,8 @@ export const CVBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
+  const [isSavingToProfile, setIsSavingToProfile] = useState(false);
+  const [savedCVUrl, setSavedCVUrl] = useState<string | null>(null);
 
   // Show mobile warning on mount if on mobile
   useEffect(() => {
@@ -326,6 +329,7 @@ export const CVBuilder = () => {
 
       if (result.imageUrl) {
         setGeneratedImage(result.imageUrl);
+        setSavedCVUrl(null); // Reset saved state for new generation
         setShowPromptDialog(false);
         setShowResultDialog(true);
         toast.success(language === 'he' ? 'קורות החיים נוצרו בהצלחה!' : 'CV generated successfully!');
@@ -340,7 +344,7 @@ export const CVBuilder = () => {
     }
   };
 
-  // Download generated image
+  // Download generated image as PNG
   const handleDownloadCV = () => {
     if (!generatedImage) return;
     const link = document.createElement('a');
@@ -349,6 +353,93 @@ export const CVBuilder = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success(language === 'he' ? 'הקובץ הורד בהצלחה!' : 'File downloaded!');
+  };
+
+  // Download generated image as PDF
+  const handleDownloadPDF = async () => {
+    if (!generatedImage) return;
+    
+    try {
+      // Create a new image to get dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = generatedImage;
+      });
+
+      // A4 dimensions in points (72 dpi)
+      const a4Width = 595.28;
+      const a4Height = 841.89;
+      
+      // Calculate scaling to fit A4
+      const scale = Math.min(a4Width / img.width, a4Height / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      
+      // Center on page
+      const x = (a4Width - scaledWidth) / 2;
+      const y = (a4Height - scaledHeight) / 2;
+      
+      const pdf = new jsPDF({
+        orientation: cvData.settings?.orientation === 'landscape' ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: 'a4',
+      });
+      
+      pdf.addImage(generatedImage, 'PNG', x, y, scaledWidth, scaledHeight);
+      pdf.save(`${cvData.personalInfo.fullName || 'CV'}_resume.pdf`);
+      
+      toast.success(language === 'he' ? 'ה-PDF הורד בהצלחה!' : 'PDF downloaded!');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error(language === 'he' ? 'שגיאה ביצירת PDF' : 'Error creating PDF');
+    }
+  };
+
+  // Save CV to profile (storage)
+  const handleSaveToProfile = async () => {
+    if (!generatedImage || !user) return;
+    
+    setIsSavingToProfile(true);
+    try {
+      // Convert base64 to blob
+      const base64Data = generatedImage.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/png' });
+      
+      // Upload to storage
+      const fileName = `${user.id}/${Date.now()}_cv.png`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('generated-cvs')
+        .upload(fileName, blob, {
+          contentType: 'image/png',
+          upsert: true,
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('generated-cvs')
+        .getPublicUrl(fileName);
+      
+      setSavedCVUrl(publicUrl);
+      toast.success(language === 'he' ? 'קורות החיים נשמרו לפרופיל!' : 'CV saved to profile!');
+    } catch (error) {
+      console.error('Save to profile error:', error);
+      toast.error(language === 'he' ? 'שגיאה בשמירה' : 'Error saving');
+    } finally {
+      setIsSavingToProfile(false);
+    }
   };
 
   // Copy prompt to clipboard
@@ -454,9 +545,14 @@ export const CVBuilder = () => {
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-accent" />
+              <CheckCircle className="w-5 h-5 text-green-500" />
               {language === 'he' ? 'קורות החיים נוצרו!' : 'CV Generated!'}
             </DialogTitle>
+            <DialogDescription>
+              {language === 'he' 
+                ? 'הורד את קורות החיים או שמור לפרופיל שלך'
+                : 'Download your CV or save it to your profile'}
+            </DialogDescription>
           </DialogHeader>
           
           <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4">
@@ -464,19 +560,55 @@ export const CVBuilder = () => {
               <img 
                 src={generatedImage} 
                 alt="Generated CV" 
-                className="max-w-full max-h-[60vh] object-contain rounded shadow-lg"
+                className="max-w-full max-h-[50vh] object-contain rounded shadow-lg"
               />
             )}
           </div>
+
+          {savedCVUrl && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-green-700 dark:text-green-300">
+                {language === 'he' ? 'נשמר לפרופיל!' : 'Saved to profile!'}
+              </span>
+            </div>
+          )}
           
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setShowResultDialog(false)}>
               {language === 'he' ? 'סגור' : 'Close'}
             </Button>
-            <Button onClick={handleDownloadCV} className="gap-2">
-              <Download className="w-4 h-4" />
-              {language === 'he' ? 'הורד' : 'Download'}
-            </Button>
+            
+            <div className="flex gap-2 flex-wrap">
+              {/* Save to Profile */}
+              <Button 
+                variant="outline" 
+                onClick={handleSaveToProfile} 
+                disabled={isSavingToProfile || !!savedCVUrl}
+                className="gap-2"
+              >
+                {isSavingToProfile ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : savedCVUrl ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <UploadIcon className="w-4 h-4" />
+                )}
+                {language === 'he' ? 'שמור לפרופיל' : 'Save to Profile'}
+              </Button>
+
+              {/* Download as PNG */}
+              <Button variant="outline" onClick={handleDownloadCV} className="gap-2">
+                <Download className="w-4 h-4" />
+                PNG
+              </Button>
+
+              {/* Download as PDF */}
+              <Button onClick={handleDownloadPDF} className="gap-2">
+                <FileText className="w-4 h-4" />
+                PDF
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
