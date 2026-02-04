@@ -56,8 +56,8 @@ interface ResumeSummary {
 // Build prompt from CV data for AI generation
 function buildCVPrompt(data: CVData, language: string): string {
   const isHebrew = language === 'he';
-  const preset = colorPresets[data.settings.colorPreset];
-  const font = fontFamilies[data.settings.fontFamily];
+  const preset = colorPresets[data.settings?.colorPreset] || colorPresets['default'] || { name: 'Default', primary: '#3b82f6', accent: '#10b981' };
+  const font = fontFamilies[data.settings?.fontFamily] || fontFamilies['inter'] || { name: 'Inter' };
   
   let prompt = isHebrew 
     ? `צור קורות חיים מקצועיים ויזואליים בעברית עבור:\n\n`
@@ -114,11 +114,11 @@ function buildCVPrompt(data: CVData, language: string): string {
   
   // Design instructions
   prompt += `\n**${isHebrew ? 'הנחיות עיצוב' : 'Design Instructions'}:**\n`;
-  prompt += `- ${isHebrew ? 'פלטת צבעים' : 'Color Palette'}: ${preset.name} (Primary: ${preset.primary}, Accent: ${preset.accent})\n`;
-  prompt += `- ${isHebrew ? 'פונט' : 'Font'}: ${font.name}\n`;
-  prompt += `- ${isHebrew ? 'ריווח' : 'Spacing'}: ${data.settings.spacing}\n`;
-  prompt += `- ${isHebrew ? 'כיוון' : 'Orientation'}: ${data.settings.orientation}\n`;
-  prompt += `- ${isHebrew ? 'גודל טקסט' : 'Font Size'}: ${data.settings.fontSize}\n`;
+  prompt += `- ${isHebrew ? 'פלטת צבעים' : 'Color Palette'}: ${preset?.name || 'Default'} (Primary: ${preset?.primary || '#3b82f6'}, Accent: ${preset?.accent || '#10b981'})\n`;
+  prompt += `- ${isHebrew ? 'פונט' : 'Font'}: ${font?.name || 'Inter'}\n`;
+  prompt += `- ${isHebrew ? 'ריווח' : 'Spacing'}: ${data.settings?.spacing || 'comfortable'}\n`;
+  prompt += `- ${isHebrew ? 'כיוון' : 'Orientation'}: ${data.settings?.orientation || 'portrait'}\n`;
+  prompt += `- ${isHebrew ? 'גודל טקסט' : 'Font Size'}: ${data.settings?.fontSize || 'medium'}\n`;
   
   prompt += `\n${isHebrew 
     ? 'צור תמונה של קורות חיים מקצועיים, נקיים ומודרניים בפורמט A4. השתמש בצבעים ובפונט שצוינו.'
