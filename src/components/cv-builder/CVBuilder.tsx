@@ -6,8 +6,10 @@ import { CVData, defaultCVData, Experience } from './types';
 import { CVEditorPanel } from './CVEditorPanel';
 import { CVPreviewPanel } from './CVPreviewPanel';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, CheckCircle, Loader2, Monitor } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -58,6 +60,15 @@ export const CVBuilder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isLoadingResume, setIsLoadingResume] = useState(true);
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+  const [viewOnlyMode, setViewOnlyMode] = useState(false);
+
+  // Show mobile warning on mount if on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setShowMobileWarning(true);
+    }
+  }, [isMobile]);
 
   // Load CV data from profile and existing resume
   useEffect(() => {
@@ -192,6 +203,11 @@ export const CVBuilder = () => {
     saveToDatabase(newData);
   };
 
+  const handleContinueToView = () => {
+    setViewOnlyMode(true);
+    setShowMobileWarning(false);
+  };
+
   if (isLoadingResume) {
     return (
       <div className="h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-3">
@@ -205,11 +221,44 @@ export const CVBuilder = () => {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col" data-tour="cv-builder">
+      {/* Mobile Warning Dialog */}
+      <Dialog open={showMobileWarning} onOpenChange={setShowMobileWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Monitor className="w-8 h-8 text-primary" />
+              </div>
+            </div>
+            <DialogTitle className="text-center">
+              {language === 'he' ? 'מסך קטן לעריכה' : 'Screen Too Small for Editing'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {language === 'he' 
+                ? 'בונה קורות החיים מיועד לצפייה בלבד במובייל. לעריכה מלאה, השתמש במחשב או טאבלט.'
+                : 'The CV Builder is view-only on mobile. For full editing, please use a desktop or tablet.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button onClick={handleContinueToView} className="w-full">
+              {language === 'he' ? 'צפה בתצוגה מקדימה' : 'View Preview Only'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
-        <h1 className="text-lg font-bold">
-          {language === 'he' ? 'בונה קורות חיים' : 'CV Builder'}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold">
+            {language === 'he' ? 'בונה קורות חיים' : 'CV Builder'}
+          </h1>
+          {viewOnlyMode && (
+            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+              {language === 'he' ? 'תצוגה בלבד' : 'View Only'}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           {isSaving ? (
             <>
@@ -227,15 +276,22 @@ export const CVBuilder = () => {
 
       {/* Main Content - Different layouts for mobile/desktop */}
       {isMobile ? (
-        // Mobile: Vertical layout - Editor on top, Preview on bottom
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-1/2 border-b overflow-hidden">
-            <CVEditorPanel data={cvData} onChange={handleDataChange} />
-          </div>
-          <div className="h-1/2 overflow-hidden">
+        // Mobile: Show only preview if in view-only mode
+        viewOnlyMode ? (
+          <div className="flex-1 overflow-hidden">
             <CVPreviewPanel data={cvData} onChange={handleDataChange} />
           </div>
-        </div>
+        ) : (
+          // Mobile: Vertical layout - Editor on top, Preview on bottom
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="h-1/2 border-b overflow-hidden">
+              <CVEditorPanel data={cvData} onChange={handleDataChange} />
+            </div>
+            <div className="h-1/2 overflow-hidden">
+              <CVPreviewPanel data={cvData} onChange={handleDataChange} />
+            </div>
+          </div>
+        )
       ) : (
         // Desktop: Horizontal resizable layout
         <ResizablePanelGroup direction="horizontal" className="flex-1">

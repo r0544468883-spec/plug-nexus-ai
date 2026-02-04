@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Sparkles, User, Loader2 } from 'lucide-react';
+import { Send, Sparkles, User, Loader2, Paperclip, Mic, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -481,8 +481,43 @@ export function PlugChat({ initialMessage, onMessageSent }: PlugChatProps = {}) 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-border bg-card/80 backdrop-blur-sm">
+      {/* Input with function buttons */}
+      <div className="p-4 border-t border-border bg-card/80 backdrop-blur-sm space-y-3">
+        {/* Function buttons row */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => toast.info(direction === 'rtl' ? 'העלאת קבצים - בקרוב!' : 'File upload - coming soon!')}
+          >
+            <Paperclip className="w-4 h-4 me-1" />
+            <span className="text-xs">{direction === 'rtl' ? 'קובץ' : 'File'}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => toast.info(direction === 'rtl' ? 'הקלטה קולית - בקרוב!' : 'Voice recording - coming soon!')}
+          >
+            <Mic className="w-4 h-4 me-1" />
+            <span className="text-xs">{direction === 'rtl' ? 'קול' : 'Voice'}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => toast.info(direction === 'rtl' ? 'העלאת תמונה - בקרוב!' : 'Image upload - coming soon!')}
+          >
+            <Image className="w-4 h-4 me-1" />
+            <span className="text-xs">{direction === 'rtl' ? 'תמונה' : 'Image'}</span>
+          </Button>
+        </div>
+
+        {/* Input row */}
         <form 
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           className="flex gap-2"

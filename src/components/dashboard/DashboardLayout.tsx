@@ -119,9 +119,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Added bg-background to fix transparency issue on mobile */}
       <aside className={cn(
-        'fixed lg:static inset-y-0 z-50 w-64 bg-sidebar-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
+        'fixed lg:static inset-y-0 z-50 w-64 bg-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
         direction === 'rtl' ? 'right-0' : 'left-0',
         sidebarOpen ? 'translate-x-0' : direction === 'rtl' ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>

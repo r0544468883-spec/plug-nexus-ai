@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,6 +24,7 @@ import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
+import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -90,6 +91,11 @@ export default function Dashboard() {
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === 'he';
+
+  // Scroll to top on mount and section change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentSection]);
 
   // Fetch real statistics from database
   const { data: dashboardData, refetch: refetchStats } = useQuery({
@@ -221,6 +227,15 @@ export default function Dashboard() {
   // Section-specific content renderers
   const renderOverviewContent = () => (
     <div className="space-y-6">
+      {/* Mobile Welcome Stats Popup */}
+      {role === 'job_seeker' && (
+        <MobileWelcomeStats
+          totalApplications={dashboardData?.totalApplications || 0}
+          interviews={dashboardData?.interviews || 0}
+          activeApplications={dashboardData?.activeApplications || 0}
+        />
+      )}
+
       {/* Contextual Plug Tips for job seekers */}
       {role === 'job_seeker' && (
         <PlugTipContainer context="dashboard" maxTips={1} />

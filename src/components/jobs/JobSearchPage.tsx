@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,11 +8,12 @@ import { JobCard } from './JobCard';
 import { JobDetailsSheet } from './JobDetailsSheet';
 import { ShareJobForm } from './ShareJobForm';
 import { CompanyRecommendations } from './CompanyRecommendations';
+import { JobInsightsStats } from './JobInsightsStats';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown } from 'lucide-react';
+import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown, Target, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
@@ -62,6 +63,8 @@ export function JobSearchPage() {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [matchMeActive, setMatchMeActive] = useState(false);
 
   const recommendationsRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,6 +80,21 @@ export function JobSearchPage() {
       return next;
     });
   };
+
+  // Fetch user profile for Match Me feature
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile-for-match', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferred_fields, preferred_roles, cv_data')
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   // Fetch jobs with filters
   const { data: jobs = [], isLoading } = useQuery({
@@ -202,6 +220,43 @@ export function JobSearchPage() {
   // Count community shared jobs
   const communityJobsCount = jobs.filter(j => j.is_community_shared).length;
 
+  // Apply Match Me filter based on user preferences
+  const matchedJobs = useMemo(() => {
+    if (!matchMeActive || !userProfile) return jobs;
+    
+    // Extract skills from cv_data if available
+    const cvData = userProfile.cv_data as any;
+    const skills = cvData?.skills?.technical || [];
+    const preferredFields = userProfile.preferred_fields || [];
+    const preferredRoles = userProfile.preferred_roles || [];
+    
+    if (skills.length === 0 && preferredFields.length === 0 && preferredRoles.length === 0) {
+      toast.info(isHebrew 
+        ? 'עדכן את הפרופיל שלך כדי לקבל התאמות טובות יותר' 
+        : 'Update your profile for better matches');
+      return jobs;
+    }
+
+    return jobs.filter(job => {
+      const jobDesc = ((job.description || '') + ' ' + (job.title || '') + ' ' + (job.requirements || '')).toLowerCase();
+      
+      // Check if any skill matches
+      const hasSkillMatch = skills.some((skill: string) => 
+        jobDesc.includes(skill.toLowerCase())
+      );
+      
+      // Check field match
+      const hasFieldMatch = preferredFields.length === 0 || 
+        preferredFields.some((field: string) => 
+          (job as any).job_field?.slug === field || (job as any).field_id === field
+        );
+
+      return hasSkillMatch || hasFieldMatch;
+    });
+  }, [jobs, matchMeActive, userProfile, isHebrew]);
+
+  const displayedJobs = matchMeActive ? matchedJobs : jobs;
+
   // Apply mutation
   const applyMutation = useMutation({
     mutationFn: async (jobId: string) => {
@@ -281,18 +336,47 @@ export function JobSearchPage() {
         </CardContent>
       </Card>
 
-      {/* Companies Button */}
-      <div data-tour="company-recommendations">
+      {/* Action Buttons Row */}
+      <div className="flex flex-wrap gap-2" data-tour="company-recommendations">
+        <Button
+          variant={matchMeActive ? "default" : "outline"}
+          onClick={() => setMatchMeActive(!matchMeActive)}
+          className="gap-2"
+        >
+          <Target className="w-4 h-4" />
+          {isHebrew ? (matchMeActive ? 'הצג הכל' : 'מתאים לי!') : (matchMeActive ? 'Show All' : 'Match Me!')}
+          {matchMeActive && matchedJobs.length !== jobs.length && (
+            <Badge variant="secondary" className="ms-1">
+              {matchedJobs.length}
+            </Badge>
+          )}
+        </Button>
+        
         <Button
           variant="ghost"
           onClick={toggleRecommendations}
           className="gap-2 text-primary hover:text-primary/80"
         >
           <Building2 className="w-4 h-4" />
-          {isHebrew ? 'חברות שמחפשות עובדים כמוך' : 'Companies that look for your type of employees'}
+          {isHebrew ? 'חברות מומלצות' : 'Recommended Companies'}
           <ChevronDown className={cn("w-4 h-4 transition-transform", showRecommendations && "rotate-180")} />
         </Button>
+
+        <Button
+          variant="ghost"
+          onClick={() => setShowStats(!showStats)}
+          className="gap-2"
+        >
+          <BarChart3 className="w-4 h-4" />
+          {isHebrew ? 'סטטיסטיקות' : 'Stats'}
+          <ChevronDown className={cn("w-4 h-4 transition-transform", showStats && "rotate-180")} />
+        </Button>
       </div>
+
+      {/* Job Stats (collapsible) */}
+      {showStats && (
+        <JobInsightsStats jobs={jobs} />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -303,8 +387,14 @@ export function JobSearchPage() {
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             {isHebrew 
-              ? `${jobs.length} משרות נמצאו` 
-              : `${jobs.length} jobs found`}
+              ? `${displayedJobs.length} משרות נמצאו` 
+              : `${displayedJobs.length} jobs found`}
+            {matchMeActive && (
+              <Badge variant="default" className="gap-1 bg-primary/20 text-primary border-primary/20">
+                <Target className="w-3 h-3" />
+                {isHebrew ? 'מסונן לפי התאמה' : 'Matched to you'}
+              </Badge>
+            )}
             {communityJobsCount > 0 && (
               <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
                 <Users className="w-3 h-3" />
@@ -349,7 +439,7 @@ export function JobSearchPage() {
             </Card>
           ))}
         </div>
-      ) : jobs.length === 0 ? (
+      ) : displayedJobs.length === 0 ? (
         <Card className="bg-card border-border">
           <CardContent className="p-12 text-center">
             <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -357,18 +447,22 @@ export function JobSearchPage() {
               {isHebrew ? 'לא נמצאו משרות' : 'No jobs found'}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {isHebrew 
-                ? 'נסה לשנות את הפילטרים או לחפש מונח אחר'
-                : 'Try adjusting your filters or search term'}
+              {matchMeActive 
+                ? (isHebrew 
+                    ? 'נסה לכבות את הסינון או לעדכן את הפרופיל שלך'
+                    : 'Try turning off the filter or updating your profile')
+                : (isHebrew 
+                    ? 'נסה לשנות את הפילטרים או לחפש מונח אחר'
+                    : 'Try adjusting your filters or search term')}
             </p>
-            <Button variant="outline" onClick={handleClearFilters}>
+            <Button variant="outline" onClick={() => { handleClearFilters(); setMatchMeActive(false); }}>
               {isHebrew ? 'נקה פילטרים' : 'Clear filters'}
             </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {jobs.map((job) => (
+          {displayedJobs.map((job) => (
             <JobCard
               key={job.id}
               job={job}

@@ -110,8 +110,8 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
       <main className="flex-1 flex items-center justify-center px-4 pb-12">
         <div className="w-full max-w-md">
           {/* Logo and title */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-4">
               <PlugLogo size="lg" />
             </div>
             <h1 className="text-2xl font-bold mb-2">
@@ -122,6 +122,20 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
                 {t('auth.create_account_subtitle')}
               </p>
             )}
+          </div>
+
+          {/* Toggle login/register - Moved to TOP for easier access */}
+          <div className="mb-6 text-center p-3 rounded-lg bg-muted/50 border border-border">
+            <p className="text-muted-foreground">
+              {isLogin ? t('auth.no_account') : t('auth.have_account')}{' '}
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary hover:underline font-semibold"
+              >
+                {isLogin ? t('auth.sign_up') : t('auth.sign_in')}
+              </button>
+            </p>
           </div>
 
           {/* Form */}
@@ -247,17 +261,10 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
             </Button>
           </form>
 
-          {/* Toggle login/register */}
+          {/* Additional help text at bottom */}
           <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              {isLogin ? t('auth.no_account') : t('auth.have_account')}{' '}
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-primary hover:underline font-medium"
-              >
-                {isLogin ? t('auth.sign_up') : t('auth.sign_in')}
-              </button>
+            <p className="text-xs text-muted-foreground">
+              {isHebrew ? 'צריך עזרה? צור קשר בתפריט הראשי' : 'Need help? Contact us from the main menu'}
             </p>
           </div>
         </div>
