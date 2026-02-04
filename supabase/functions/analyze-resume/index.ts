@@ -198,23 +198,36 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert HR analyst specializing in resume analysis. Analyze the provided resume and extract ALL available information.
+    const systemPrompt = `You are an expert HR analyst specializing in resume analysis. Your task is to extract COMPLETE and STRUCTURED data from resumes.
 
-IMPORTANT: Extract as much detail as possible from the resume including:
-- Full name, email, phone, location
-- All work experience with company names, roles, dates, and descriptions
-- All education with institution names, degrees, fields of study, and dates
-- Technical skills, soft skills, and languages
+## MANDATORY EXTRACTION REQUIREMENTS
 
-CRITICAL DATE EXTRACTION RULES:
-- ALWAYS extract start and end dates for EVERY position and education entry
-- Look for date formats like: "2020-2023", "Jan 2020 - Dec 2023", "2020 - Present", "01/2020 - 12/2023", "2020-01 to 2023-12"
-- Convert all dates to YYYY-MM format (e.g., "2020-01", "2023-12")
-- If only year is available, use January: "2020" → "2020-01"
-- If end date says "Present", "Current", "Now", "היום", "עד היום", use the literal string "Present"
-- Calculate totalYears based on the extracted dates from ALL positions
+You MUST extract the following:
+1. Personal information (name, email, phone, location)
+2. COMPLETE work history - extract EVERY job position separately with full details
+3. COMPLETE education history - extract EVERY institution separately
+4. All skills categorized by type
+5. Languages spoken
 
-Respond in JSON format with this EXACT structure:
+## CRITICAL: POSITIONS EXTRACTION
+
+For the "positions" array, you MUST:
+- Extract EACH job as a SEPARATE entry in the positions array
+- Include company name, job title, dates, and description for EACH position
+- NEVER summarize multiple jobs into one entry
+- If you see multiple companies/roles, create multiple entries
+
+Example: If someone worked at Google, then Microsoft, then Apple - create 3 separate position entries.
+
+## DATE FORMAT RULES
+
+- Convert ALL dates to YYYY-MM format (e.g., "2020-01", "2023-12")
+- If only year available: "2020" → "2020-01"
+- If "Present", "Current", "Now", "היום", "עד היום" → use literal string "Present"
+- Hebrew months: ינואר=01, פברואר=02, מרץ=03, אפריל=04, מאי=05, יוני=06, יולי=07, אוגוסט=08, ספטמבר=09, אוקטובר=10, נובמבר=11, דצמבר=12
+
+## REQUIRED JSON STRUCTURE
+
 {
   "personalInfo": {
     "name": "Full Name",
@@ -225,7 +238,7 @@ Respond in JSON format with this EXACT structure:
   "skills": {
     "technical": ["JavaScript", "Python", "React"],
     "soft": ["Leadership", "Communication"],
-    "languages": ["English", "Hebrew", "Spanish"]
+    "languages": ["English", "Hebrew"]
   },
   "experience": {
     "totalYears": 5,
@@ -233,18 +246,25 @@ Respond in JSON format with this EXACT structure:
     "recentRole": "Most recent job title",
     "positions": [
       {
-        "company": "Company Name",
+        "company": "Most Recent Company",
         "role": "Job Title",
-        "startDate": "2020-01",
-        "endDate": "2023-12",
-        "description": "Key responsibilities and achievements as bullet points separated by newlines"
+        "startDate": "2022-01",
+        "endDate": "Present",
+        "description": "Key responsibilities and achievements"
       },
       {
         "company": "Previous Company",
         "role": "Previous Title",
-        "startDate": "2018-06",
-        "endDate": "2019-12",
+        "startDate": "2020-06",
+        "endDate": "2021-12",
         "description": "Previous role description"
+      },
+      {
+        "company": "Earlier Company",
+        "role": "Earlier Title",
+        "startDate": "2018-03",
+        "endDate": "2020-05",
+        "description": "Earlier role description"
       }
     ]
   },
@@ -254,7 +274,7 @@ Respond in JSON format with this EXACT structure:
     "institutions": [
       {
         "name": "University Name",
-        "degree": "Bachelor's/Master's/PhD",
+        "degree": "Bachelor's/Master's/MBA/PhD",
         "field": "Field of Study",
         "startDate": "2015-09",
         "endDate": "2019-06"
@@ -267,14 +287,13 @@ Respond in JSON format with this EXACT structure:
   "overallScore": 85
 }
 
-CRITICAL: 
-- Extract ALL positions from work history, not just the most recent
-- Extract ALL education entries, not just the highest degree
-- ALWAYS include dates in YYYY-MM format - this is REQUIRED for every position and education entry
-- If dates are missing from the resume, make a reasonable estimate based on context
-- If end date is current/present, use "Present" (string)
-- For descriptions, include key achievements and responsibilities
-- Look carefully for Hebrew date formats (ינואר, פברואר, etc.) and convert them properly`;
+## VALIDATION BEFORE RESPONDING
+
+Before responding, verify:
+✓ positions array contains EVERY job from the resume (minimum 1 entry)
+✓ institutions array contains EVERY school/university (minimum 1 entry if education exists)
+✓ ALL dates are in YYYY-MM format or "Present"
+✓ totalYears is calculated from positions dates`;
 
     // Use Gemini's vision capabilities to analyze the document
     console.log("Sending to AI for analysis...");

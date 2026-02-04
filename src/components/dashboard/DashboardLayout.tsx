@@ -45,7 +45,7 @@ interface DashboardLayoutProps {
   children: ReactNode;
   currentSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
-  onChatOpen?: () => void;
+  onChatOpen?: (initialMessage?: string) => void;
 }
 
 export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
@@ -278,8 +278,8 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
             currentSection === 'job-search' ? 'jobs' :
             'dashboard'
           }
-          onChatOpen={() => {
-            onChatOpen?.();
+          onChatOpen={(initialMessage) => {
+            onChatOpen?.(initialMessage);
             onSectionChange('chat');
           }}
         />
