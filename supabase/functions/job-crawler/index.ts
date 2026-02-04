@@ -118,7 +118,18 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { platform, query, location, runId } = body;
+    const { platform, query, location, runId, globalCrawl } = body;
+    
+    // Global crawl mode - runs 3 times a day for ALL platforms with predefined queries
+    if (globalCrawl === true) {
+      console.log('Starting GLOBAL crawl for all platforms...');
+      const results = await runGlobalCrawl(supabaseAdmin, FIRECRAWL_API_KEY, LOVABLE_API_KEY);
+      
+      return new Response(
+        JSON.stringify({ success: true, mode: 'global', results }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // If specific parameters provided, run single crawl
     if (platform && query) {
@@ -138,11 +149,12 @@ serve(async (req) => {
       );
     }
     
-    // Otherwise, run scheduled crawl for all active users
-    const results = await runScheduledCrawl(supabaseAdmin, FIRECRAWL_API_KEY, LOVABLE_API_KEY);
+    // Default: run global crawl (for scheduled calls)
+    console.log('No params - running global crawl...');
+    const results = await runGlobalCrawl(supabaseAdmin, FIRECRAWL_API_KEY, LOVABLE_API_KEY);
     
     return new Response(
-      JSON.stringify({ success: true, results }),
+      JSON.stringify({ success: true, mode: 'global', results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -155,12 +167,81 @@ serve(async (req) => {
   }
 });
 
+// Global predefined search queries for all job seekers
+const GLOBAL_SEARCH_QUERIES = [
+  // Tech roles
+  { query: 'software engineer', location: 'Israel' },
+  { query: 'frontend developer', location: 'Israel' },
+  { query: 'backend developer', location: 'Israel' },
+  { query: 'fullstack developer', location: 'Israel' },
+  { query: 'data scientist', location: 'Israel' },
+  { query: 'product manager', location: 'Israel' },
+  { query: 'devops engineer', location: 'Israel' },
+  { query: 'QA engineer', location: 'Israel' },
+  // Business roles
+  { query: 'marketing manager', location: 'Israel' },
+  { query: 'sales manager', location: 'Israel' },
+  { query: 'HR manager', location: 'Israel' },
+  { query: 'project manager', location: 'Israel' },
+  // Hebrew queries for local sites
+  { query: 'מפתח תוכנה', location: 'ישראל' },
+  { query: 'מנהל מוצר', location: 'ישראל' },
+  { query: 'מנהל שיווק', location: 'ישראל' },
+];
+
+const ALL_PLATFORMS = ['linkedin', 'alljobs', 'drushim'];
+
+async function runGlobalCrawl(
+  supabase: any,
+  firecrawlKey: string,
+  aiKey: string
+): Promise<any[]> {
+  console.log('=== GLOBAL CRAWL STARTED ===');
+  console.log(`Crawling ${ALL_PLATFORMS.length} platforms with ${GLOBAL_SEARCH_QUERIES.length} queries`);
+  
+  const results: any[] = [];
+  let totalJobsAdded = 0;
+  
+  // Crawl each platform with each query
+  for (const platform of ALL_PLATFORMS) {
+    for (const { query, location } of GLOBAL_SEARCH_QUERIES) {
+      try {
+        console.log(`Crawling ${platform}: "${query}" in "${location}"`);
+        
+        const result = await crawlPlatform(
+          supabase,
+          firecrawlKey,
+          aiKey,
+          platform,
+          query,
+          location
+        );
+        
+        results.push(result);
+        totalJobsAdded += result.jobsAdded || 0;
+        
+        // Small delay between requests to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+      } catch (err) {
+        console.error(`Error crawling ${platform}/${query}:`, err);
+        results.push({ platform, query, location, error: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    }
+  }
+  
+  console.log(`=== GLOBAL CRAWL COMPLETED: ${totalJobsAdded} jobs added ===`);
+  
+  return results;
+}
+
+// Legacy: per-user scheduled crawl (kept for backwards compatibility)
 async function runScheduledCrawl(
   supabase: any,
   firecrawlKey: string,
   aiKey: string
 ): Promise<any[]> {
-  console.log('Starting scheduled crawl...');
+  console.log('Starting user-specific scheduled crawl...');
   
   // Get all enabled crawler settings
   const { data: settings, error: settingsError } = await supabase
@@ -174,8 +255,8 @@ async function runScheduledCrawl(
   }
   
   if (!settings || settings.length === 0) {
-    console.log('No active crawler settings found');
-    return [];
+    console.log('No active crawler settings found, falling back to global crawl');
+    return runGlobalCrawl(supabase, firecrawlKey, aiKey);
   }
   
   const results: any[] = [];

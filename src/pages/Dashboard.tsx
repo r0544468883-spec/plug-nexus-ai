@@ -19,7 +19,7 @@ import { MessageInbox } from '@/components/messaging/MessageInbox';
 import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
-import { CVBuilder } from '@/components/cv-builder/CVBuilder';
+import { CVChatBuilder } from '@/components/cv-builder/CVChatBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
@@ -282,21 +282,23 @@ export default function Dashboard() {
 
       {/* Main Content - Chat Centered with Actions on Sides */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Quick Actions - Left Side */}
+        {/* Quick Actions - Left Side - Sticky */}
         <div className="lg:col-span-1 space-y-3" data-tour="quick-actions">
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" />
-                {t('dashboard.quickActions') || 'Quick Actions'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {quickActions.map((action, index) => (
-                <QuickAction key={index} {...action} />
-              ))}
-            </CardContent>
-          </Card>
+          <div className="lg:sticky lg:top-4">
+            <Card className="bg-card border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  {t('dashboard.quickActions') || 'Quick Actions'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {quickActions.map((action, index) => (
+                  <QuickAction key={index} {...action} />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* PLUG Chat - Center (Large) */}
@@ -307,43 +309,45 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* AI Insights + Vouch Widget + Company Recommendations - Right Side */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Vouch Widget */}
-          <VouchWidget />
+        {/* AI Insights + Vouch Widget + Company Recommendations - Right Side - Sticky */}
+        <div className="lg:col-span-1">
+          <div className="lg:sticky lg:top-4 space-y-4">
+            {/* Vouch Widget */}
+            <VouchWidget />
 
-          {/* Company Recommendations - Only for job seekers */}
-          {role === 'job_seeker' && (
-            <CompanyRecommendations />
-          )}
+            {/* Company Recommendations - Only for job seekers */}
+            {role === 'job_seeker' && (
+              <CompanyRecommendations />
+            )}
 
-          {/* AI Insights */}
-          <Card className="bg-card border-border plug-ai-highlight">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                {t('dashboard.aiInsights') || 'AI Insights'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
-                <p className="text-sm text-muted-foreground">
-                  {role === 'job_seeker' 
-                    ? t('insights.jobSeeker') || 'Based on your profile, I found 5 new positions that match your skills.'
-                    : role === 'company_employee'
-                    ? t('insights.employee') || 'There are 4 open positions in your company that match your network.'
-                    : t('insights.hr') || 'You have 12 candidates waiting for review.'
-                  }
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-sm font-medium text-primary mb-1">{t('insights.tip') || 'Pro Tip'}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t('insights.tipText') || 'Complete your profile to get better AI recommendations.'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            {/* AI Insights */}
+            <Card className="bg-card border-border plug-ai-highlight">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                  {t('dashboard.aiInsights') || 'AI Insights'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
+                  <p className="text-sm text-muted-foreground">
+                    {role === 'job_seeker' 
+                      ? t('insights.jobSeeker') || 'Based on your profile, I found 5 new positions that match your skills.'
+                      : role === 'company_employee'
+                      ? t('insights.employee') || 'There are 4 open positions in your company that match your network.'
+                      : t('insights.hr') || 'You have 12 candidates waiting for review.'
+                    }
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-sm font-medium text-primary mb-1">{t('insights.tip') || 'Pro Tip'}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('insights.tipText') || 'Complete your profile to get better AI recommendations.'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
@@ -481,7 +485,7 @@ export default function Dashboard() {
       case 'post-job':
         return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
       case 'cv-builder':
-        return <CVBuilder />;
+        return <CVChatBuilder />;
       case 'job-crawler':
         return renderCrawlerContent();
       default:
