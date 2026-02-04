@@ -1,154 +1,186 @@
 
-# תוכנית תיקון - 3 בעיות
 
-## בעיה 1: מסך Overview יורד למטה
+# תוכנית: CV Builder משודרג עם יצירת עיצוב AI ושיפורי UX
 
-### אבחון
-ב-`PlugChat.tsx` שורה 144:
-```typescript
-useEffect(() => {
-  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-}, [messages]);
+## סיכום
+שיפור מקיף ל-CV Builder שכולל:
+1. יצירת עיצוב קורות חיים באמצעות AI (Gemini Canvas-style בתוך האפליקציה)
+2. Skills & Soft Skills עם רובריקות לבחירה מרובה
+3. Languages עם רובריקות ותיקון בעיית הצבע הלבן
+4. שילוב Smart Import עם יצירת העיצוב
+
+---
+
+## שלב 1: רובריקות Skills עם בחירה מרובה
+
+### מה ישתנה
+במקום שדה טקסט חופשי, יוצגו רשימות מוכנות של מיומנויות לבחירה:
+
+**Technical Skills** - רובריקות לפי קטגוריות:
+- Programming: JavaScript, Python, TypeScript, Java, C++, Go, Ruby, PHP
+- Frontend: React, Vue, Angular, HTML/CSS, Tailwind, Next.js
+- Backend: Node.js, Django, FastAPI, Spring Boot, .NET
+- Database: PostgreSQL, MongoDB, MySQL, Redis, Elasticsearch
+- Cloud: AWS, Azure, GCP, Docker, Kubernetes
+- Tools: Git, CI/CD, Jira, Figma, Slack
+
+**Soft Skills** - רובריקות:
+- Leadership, Communication, Teamwork, Problem Solving
+- Time Management, Creativity, Adaptability, Critical Thinking
+- Negotiation, Presentation, Conflict Resolution, Decision Making
+
+### עיצוב UI
+- כפתורי Chip/Badge לכל מיומנות
+- סימון מרובה בלחיצה
+- אפשרות להוסיף מיומנות custom
+- צבע שונה למיומנויות נבחרות
+
+---
+
+## שלב 2: רובריקות שפות + תיקון צבע
+
+### שפות מוכנות לבחירה
+- עברית, English, Arabic, Russian, French, Spanish, German, Chinese, Portuguese, Italian, Hindi, Japanese, Korean
+
+### תיקון בעיית הצבע הלבן
+ה-select הנוכחי:
+```html
+<select className="border rounded px-2 py-2 text-sm">
 ```
-
-זה גורם לסקרול **למטה** בכל פעם שההודעות משתנות. כשה-Overview נטען, ה-PlugChat טוען את ההיסטוריה וגורם לסקרול למטה.
-
-### פתרון
-1. הגבל את ה-`scrollIntoView` רק לתוך ה-chat container עצמו (לא לכל הדף)
-2. השתמש ב-`{ block: 'nearest' }` במקום `{ behavior: 'smooth' }` כדי שזה לא ישפיע על ה-parent scroll
-3. הוסף בדיקה שה-chat באמת visible לפני הסקרול
-
-**שינוי ב-PlugChat.tsx:**
-```typescript
-// במקום:
-messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-// יהיה:
-if (chatContainerRef.current && messagesEndRef.current) {
-  // Scroll only within the chat container
-  chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-}
+חסר עיצוב לטקסט - יתוקן ל:
+```html
+<Select> component מ-shadcn עם סגנון נכון
 ```
 
 ---
 
-## בעיה 2: CV Builder - חזרה לממשק הטופס המקורי עם הצגת פרומפט
+## שלב 3: יצירת עיצוב AI (Canvas-style בתוך האפליקציה)
 
-### מצב נוכחי
-- `CVChatBuilder.tsx` - ממשק שיחה (לא רצוי)
-- `CVBuilder.tsx` + `CVEditorPanel.tsx` - ממשק טופס מקורי (רצוי!)
+### Flow חדש
+1. משתמש ממלא את הטופס (או מייבא דרך Smart Import)
+2. לוחץ על **"צור עיצוב עם AI"**
+3. נפתח Dialog עם:
+   - תצוגה מקדימה של ה-Prompt שיישלח
+   - אפשרות לערוך את ה-Prompt
+   - בחירת סגנון (Professional, Creative, Modern, Minimal)
+4. AI מייצר **עיצוב HTML/CSS** מותאם אישית
+5. התוצאה מוצגת לעריכה בתוך האפליקציה
+6. אפשרות להוריד כ-PDF או לשמור לפרופיל
 
-### מה רוצים
-1. לשמור על הטופס המקורי (CVEditorPanel) כפי שהיה
-2. להוסיף כפתור "סיימתי - צור קורות חיים" בסוף
-3. בלחיצה - להציג Dialog עם הפרומפט שייצא ל-Gemini Canvas
-4. המשתמש יכול לערוך את הפרומפט או לשלוח כמו שהוא
-5. לאחר שליחה - התמונה מוצגת למשתמש
-
-### שינויים נדרשים
-
-**1. עדכון Dashboard.tsx:**
-להחזיר את `CVBuilder` במקום `CVChatBuilder`
-
-**2. עדכון CVBuilder.tsx:**
-הוספת כפתור "סיימתי" + Dialog להצגת הפרומפט
-
-**3. יצירת פונקציה `buildCVPrompt`:**
-```typescript
-function buildCVPrompt(data: CVData): string {
-  // בונה את הפרומפט המלא מכל הנתונים
-  return `Create a professional CV...
-  Name: ${data.personalInfo.fullName}
-  Title: ${data.personalInfo.title}
-  ...`;
+### Edge Function: cv-generate-design
+במקום ייצור תמונה, ה-AI ייצר:
+```json
+{
+  "html": "<div class='cv-container'>...</div>",
+  "css": ".cv-container { ... }",
+  "metadata": { "style": "professional", "colors": [...] }
 }
 ```
 
-**4. Dialog חדש להצגת הפרומפט:**
+### עורך תוצאה
+- תצוגה WYSIWYG של ה-HTML שנוצר
+- אפשרות לערוך טקסט ישירות
+- כפתור "בקש שינוי" לשליחת הוראה נוספת ל-AI
+- Export ל-PDF
+
+---
+
+## שלב 4: שילוב Smart Import עם יצירת AI
+
+### Flow משופר
 ```text
-+------------------------------------------+
-| Preview Prompt                      [X]  |
-+------------------------------------------+
-| This is the prompt that will be sent     |
-| to AI to generate your CV:               |
-|                                          |
-| [Editable Textarea with prompt]          |
-|                                          |
-+------------------------------------------+
-| [Cancel]                  [Generate CV]  |
-+------------------------------------------+
+1. Smart Import → ניתוח קובץ
+2. הצגת נתונים שחולצו → שאלות עיצוב
+3. לחיצה על "צור עם AI"
+4. פתיחת עורך Prompt → עריכה
+5. יצירה → תצוגה מקדימה → עריכה
+6. Export / Save
 ```
-
-**5. תהליך יצירת התמונה:**
-- לחיצה על "Generate CV" שולחת ל-`cv-generate-visual`
-- התמונה מוצגת ב-Dialog חדש או בפאנל התצוגה
-- אפשרות להורדה
 
 ---
 
-## בעיה 3: Crawler לא מוצא משרות
+## שינויים טכניים
 
-### אבחון
-- ה-cron jobs **פעילים** (3 פעמים ביום: 05:00, 11:00, 17:00 UTC)
-- הסריקות רצות אבל מחזירות `jobs_found: 0`
-- הבעיה: Firecrawl Map לא מחזיר URLs, ו-Scrape fallback גם לא מוצא
+### קבצים חדשים
+| קובץ | תיאור |
+|------|--------|
+| `src/components/cv-builder/SkillsSelector.tsx` | רובריקות Skills עם בחירה מרובה |
+| `src/components/cv-builder/LanguageSelector.tsx` | רובריקות שפות עם Select מתוקן |
+| `src/components/cv-builder/AIDesignDialog.tsx` | Dialog ליצירת עיצוב AI |
+| `src/components/cv-builder/AIDesignPreview.tsx` | תצוגה ועריכה של עיצוב שנוצר |
 
-### סיבות אפשריות
-1. **LinkedIn**: חוסם סקריפטים (צריך session/cookies)
-2. **AllJobs/Drushim**: ה-regex patterns לא מתאימים ל-HTML
-3. **Firecrawl**: ה-waitFor לא מספיק זמן
-
-### פתרון
-1. **הוספת Logging מפורט** לראות מה בדיוק חוזר מ-Firecrawl
-2. **תיקון ה-regex patterns** להתאים ל-structure האמיתי של האתרים
-3. **הוספת fallback חכם יותר** - במקום לחפש URLs ב-markdown, לחפש ב-links array
-4. **הוספת indicator במסך** - להראות למשתמש את הסטטוס האמיתי
-
-### שינויים ל-job-crawler/index.ts:
-
-```typescript
-// 1. Logging משופר
-console.log('Map response:', JSON.stringify(mapData, null, 2));
-console.log('All links from Firecrawl:', mapData.links);
-
-// 2. Regex patterns מעודכנים
-// LinkedIn:
-const linkedinPatches = content.matchAll(/linkedin\.com\/jobs\/view\/(\d+)/gi);
-
-// AllJobs:
-const alljobsMatches = content.matchAll(/alljobs\.co\.il\/jobs\/[^"'\s>]+/gi);
-
-// 3. הדפסת מה נמצא
-console.log(`Found ${jobUrls.length} URLs:`, jobUrls);
-```
-
-### הוספת מידע למסך CrawlerSettings:
-- הוספת Badge "Last successful crawl" עם תאריך
-- הצגת כמה משרות נמצאו בסה"כ
-- כפתור "View Logs" לראות מה קרה
-
----
-
-## סיכום שינויים לקבצים
-
+### קבצים שיעודכנו
 | קובץ | שינוי |
 |------|-------|
-| `src/components/chat/PlugChat.tsx` | תיקון scrollIntoView שלא ישפיע על parent |
-| `src/pages/Dashboard.tsx` | החזרת CVBuilder במקום CVChatBuilder |
-| `src/components/cv-builder/CVBuilder.tsx` | הוספת כפתור "סיימתי", Dialog לפרומפט, יצירת תמונה |
-| `supabase/functions/job-crawler/index.ts` | Logging, regex fixes, better fallback |
-| `src/components/crawler/CrawlerSettings.tsx` | הוספת סטטיסטיקות ומידע על הסטטוס |
+| `src/components/cv-builder/CVEditorPanel.tsx` | החלפת שדות Skills ו-Languages ברכיבים החדשים |
+| `src/components/cv-builder/CVBuilder.tsx` | הוספת כפתור "צור עיצוב AI" ו-Dialog |
+| `src/components/cv-builder/CVImportWizard.tsx` | הוספת אפשרות "צור עם AI" בסיום |
+| `supabase/functions/cv-generate-visual/index.ts` | שינוי ליצירת HTML במקום תמונה |
+
+### מבנה נתונים חדש לרובריקות
+```typescript
+// src/lib/cv-skills-taxonomy.ts
+export const TECHNICAL_SKILLS = {
+  programming: ['JavaScript', 'Python', 'TypeScript', ...],
+  frontend: ['React', 'Vue', 'Angular', ...],
+  backend: ['Node.js', 'Django', ...],
+  // ...
+};
+
+export const SOFT_SKILLS = [
+  'Leadership', 'Communication', 'Teamwork', ...
+];
+
+export const LANGUAGES = [
+  { code: 'he', name: 'עברית', nameEn: 'Hebrew' },
+  { code: 'en', name: 'English', nameEn: 'English' },
+  // ...
+];
+```
 
 ---
 
-## איך תדע שה-Crawler עובד?
+## Prompt ל-AI Design
 
-1. **במסך Job Crawler** - תראה סריקות עם `jobs_found > 0`
-2. **במסך חיפוש משרות** - יופיעו משרות חדשות מ-LinkedIn/AllJobs/Drushim
-3. **בלוגים** - אפשר לבדוק את הלוגים של ה-Edge Function
-4. **בדיקה ידנית** - לחיצה על "Run Crawl Now" ולראות תוצאות
+```text
+You are a professional CV/resume designer. Create a clean, ATS-friendly CV design.
 
-### לוח זמנים הסריקות האוטומטיות (UTC):
-- 05:00 (07:00 שעון ישראל)
-- 11:00 (13:00 שעון ישראל)  
-- 17:00 (19:00 שעון ישראל)
+CANDIDATE INFO:
+- Name: {fullName}
+- Title: {title}
+- Summary: {summary}
+
+EXPERIENCE:
+{experience formatted}
+
+EDUCATION:
+{education formatted}
+
+SKILLS:
+Technical: {technical skills}
+Soft: {soft skills}
+
+DESIGN PREFERENCES:
+- Style: {style - Professional/Creative/Modern/Minimal}
+- Color: {accentColor}
+- Font: {fontFamily}
+- Layout: {orientation}
+
+Generate a complete HTML document with inline CSS for a printable A4 resume.
+Use modern, clean design. Ensure good contrast and readability.
+Support both LTR and RTL text.
+```
+
+---
+
+## אבטחה ו-RLS
+- ללא שינויים נדרשים - ה-Edge Function קיים ואין גישה ל-DB
+
+---
+
+## סיכום יתרונות
+1. **UX משופר** - רובריקות במקום טקסט חופשי = מהיר יותר ופחות שגיאות
+2. **עיצוב AI אמיתי** - לא תמונה אלא HTML ניתן לעריכה
+3. **תיקון באגים** - צבע לבן ב-Languages נפתר
+4. **Flow אחיד** - Smart Import → AI Design → Export
+
