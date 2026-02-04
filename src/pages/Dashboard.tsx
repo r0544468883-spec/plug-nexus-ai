@@ -94,7 +94,14 @@ export default function Dashboard() {
 
   // Scroll to top on mount and section change
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // The scroll container is the <main> in DashboardLayout (it uses overflow-auto),
+    // so scrolling the window won't help.
+    const el = document.getElementById('dashboard-scroll');
+    if (el) {
+      el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    } else {
+      window.scrollTo(0, 0);
+    }
   }, [currentSection]);
 
   // Fetch real statistics from database
@@ -332,7 +339,7 @@ export default function Dashboard() {
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <User className="w-6 h-6 text-primary" />
-        {isRTL ? 'הפרופיל והמסמכים שלי' : 'My Profile & Documents'}
+        {isRTL ? 'פרופיל ומסמכים' : 'Profile & documents'}
       </h2>
 
       {/* Personal Card Editor - First for job seekers */}

@@ -77,7 +77,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
     if (role === 'job_seeker') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על החשבון, סטטיסטיקות והודעות מ-Plug', tooltipEn: 'Overview of your account, stats, and Plug messages' },
-        { icon: User, label: 'My Profile', section: 'profile-docs', tooltipHe: 'הכרטיס האישי, קורות חיים ולינקים מקצועיים', tooltipEn: 'Personal card, resume, and professional links' },
+        { icon: User, label: 'Profile & documents', section: 'profile-docs', tooltipHe: 'כרטיס אישי, קו"ח ולינקים מקצועיים', tooltipEn: 'Personal card, resume, and professional links' },
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
         { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
         { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
@@ -264,7 +264,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange }: D
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main id="dashboard-scroll" className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
         </main>
       </div>
