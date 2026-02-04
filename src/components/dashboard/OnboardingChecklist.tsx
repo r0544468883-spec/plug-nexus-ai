@@ -33,7 +33,7 @@ interface ChecklistItem {
 }
 
 interface OnboardingChecklistProps {
-  onNavigate: (section: 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'documents' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder') => void;
+  onNavigate: (section: 'overview' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'profile-docs' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder') => void;
   onShowResumeDialog: () => void;
 }
 

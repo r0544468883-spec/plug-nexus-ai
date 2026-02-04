@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ScrollToTop } from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
@@ -23,6 +24,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/profile" element={<Profile />} />
