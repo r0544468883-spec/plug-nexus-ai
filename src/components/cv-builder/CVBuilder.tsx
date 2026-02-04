@@ -6,11 +6,13 @@ import { CVData, defaultCVData, Experience, fontFamilies } from './types';
 import { CVEditorPanel } from './CVEditorPanel';
 import { CVPreviewPanel } from './CVPreviewPanel';
 import { CVImportWizard } from './CVImportWizard';
+import { AIDesignDialog } from './AIDesignDialog';
+import { AIDesignPreview } from './AIDesignPreview';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Loader2, Monitor, FileText, Upload as UploadIcon, Download, Sparkles } from 'lucide-react';
+import { Save, CheckCircle, Loader2, Monitor, FileText, Upload as UploadIcon, Download, Sparkles, Wand2 } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import html2canvas from 'html2canvas';
@@ -69,6 +71,12 @@ export const CVBuilder = () => {
   
   // Import wizard state
   const [showImportWizard, setShowImportWizard] = useState(false);
+  
+  // AI Design state
+  const [showAIDesignDialog, setShowAIDesignDialog] = useState(false);
+  const [showAIDesignPreview, setShowAIDesignPreview] = useState(false);
+  const [generatedHtml, setGeneratedHtml] = useState('');
+  const [generatedCss, setGeneratedCss] = useState('');
   
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -329,6 +337,13 @@ export const CVBuilder = () => {
     saveToDatabase(importedData);
   };
 
+  // Handle AI Design generation
+  const handleAIDesignGenerated = (html: string, css: string) => {
+    setGeneratedHtml(html);
+    setGeneratedCss(css);
+    setShowAIDesignPreview(true);
+  };
+
   // Get current template component
   const currentTemplate = getTemplateById(cvData.settings.templateId);
   const TemplateComponent = currentTemplate?.component;
@@ -466,6 +481,22 @@ export const CVBuilder = () => {
         currentData={cvData}
       />
 
+      {/* AI Design Dialog */}
+      <AIDesignDialog
+        open={showAIDesignDialog}
+        onOpenChange={setShowAIDesignDialog}
+        cvData={cvData}
+        onDesignGenerated={handleAIDesignGenerated}
+      />
+
+      {/* AI Design Preview */}
+      <AIDesignPreview
+        open={showAIDesignPreview}
+        onOpenChange={setShowAIDesignPreview}
+        html={generatedHtml}
+        css={generatedCss}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
         <div className="flex items-center gap-2">
@@ -497,6 +528,12 @@ export const CVBuilder = () => {
           <Button variant="outline" onClick={() => setShowImportWizard(true)} className="gap-2">
             <Sparkles className="w-4 h-4" />
             {language === 'he' ? 'ייבוא חכם' : 'Smart Import'}
+          </Button>
+          
+          {/* AI Design Button */}
+          <Button variant="outline" onClick={() => setShowAIDesignDialog(true)} className="gap-2 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/30 hover:border-primary/50">
+            <Wand2 className="w-4 h-4 text-primary" />
+            {language === 'he' ? 'עיצוב AI' : 'AI Design'}
           </Button>
           
           {/* Export Button */}

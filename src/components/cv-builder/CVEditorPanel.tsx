@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-
+import { SkillsSelector } from './SkillsSelector';
+import { LanguageSelector } from './LanguageSelector';
 
 interface CVEditorPanelProps {
   data: CVData;
@@ -79,32 +80,24 @@ export const CVEditorPanel = ({ data, onChange }: CVEditorPanelProps) => {
     onChange({ ...data, education: data.education.filter((e) => e.id !== id) });
   };
 
-  const updateSkills = (type: 'technical' | 'soft', value: string) => {
-    const skills = value.split(',').map((s) => s.trim()).filter(Boolean);
+  const updateTechnicalSkills = (skills: string[]) => {
     onChange({
       ...data,
-      skills: { ...data.skills, [type]: skills },
+      skills: { ...data.skills, technical: skills },
     });
   };
 
-  const addLanguage = () => {
-    const newLang: Language = { name: '', level: 'intermediate' };
+  const updateSoftSkills = (skills: string[]) => {
     onChange({
       ...data,
-      skills: { ...data.skills, languages: [...data.skills.languages, newLang] },
+      skills: { ...data.skills, soft: skills },
     });
   };
 
-  const updateLanguage = (idx: number, field: keyof Language, value: string) => {
-    const newLangs = [...data.skills.languages];
-    newLangs[idx] = { ...newLangs[idx], [field]: value };
-    onChange({ ...data, skills: { ...data.skills, languages: newLangs } });
-  };
-
-  const removeLanguage = (idx: number) => {
+  const updateLanguages = (languages: Language[]) => {
     onChange({
       ...data,
-      skills: { ...data.skills, languages: data.skills.languages.filter((_, i) => i !== idx) },
+      skills: { ...data.skills, languages },
     });
   };
 
@@ -267,15 +260,13 @@ export const CVEditorPanel = ({ data, onChange }: CVEditorPanelProps) => {
             <AccordionTrigger className="font-semibold">
               {isHe ? '🛠️ כישורים' : '🛠️ Skills'}
             </AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-2">
-              <div>
-                <Label>{isHe ? 'כישורים טכניים (מופרדים בפסיק)' : 'Technical Skills (comma separated)'}</Label>
-                <Textarea rows={2} value={data.skills.technical.join(', ')} onChange={(e) => updateSkills('technical', e.target.value)} />
-              </div>
-              <div>
-                <Label>{isHe ? 'כישורים רכים (מופרדים בפסיק)' : 'Soft Skills (comma separated)'}</Label>
-                <Textarea rows={2} value={data.skills.soft.join(', ')} onChange={(e) => updateSkills('soft', e.target.value)} />
-              </div>
+            <AccordionContent className="pt-2">
+              <SkillsSelector
+                technicalSkills={data.skills.technical}
+                softSkills={data.skills.soft}
+                onTechnicalChange={updateTechnicalSkills}
+                onSoftChange={updateSoftSkills}
+              />
             </AccordionContent>
           </AccordionItem>
 
@@ -284,26 +275,11 @@ export const CVEditorPanel = ({ data, onChange }: CVEditorPanelProps) => {
             <AccordionTrigger className="font-semibold">
               {isHe ? '🌍 שפות' : '🌍 Languages'}
             </AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-2">
-              {data.skills.languages.map((lang, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <Input placeholder={isHe ? 'שפה' : 'Language'} value={lang.name} onChange={(e) => updateLanguage(idx, 'name', e.target.value)} />
-                  <select className="border rounded px-2 py-2 text-sm" value={lang.level} onChange={(e) => updateLanguage(idx, 'level', e.target.value)}>
-                    <option value="native">{isHe ? 'שפת אם' : 'Native'}</option>
-                    <option value="fluent">{isHe ? 'שוטף' : 'Fluent'}</option>
-                    <option value="advanced">{isHe ? 'מתקדם' : 'Advanced'}</option>
-                    <option value="intermediate">{isHe ? 'בינוני' : 'Intermediate'}</option>
-                    <option value="basic">{isHe ? 'בסיסי' : 'Basic'}</option>
-                  </select>
-                  <Button variant="ghost" size="icon" onClick={() => removeLanguage(idx)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addLanguage}>
-                <Plus className="w-4 h-4 mr-1" />
-                {isHe ? 'הוסף שפה' : 'Add Language'}
-              </Button>
+            <AccordionContent className="pt-2">
+              <LanguageSelector
+                languages={data.skills.languages}
+                onChange={updateLanguages}
+              />
             </AccordionContent>
           </AccordionItem>
 
