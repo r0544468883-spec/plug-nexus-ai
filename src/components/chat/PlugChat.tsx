@@ -123,21 +123,26 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
     }
   }, [user]);
 
-  // Handle initial message from WelcomeCard
+  // Handle initial message from Quick Actions / WelcomeCard - fill input instead of auto-send
   useEffect(() => {
     if (initialMessage && !hasProcessedInitial && user) {
       setHasProcessedInitial(true);
-      setTimeout(() => {
-        sendMessage(initialMessage);
-        onMessageSent?.();
-      }, 100);
+      // Pre-fill the input so the user can review/edit before sending
+      setInput(initialMessage);
+      // Don't call onMessageSent here - it clears pendingMessage in parent
+      // We only want to clear it after the user actually sends
     }
   }, [initialMessage, hasProcessedInitial, user]);
 
-  // Reset when initialMessage changes
+  // Reset hasProcessedInitial when initialMessage changes to a new value
+  const prevInitialMessageRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!initialMessage) {
-      setHasProcessedInitial(false);
+    if (initialMessage !== prevInitialMessageRef.current) {
+      prevInitialMessageRef.current = initialMessage;
+      if (initialMessage) {
+        // New message arrived, reset so we can process it
+        setHasProcessedInitial(false);
+      }
     }
   }, [initialMessage]);
 
