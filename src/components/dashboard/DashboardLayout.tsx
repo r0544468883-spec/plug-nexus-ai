@@ -54,7 +54,6 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
   const { t, direction } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plugHintSignal, setPlugHintSignal] = useState(0);
-  const [plugDebug, setPlugDebug] = useState<{ action: string; message?: string; time: string } | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -262,15 +261,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  setPlugHintSignal((v) => {
-                    const next = v + 1;
-                    // DEBUG: confirm the sparkle click itself is registered
-                    console.log('[DashboardLayout] sparkle click -> plugHintSignal', { prev: v, next });
-                    setPlugDebug({ action: 'hint_signal', message: String(next), time: new Date().toLocaleTimeString() });
-                    return next;
-                  });
-                }}
+                onClick={() => setPlugHintSignal((v) => v + 1)}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label={direction === 'rtl' ? 'הצג מחדש את Plug' : 'Show Plug hint again'}
               >
@@ -308,32 +299,11 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
           contextPage={hintContextPage}
           forceShowSignal={plugHintSignal}
           onChatOpen={(initialMessage) => {
-            // DEBUG: Log the action
-            const action = initialMessage ? 'quick_action' : 'hint_open';
-            console.log('[DashboardLayout] onChatOpen called', { action, initialMessage, currentSection });
-            setPlugDebug({ action, message: initialMessage, time: new Date().toLocaleTimeString() });
             // Let the parent decide how/when to navigate to chat.
             // We pass the source section so Plug can keep correct context.
             onChatOpen?.(initialMessage, currentSection);
           }}
         />
-        
-        {/* DEBUG Panel - shows last Plug action */}
-        {plugDebug && (
-          <div className="fixed top-20 left-4 z-[9999] bg-accent text-accent-foreground border border-border p-3 rounded-lg shadow-xl text-xs font-mono max-w-xs">
-            <div className="font-bold mb-1">Plug Debug</div>
-            <div><b>Action:</b> {plugDebug.action}</div>
-            <div><b>Value:</b> {plugDebug.message || '(none)'}</div>
-            <div><b>Signal:</b> {plugHintSignal}</div>
-            <div><b>Time:</b> {plugDebug.time}</div>
-            <button 
-              onClick={() => setPlugDebug(null)} 
-              className="mt-2 px-2 py-1 bg-background text-foreground border border-border rounded text-xs"
-            >
-              Close
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

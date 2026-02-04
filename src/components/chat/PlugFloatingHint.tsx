@@ -25,10 +25,6 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   const [isDismissed, setIsDismissed] = useState(false);
   const isForceShownRef = useRef(false);
 
-  // DEBUG: track visibility transitions
-  useEffect(() => {
-    console.log('[PlugFloatingHint] visibility', { contextPage, isVisible, isDismissed });
-  }, [contextPage, isVisible, isDismissed]);
 
   const safeSessionGet = (key: string) => {
     try {
@@ -66,7 +62,6 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
     
     if (!alreadyShown) {
       const timer = setTimeout(() => {
-        console.log('[PlugFloatingHint] auto-show', { contextPage });
         setIsVisible(true);
         safeSessionSet(sessionKey, 'true');
       }, 2000);
@@ -79,7 +74,6 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   // and keeps it visible until the user closes it.
   useEffect(() => {
     if (!forceShowSignal) return;
-    console.log('[PlugFloatingHint] force-show', { contextPage, forceShowSignal });
     // Make it visible even if sessionStorage is blocked.
     setIsVisible(true);
     // Clear the session storage so the hint can show again
@@ -202,14 +196,12 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   };
 
   const handleClick = () => {
-    console.log('[PlugFloatingHint] open chat click', { contextPage, hasOnChatOpen: !!onChatOpen });
     onChatOpen?.();
     setIsVisible(false);
   };
 
   const handleQuickAction = (action: QuickAction) => {
     const message = isRTL ? action.messageHe : action.message;
-    console.log('[PlugFloatingHint] quick action', { contextPage, label: isRTL ? action.labelHe : action.label, hasOnChatOpen: !!onChatOpen, message });
     onChatOpen?.(message);
     setIsVisible(false);
   };
@@ -234,18 +226,6 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
             mass: 0.8,
           }}
           data-testid="plug-floating-hint"
-          onPointerDownCapture={(e) => {
-            console.log('[PlugFloatingHint] pointerdown capture', {
-              contextPage,
-              target: (e.target as HTMLElement | null)?.tagName,
-            });
-          }}
-          onClickCapture={(e) => {
-            console.log('[PlugFloatingHint] click capture', {
-              contextPage,
-              target: (e.target as HTMLElement | null)?.tagName,
-            });
-          }}
           className={`pointer-events-auto fixed bottom-24 ${isRTL ? 'left-4' : 'right-4'} z-[1000] max-w-xs`}
         >
           {/* Glow effect */}
@@ -328,13 +308,7 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
                     >
                       <button
                         type="button"
-                        onClick={() => {
-                          console.log('[PlugFloatingHint] quick action click', {
-                            contextPage,
-                            label: isRTL ? qa.labelHe : qa.label,
-                          });
-                          handleQuickAction(qa);
-                        }}
+                        onClick={() => handleQuickAction(qa)}
                         className="inline-flex items-center gap-1.5 text-xs h-7 px-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-105 transition-transform"
                       >
                         {qa.icon}
