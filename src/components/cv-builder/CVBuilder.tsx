@@ -236,36 +236,47 @@ export const CVBuilder = () => {
   // Open export dialog and generate PDF from template
   const handleExportClick = async () => {
     setShowExportDialog(true);
-    setIsExporting(false); // Start with false so template renders immediately
+    setIsExporting(true);
     setSavedCVUrl(null);
     setExportedPdfBlob(null);
     
-    // Wait for dialog and template to render
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    setIsExporting(true); // Show loading state while generating PDF
-    
     try {
-      // Wait a bit more for the isExporting state to not affect the ref
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Create a hidden container for PDF rendering at full size
+      const hiddenContainer = document.createElement('div');
+      hiddenContainer.style.position = 'absolute';
+      hiddenContainer.style.left = '-9999px';
+      hiddenContainer.style.top = '0';
+      hiddenContainer.style.width = cvData.settings.orientation === 'landscape' ? '297mm' : '210mm';
+      hiddenContainer.style.minHeight = cvData.settings.orientation === 'landscape' ? '210mm' : '297mm';
+      hiddenContainer.style.backgroundColor = '#ffffff';
+      hiddenContainer.style.fontFamily = fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif";
+      document.body.appendChild(hiddenContainer);
       
-      const renderElement = cvRenderRef.current;
-      if (!renderElement) {
-        console.error('CV render element not found, retrying...');
-        // Retry after a delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        if (!cvRenderRef.current) {
-          throw new Error('CV render element not found');
-        }
+      // Wait for dialog to open
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Copy the template content from the visible ref to the hidden container
+      if (cvRenderRef.current) {
+        hiddenContainer.innerHTML = cvRenderRef.current.innerHTML;
+      } else {
+        throw new Error('CV render element not found');
       }
       
-      // Capture the template as canvas
-      const canvas = await html2canvas(cvRenderRef.current, {
+      // Wait for fonts and images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Capture the hidden container as canvas (no scale transform)
+      const canvas = await html2canvas(hiddenContainer, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: cvData.settings.orientation === 'landscape' ? 1123 : 794, // A4 at 96 DPI
+        height: cvData.settings.orientation === 'landscape' ? 794 : 1123,
       });
+      
+      // Remove hidden container
+      document.body.removeChild(hiddenContainer);
       
       // Create PDF from canvas
       const isLandscape = cvData.settings.orientation === 'landscape';
@@ -414,18 +425,16 @@ export const CVBuilder = () => {
           </DialogHeader>
           
           <div className="flex-1 overflow-auto flex items-center justify-center bg-muted/30 rounded-lg p-4 min-h-[400px] relative">
-            {/* Always render the template for ref capture, but overlay loading state */}
+            {/* Render the template for preview - always visible for ref capture */}
             <div 
               ref={cvRenderRef}
-              className="bg-white shadow-xl"
+              className="bg-white shadow-xl overflow-hidden"
               style={{
                 width: cvData.settings.orientation === 'landscape' ? '297mm' : '210mm',
                 minHeight: cvData.settings.orientation === 'landscape' ? '210mm' : '297mm',
                 fontFamily: fontFamilies[cvData.settings.fontFamily]?.stack || "'Inter', sans-serif",
-                transform: 'scale(0.5)',
+                transform: 'scale(0.4)',
                 transformOrigin: 'top center',
-                opacity: isExporting ? 0 : 1,
-                transition: 'opacity 0.3s',
               }}
             >
               {TemplateComponent && <TemplateComponent data={cvData} scale={1} />}
@@ -433,7 +442,7 @@ export const CVBuilder = () => {
             
             {/* Overlay loading indicator */}
             {isExporting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/80 rounded-lg">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm rounded-lg">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 <p className="text-muted-foreground mt-3">
                   {language === 'he' ? 'מייצר PDF...' : 'Generating PDF...'}
