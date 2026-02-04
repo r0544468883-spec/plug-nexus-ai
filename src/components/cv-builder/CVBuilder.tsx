@@ -464,12 +464,12 @@ export const CVBuilder = () => {
             </div>
           )}
           
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowExportDialog(false)}>
               {language === 'he' ? 'סגור' : 'Close'}
             </Button>
             
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap flex-1 justify-end">
               {/* Save to Profile */}
               <Button 
                 variant="outline" 
@@ -493,8 +493,14 @@ export const CVBuilder = () => {
                 disabled={isExporting || !exportedPdfBlob}
                 className="gap-2"
               >
-                <Download className="w-4 h-4" />
-                {language === 'he' ? 'הורד PDF' : 'Download PDF'}
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting 
+                  ? (language === 'he' ? 'מייצר...' : 'Generating...') 
+                  : (language === 'he' ? 'הורד PDF' : 'Download PDF')}
               </Button>
             </div>
           </DialogFooter>
