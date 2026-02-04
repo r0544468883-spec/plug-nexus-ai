@@ -250,6 +250,128 @@ export type Database = {
         }
         Relationships: []
       }
+      crawler_discovered_jobs: {
+        Row: {
+          company_name: string | null
+          discovered_at: string
+          id: string
+          job_id: string | null
+          platform: string
+          processed_at: string | null
+          source_url: string
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          discovered_at?: string
+          id?: string
+          job_id?: string | null
+          platform: string
+          processed_at?: string | null
+          source_url: string
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          discovered_at?: string
+          id?: string
+          job_id?: string | null
+          platform?: string
+          processed_at?: string | null
+          source_url?: string
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawler_discovered_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crawler_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          jobs_added: number | null
+          jobs_found: number | null
+          platform: string
+          search_query: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          jobs_added?: number | null
+          jobs_found?: number | null
+          platform: string
+          search_query: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          jobs_added?: number | null
+          jobs_found?: number | null
+          platform?: string
+          search_query?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      crawler_settings: {
+        Row: {
+          created_at: string
+          frequency_hours: number | null
+          id: string
+          is_enabled: boolean | null
+          last_run_at: string | null
+          locations: string[] | null
+          platforms: string[] | null
+          search_queries: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          frequency_hours?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          locations?: string[] | null
+          platforms?: string[] | null
+          search_queries?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          frequency_hours?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          last_run_at?: string | null
+          locations?: string[] | null
+          platforms?: string[] | null
+          search_queries?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           ai_summary: Json | null
