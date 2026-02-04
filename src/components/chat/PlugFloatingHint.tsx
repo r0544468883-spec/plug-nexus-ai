@@ -27,6 +27,9 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
 
   // Show hint after a short delay on page load
   useEffect(() => {
+    // Reset dismissed state when context changes
+    setIsDismissed(false);
+    
     const sessionKey = `plug-hint-shown-${contextPage}`;
     const alreadyShown = sessionStorage.getItem(sessionKey);
     
@@ -40,11 +43,14 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   }, [contextPage]);
 
   // Allow the parent to force-show the hint via a signal.
+  // This explicitly clears the session storage flag so it actually shows.
   useEffect(() => {
     if (!forceShowSignal) return;
+    // Clear the session storage so the hint can show again
+    sessionStorage.removeItem(`plug-hint-shown-${contextPage}`);
     setIsDismissed(false);
     setIsVisible(true);
-  }, [forceShowSignal]);
+  }, [forceShowSignal, contextPage]);
 
   // Auto-hide after 10 seconds (extended for quick actions)
   useEffect(() => {

@@ -149,6 +149,42 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
     }
   }, [messages]);
 
+  // Get contextual greeting based on current page - moved before useEffect that uses it
+  const getContextualGreeting = () => {
+    const isRTL = direction === 'rtl';
+    switch (contextPage) {
+      case 'cv-builder':
+        return {
+          title: isRTL ? 'היי! אני כאן לשפר את קורות החיים שלך 📄' : "Hey! I'm here to improve your CV 📄",
+          subtitle: isRTL 
+            ? 'איך אני יכול לעזור? אוכל לשפר ניסוחים, להציע מילות מפתח, או לסקור את התוכן שלך.'
+            : 'How can I help? I can improve phrasing, suggest keywords, or review your content.',
+        };
+      case 'applications':
+        return {
+          title: isRTL ? 'מה שלום המשרות שלך? 💼' : 'How are your applications going? 💼',
+          subtitle: isRTL 
+            ? 'רוצה שאסכם את המשרות ששלחת? או אולי להכין אותך לראיון?'
+            : 'Want me to summarize your applications? Or maybe prepare you for an interview?',
+        };
+      case 'jobs':
+        return {
+          title: isRTL ? 'בוא נמצא לך את המשרה המושלמת! 🎯' : "Let's find you the perfect job! 🎯",
+          subtitle: isRTL 
+            ? 'ספר לי מה אתה מחפש ואני אעזור למצוא התאמות.'
+            : 'Tell me what you are looking for and I will help find matches.',
+        };
+      case 'dashboard':
+      default:
+        return {
+          title: t('plug.greeting') || "Hey there! I'm Plug 👋",
+          subtitle: isRTL 
+            ? 'שאל אותי על משרות, קורות חיים, ראיונות או כל דבר אחר!'
+            : 'Ask me about jobs, resumes, interviews, or anything else!',
+        };
+    }
+  };
+
   // When the user navigates between pages, inject a contextual Plug message
   // so the chat feels page-aware even when there is existing history.
   useEffect(() => {
@@ -159,19 +195,23 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
     console.log("PlugChat: context changed from", lastContextPageRef.current, "to", contextPage);
     lastContextPageRef.current = contextPage;
     
-    // Always add a context message when navigating to a new page (except on initial load)
+    // Get the greeting for current context
+    const g = getContextualGreeting();
+    const content = `${g.title}\n${g.subtitle}`;
+    
+    // Always add a context message when navigating to a new page
     setMessages((prev) => {
-      // Skip if no messages yet - greeting panel handles it
-      if (prev.length === 0) return prev;
-      
-      const g = getContextualGreeting();
-      const content = `${g.title}\n${g.subtitle}`;
+      // If no messages, we'll show the greeting panel instead, but also add a context message
+      // so the next interaction has context
       
       // Avoid duplicate context messages
       const lastMsg = prev[prev.length - 1];
       if (lastMsg?.id?.startsWith('ctx-') && lastMsg.content === content) {
         return prev;
       }
+      
+      // For empty chat, don't add context message (greeting panel shows instead)
+      if (prev.length === 0) return prev;
       
       return [
         ...prev,
@@ -183,7 +223,7 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
         },
       ];
     });
-  }, [contextPage, user]);
+  }, [contextPage, user, direction, t]);
 
   const loadChatHistory = async () => {
     if (!user) return;
@@ -523,42 +563,6 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
   };
 
   const showGreeting = messages.length === 0;
-
-  // Contextual greeting messages based on page
-  const getContextualGreeting = () => {
-    const isRTL = direction === 'rtl';
-    switch (contextPage) {
-      case 'cv-builder':
-        return {
-          title: isRTL ? 'היי! אני כאן לשפר את קורות החיים שלך 📄' : "Hey! I'm here to improve your CV 📄",
-          subtitle: isRTL 
-            ? 'איך אני יכול לעזור? אוכל לשפר ניסוחים, להציע מילות מפתח, או לסקור את התוכן שלך.'
-            : 'How can I help? I can improve phrasing, suggest keywords, or review your content.',
-        };
-      case 'applications':
-        return {
-          title: isRTL ? 'מה שלום המשרות שלך? 💼' : 'How are your applications going? 💼',
-          subtitle: isRTL 
-            ? 'רוצה שאסכם את המשרות ששלחת? או אולי להכין אותך לראיון?'
-            : 'Want me to summarize your applications? Or maybe prepare you for an interview?',
-        };
-      case 'jobs':
-        return {
-          title: isRTL ? 'בוא נמצא לך את המשרה המושלמת! 🎯' : "Let's find you the perfect job! 🎯",
-          subtitle: isRTL 
-            ? 'ספר לי מה אתה מחפש ואני אעזור למצוא התאמות.'
-            : 'Tell me what you are looking for and I will help find matches.',
-        };
-      case 'dashboard':
-      default:
-        return {
-          title: t('plug.greeting') || "Hey there! I'm Plug 👋",
-          subtitle: isRTL 
-            ? 'שאל אותי על משרות, קורות חיים, ראיונות או כל דבר אחר!'
-            : 'Ask me about jobs, resumes, interviews, or anything else!',
-        };
-    }
-  };
 
   const greeting = getContextualGreeting();
 
