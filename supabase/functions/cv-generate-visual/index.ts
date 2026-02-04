@@ -140,6 +140,7 @@ Generate a complete, professional CV image that looks like a real printed resume
             content: prompt,
           },
         ],
+        modalities: ["image", "text"],
       }),
     });
 
@@ -169,28 +170,47 @@ Generate a complete, professional CV image that looks like a real printed resume
     const result = await response.json();
     console.log("CV image generated successfully");
 
-    // Extract image from response
-    const content = result.choices?.[0]?.message?.content;
-    let imageData = null;
+    // Extract image from response - Gemini returns images in message.images array
+    const message = result.choices?.[0]?.message;
+    let imageUrl = null;
 
-    // Check if response contains inline image data
-    if (Array.isArray(content)) {
-      const imagePart = content.find((part: any) => part.type === 'image' || part.image);
-      if (imagePart) {
-        imageData = imagePart.image || imagePart.data;
+    // Check for images array (Lovable AI format)
+    if (message?.images && Array.isArray(message.images) && message.images.length > 0) {
+      const firstImage = message.images[0];
+      if (firstImage?.image_url?.url) {
+        imageUrl = firstImage.image_url.url;
       }
-    } else if (typeof content === 'string') {
-      // Check if it's a base64 image or URL
-      if (content.startsWith('data:image') || content.startsWith('http')) {
-        imageData = content;
+    }
+    
+    // Fallback: check content array format
+    if (!imageUrl && Array.isArray(message?.content)) {
+      const imagePart = message.content.find((part: any) => 
+        part.type === 'image_url' || part.type === 'image' || part.image_url
+      );
+      if (imagePart?.image_url?.url) {
+        imageUrl = imagePart.image_url.url;
       }
+    }
+
+    // Fallback: check if content is a direct URL or base64
+    if (!imageUrl && typeof message?.content === 'string') {
+      if (message.content.startsWith('data:image') || message.content.startsWith('http')) {
+        imageUrl = message.content;
+      }
+    }
+
+    if (!imageUrl) {
+      console.error("No image found in response:", JSON.stringify(result, null, 2));
+      return new Response(
+        JSON.stringify({ error: "AI did not return an image. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        image: imageData,
-        rawResponse: result,
+        imageUrl: imageUrl,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
