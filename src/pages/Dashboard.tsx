@@ -93,16 +93,29 @@ export default function Dashboard() {
 
   const isRTL = language === 'he';
 
-  // Scroll to top on mount and section change
+  // Scroll to top on mount
   useEffect(() => {
-    // The scroll container is the <main> in DashboardLayout (it uses overflow-auto),
-    // so scrolling the window won't help.
+    const scrollToTop = () => {
+      const el = document.getElementById('dashboard-scroll');
+      if (el) {
+        el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+      }
+      window.scrollTo(0, 0);
+    };
+    
+    scrollToTop();
+    // Also after a short delay to ensure render is complete
+    const timer = setTimeout(scrollToTop, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Scroll to top on section change
+  useEffect(() => {
     const el = document.getElementById('dashboard-scroll');
     if (el) {
       el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
-    } else {
-      window.scrollTo(0, 0);
     }
+    window.scrollTo(0, 0);
   }, [currentSection]);
 
   // Fetch real statistics from database

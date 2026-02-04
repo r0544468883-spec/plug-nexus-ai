@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.job-crawler]
 verify_jwt = false
+
+[functions.cv-generate-visual]
+verify_jwt = false
