@@ -153,6 +153,19 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
   };
 
   const convertSummaryToCVData = (summary: any): Partial<CVData> => {
+    const normalizeDate = (dateStr: string | undefined): string => {
+      if (!dateStr) return '';
+      const date = String(dateStr).trim();
+      if (/present|current|now|היום|עד היום/i.test(date)) return 'Present';
+      const yyyyMmMatch = date.match(/^(\d{4})-(\d{2})$/);
+      if (yyyyMmMatch) return date;
+      const yearMatch = date.match(/^(\d{4})$/);
+      if (yearMatch) return `${yearMatch[1]}-01`;
+      const mmYyyyMatch = date.match(/^(\d{1,2})\/(\d{4})$/);
+      if (mmYyyyMatch) return `${mmYyyyMatch[2]}-${mmYyyyMatch[1].padStart(2, '0')}`;
+      return date;
+    };
+
     return {
       personalInfo: {
         fullName: summary.personalInfo?.name || '',
@@ -166,9 +179,9 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
         id: `exp-${idx}`,
         company: pos.company || '',
         role: pos.role || '',
-        startDate: pos.startDate || '',
-        endDate: pos.endDate || null,
-        current: !pos.endDate || pos.endDate.toLowerCase()?.includes('present'),
+        startDate: normalizeDate(pos.startDate),
+        endDate: /present|current|now|היום|עד היום/i.test(String(pos.endDate || '')) ? null : (normalizeDate(pos.endDate) || null),
+        current: !pos.endDate || /present|current|now|היום|עד היום/i.test(String(pos.endDate)),
         bullets: pos.description ? pos.description.split('\n').filter(Boolean) : [],
       })) || [],
       education: summary.education?.institutions?.map((inst: any, idx: number) => ({
@@ -176,8 +189,8 @@ export const CVImportWizard = ({ open, onOpenChange, onComplete, currentData }: 
         institution: inst.name || '',
         degree: inst.degree || '',
         field: inst.field || '',
-        startDate: inst.startDate || '',
-        endDate: inst.endDate || '',
+        startDate: normalizeDate(inst.startDate),
+        endDate: normalizeDate(inst.endDate),
       })) || [],
       skills: {
         technical: summary.skills?.technical || [],

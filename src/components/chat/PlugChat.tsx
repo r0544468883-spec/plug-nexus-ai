@@ -36,6 +36,7 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastContextPageRef = useRef<PlugChatProps['contextPage']>(contextPage);
 
   // Fetch user's resume for context
   const { data: existingResume } = useQuery({
@@ -147,6 +148,30 @@ export function PlugChat({ initialMessage, onMessageSent, contextPage = 'default
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // When the user navigates between pages, inject a contextual Plug message
+  // so the chat feels page-aware even when there is existing history.
+  useEffect(() => {
+    if (!user) return;
+    if (lastContextPageRef.current === contextPage) return;
+
+    lastContextPageRef.current = contextPage;
+    setMessages((prev) => {
+      // If there are no messages yet, we already show the greeting panel.
+      if (prev.length === 0) return prev;
+      const g = getContextualGreeting();
+      const content = `${g.title}\n${g.subtitle}`;
+      return [
+        ...prev,
+        {
+          id: `ctx-${Date.now()}`,
+          content,
+          sender: 'ai',
+          timestamp: new Date(),
+        },
+      ];
+    });
+  }, [contextPage, user]);
 
   const loadChatHistory = async () => {
     if (!user) return;

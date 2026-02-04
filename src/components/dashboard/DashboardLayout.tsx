@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PlugLogo } from '@/components/PlugLogo';
@@ -26,7 +26,8 @@ import {
   ArrowRight,
   Heart,
   FileEdit,
-  Route
+  Route,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -45,13 +46,14 @@ interface DashboardLayoutProps {
   children: ReactNode;
   currentSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
-  onChatOpen?: (initialMessage?: string) => void;
+  onChatOpen?: (initialMessage?: string, sourceSection?: DashboardSection) => void;
 }
 
 export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
   const { t, direction } = useLanguage();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [plugHintSignal, setPlugHintSignal] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -109,6 +111,15 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
   };
 
   const navItems = getNavItems();
+
+  const hintContextPage = useMemo(() => {
+    return (
+      currentSection === 'cv-builder' ? 'cv-builder' :
+      currentSection === 'applications' ? 'applications' :
+      currentSection === 'job-search' ? 'jobs' :
+      'dashboard'
+    );
+  }, [currentSection]);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -244,6 +255,19 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
                 <NotificationBell />
               </span>
             </NavTooltip>
+
+            {/* Re-show Plug hint */}
+            <NavTooltip content={direction === 'rtl' ? 'הצג מחדש את Plug' : 'Show Plug hint again'} side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPlugHintSignal((v) => v + 1)}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={direction === 'rtl' ? 'הצג מחדש את Plug' : 'Show Plug hint again'}
+              >
+                <Sparkles className="h-5 w-5" />
+              </Button>
+            </NavTooltip>
             
             <NavTooltip content={direction === 'rtl' ? 'החלף שפה - עברית/אנגלית' : 'Language Toggle - Hebrew/English'} side="bottom">
               <span>
@@ -272,14 +296,10 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
         {/* Floating Plug Hint - contextual based on current section */}
         <PlugFloatingHint 
-          contextPage={
-            currentSection === 'cv-builder' ? 'cv-builder' :
-            currentSection === 'applications' ? 'applications' :
-            currentSection === 'job-search' ? 'jobs' :
-            'dashboard'
-          }
+          contextPage={hintContextPage}
+          forceShowSignal={plugHintSignal}
           onChatOpen={(initialMessage) => {
-            onChatOpen?.(initialMessage);
+            onChatOpen?.(initialMessage, currentSection);
             onSectionChange('chat');
           }}
         />
