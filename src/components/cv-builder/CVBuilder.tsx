@@ -5,11 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { CVData, defaultCVData, Experience, fontFamilies } from './types';
 import { CVEditorPanel } from './CVEditorPanel';
 import { CVPreviewPanel } from './CVPreviewPanel';
+import { CVImportWizard } from './CVImportWizard';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Save, CheckCircle, Loader2, Monitor, FileText, Upload as UploadIcon, Download } from 'lucide-react';
+import { Save, CheckCircle, Loader2, Monitor, FileText, Upload as UploadIcon, Download, Sparkles } from 'lucide-react';
 import { debounce } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import html2canvas from 'html2canvas';
@@ -65,6 +66,9 @@ export const CVBuilder = () => {
   const [isLoadingResume, setIsLoadingResume] = useState(true);
   const [showMobileWarning, setShowMobileWarning] = useState(false);
   const [viewOnlyMode, setViewOnlyMode] = useState(false);
+  
+  // Import wizard state
+  const [showImportWizard, setShowImportWizard] = useState(false);
   
   // Export dialog state
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -319,6 +323,12 @@ export const CVBuilder = () => {
     }
   };
 
+  // Handle import wizard completion
+  const handleImportComplete = (importedData: CVData) => {
+    setCvData(importedData);
+    saveToDatabase(importedData);
+  };
+
   // Get current template component
   const currentTemplate = getTemplateById(cvData.settings.templateId);
   const TemplateComponent = currentTemplate?.component;
@@ -448,6 +458,14 @@ export const CVBuilder = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Import Wizard */}
+      <CVImportWizard
+        open={showImportWizard}
+        onOpenChange={setShowImportWizard}
+        onComplete={handleImportComplete}
+        currentData={cvData}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
         <div className="flex items-center gap-2">
@@ -475,10 +493,16 @@ export const CVBuilder = () => {
             ) : null}
           </div>
           
+          {/* Import Button */}
+          <Button variant="outline" onClick={() => setShowImportWizard(true)} className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            {language === 'he' ? 'ייבוא חכם' : 'Smart Import'}
+          </Button>
+          
           {/* Export Button */}
           <Button onClick={handleExportClick} className="gap-2">
             <FileText className="w-4 h-4" />
-            {language === 'he' ? 'סיימתי - ייצא PDF' : 'Finish - Export PDF'}
+            {language === 'he' ? 'ייצא PDF' : 'Export PDF'}
           </Button>
         </div>
       </div>
