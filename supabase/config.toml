@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.bulk-import-jobs]
 verify_jwt = false
+
+[functions.job-crawler]
+verify_jwt = false
