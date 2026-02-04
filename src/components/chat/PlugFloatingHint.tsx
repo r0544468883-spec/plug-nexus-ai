@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, FileText, Search, BarChart3, Upload, Briefcase, PenLine } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Button } from '@/components/ui/button';
 
 interface QuickAction {
   icon: React.ReactNode;
@@ -24,11 +23,13 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   const isRTL = direction === 'rtl';
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const isForceShownRef = useRef(false);
 
   // Show hint after a short delay on page load
   useEffect(() => {
     // Reset dismissed state when context changes
     setIsDismissed(false);
+    isForceShownRef.current = false;
     
     const sessionKey = `plug-hint-shown-${contextPage}`;
     const alreadyShown = sessionStorage.getItem(sessionKey);
@@ -43,18 +44,22 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   }, [contextPage]);
 
   // Allow the parent to force-show the hint via a signal.
-  // This explicitly clears the session storage flag so it actually shows.
+  // This explicitly clears the session storage flag so it actually shows,
+  // and keeps it visible until the user closes it.
   useEffect(() => {
     if (!forceShowSignal) return;
     // Clear the session storage so the hint can show again
     sessionStorage.removeItem(`plug-hint-shown-${contextPage}`);
     setIsDismissed(false);
     setIsVisible(true);
+    isForceShownRef.current = true;
   }, [forceShowSignal, contextPage]);
 
   // Auto-hide after 10 seconds (extended for quick actions)
   useEffect(() => {
     if (isVisible && !isDismissed) {
+      // If opened via ✨, keep it open until the user closes it.
+      if (isForceShownRef.current) return;
       const timer = setTimeout(() => {
         setIsVisible(false);
       }, 10000);
@@ -164,12 +169,14 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
   };
 
   const handleClick = () => {
+    console.log('[PlugFloatingHint] open chat click', { contextPage, hasOnChatOpen: !!onChatOpen });
     onChatOpen?.();
     setIsVisible(false);
   };
 
   const handleQuickAction = (action: QuickAction) => {
     const message = isRTL ? action.messageHe : action.message;
+    console.log('[PlugFloatingHint] quick action', { contextPage, label: isRTL ? action.labelHe : action.label, hasOnChatOpen: !!onChatOpen, message });
     onChatOpen?.(message);
     setIsVisible(false);
   };
@@ -193,11 +200,12 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
             damping: 15,
             mass: 0.8,
           }}
-          className={`fixed bottom-24 ${isRTL ? 'left-4' : 'right-4'} z-50 max-w-xs`}
+          data-testid="plug-floating-hint"
+          className={`pointer-events-auto fixed bottom-24 ${isRTL ? 'left-4' : 'right-4'} z-[1000] max-w-xs`}
         >
           {/* Glow effect */}
           <motion.div
-            className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/40 via-accent/40 to-primary/40 blur-xl"
+            className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/40 via-accent/40 to-primary/40 blur-xl"
             animate={{
               opacity: [0.4, 0.8, 0.4],
               scale: [1, 1.05, 1],
@@ -210,7 +218,7 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
           />
           
           <motion.div 
-            className="relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4"
+            className="pointer-events-auto relative bg-card border border-primary/30 rounded-2xl shadow-xl p-4"
             initial={{ rotate: -2 }}
             animate={{ rotate: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
@@ -273,15 +281,14 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.5 + index * 0.1 }}
                     >
-                      <Button
-                        size="sm"
-                        variant="secondary"
+                      <button
+                        type="button"
                         onClick={() => handleQuickAction(qa)}
-                        className="gap-1.5 text-xs h-7 px-2 hover:scale-105 transition-transform"
+                        className="inline-flex items-center gap-1.5 text-xs h-7 px-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-105 transition-transform"
                       >
                         {qa.icon}
                         {isRTL ? qa.labelHe : qa.label}
-                      </Button>
+                      </button>
                     </motion.div>
                   ))}
                 </motion.div>
@@ -292,21 +299,20 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.6 }}
                 >
-                  <Button
-                    size="sm"
-                    variant="ghost"
+                  <button
+                    type="button"
                     onClick={handleClick}
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                   >
                     <Sparkles className="w-3 h-3" />
                     {isRTL ? 'או שאל אותי כל דבר...' : 'Or ask me anything...'}
-                  </Button>
+                  </button>
                 </motion.div>
               </div>
             </div>
 
             {/* Decorative tail */}
-            <div className={`absolute bottom-4 ${isRTL ? '-left-2' : '-right-2'} w-4 h-4 bg-card border-r border-b border-primary/30 transform rotate-45`} />
+            <div className={`pointer-events-none absolute bottom-4 ${isRTL ? '-left-2' : '-right-2'} w-4 h-4 bg-card border-r border-b border-primary/30 transform rotate-45`} />
           </motion.div>
         </motion.div>
       )}
