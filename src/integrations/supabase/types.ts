@@ -1242,6 +1242,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string | null
           id: string | null
+          ip_address: string | null
           new_values: Json | null
           old_values: Json | null
           user_id: string | null
@@ -1252,6 +1253,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string | null
           id?: string | null
+          ip_address?: never
           new_values?: Json | null
           old_values?: Json | null
           user_id?: string | null
@@ -1262,6 +1264,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string | null
           id?: string | null
+          ip_address?: never
           new_values?: Json | null
           old_values?: Json | null
           user_id?: string | null
