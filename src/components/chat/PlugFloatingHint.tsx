@@ -51,22 +51,18 @@ export const PlugFloatingHint = ({ contextPage = 'default', onChatOpen, forceSho
     }
   };
 
-  // Show hint after a short delay on page load
+  // Show hint after a short delay on page load - always show on each page visit
   useEffect(() => {
     // Reset dismissed state when context changes
     setIsDismissed(false);
     isForceShownRef.current = false;
+    setIsVisible(false); // Reset visibility first
     
-    const sessionKey = `plug-hint-shown-${contextPage}`;
-    const alreadyShown = safeSessionGet(sessionKey);
-    
-    if (!alreadyShown) {
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-        safeSessionSet(sessionKey, 'true');
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
+    // Always show hint after delay on each page/context change
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [contextPage]);
 
   // Allow the parent to force-show the hint via a signal.
