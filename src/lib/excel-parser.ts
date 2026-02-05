@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 
 // URL detection regex
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
@@ -21,33 +21,35 @@ export const parseFile = async (file: File): Promise<string[]> => {
 };
 
 /**
- * Parse Excel file (.xlsx, .xls)
+ * Parse Excel file (.xlsx, .xls) using read-excel-file (safe alternative to xlsx)
  */
 const parseExcelFile = async (file: File): Promise<string[]> => {
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data, { type: 'array' });
-  
   const urls: string[] = [];
   
-  // Process all sheets
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    
-    // Convert to array of arrays for easier processing
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { header: 1 });
+  try {
+    // read-excel-file returns rows as arrays of cell values
+    const rows = await readXlsxFile(file);
     
     for (const row of rows) {
-      if (!Array.isArray(row)) continue;
-      
       for (const cell of row) {
         if (typeof cell === 'string') {
           const matches = cell.match(URL_REGEX);
           if (matches) {
             urls.push(...matches);
           }
+        } else if (cell !== null && cell !== undefined) {
+          // Convert non-string values to string and check for URLs
+          const cellStr = String(cell);
+          const matches = cellStr.match(URL_REGEX);
+          if (matches) {
+            urls.push(...matches);
+          }
         }
       }
     }
+  } catch (error) {
+    console.error('Error parsing Excel file:', error);
+    throw new Error('Failed to parse Excel file. Please ensure the file is valid.');
   }
   
   return deduplicateUrls(urls);
