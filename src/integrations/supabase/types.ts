@@ -1097,6 +1097,30 @@ export type Database = {
           },
         ]
       }
+      promo_code_redemptions: {
+        Row: {
+          code: string
+          credits_awarded: number
+          id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          credits_awarded?: number
+          id?: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          credits_awarded?: number
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
