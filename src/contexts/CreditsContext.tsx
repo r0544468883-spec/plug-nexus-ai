@@ -3,6 +3,9 @@ import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from './LanguageContext';
+import { CREDIT_COSTS, CONFIRMATION_THRESHOLD } from '@/lib/credit-costs';
+import { CreditConfirmDialog } from '@/components/credits/CreditConfirmDialog';
+import { InsufficientFuelDialog } from '@/components/credits/InsufficientFuelDialog';
 
 interface UserCredits {
   id: string;
@@ -26,6 +29,12 @@ interface CreditTransaction {
   created_at: string;
 }
 
+interface PendingDeduction {
+  action: string;
+  cost: number;
+  resolve: (result: { success: boolean; error?: string }) => void;
+}
+
 interface CreditsContextType {
   credits: UserCredits | null;
   isLoading: boolean;
@@ -36,6 +45,7 @@ interface CreditsContextType {
   awardCredits: (action: string, taskId?: string, referralCode?: string) => Promise<{ success: boolean; awarded?: number; error?: string }>;
   canAfford: (amount: number) => boolean;
   markOnboarded: () => Promise<void>;
+  getCost: (action: keyof typeof CREDIT_COSTS) => number;
 }
 
 const CreditsContext = createContext<CreditsContextType | undefined>(undefined);
@@ -48,8 +58,18 @@ export const CreditsProvider = ({ children }: { children: ReactNode }) => {
   const [credits, setCredits] = useState<UserCredits | null>(null);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Confirmation dialog state
+  const [pendingDeduction, setPendingDeduction] = useState<PendingDeduction | null>(null);
+  
+  // Insufficient fuel dialog state
+  const [insufficientFuel, setInsufficientFuel] = useState<{ required: number; available: number } | null>(null);
 
   const totalCredits = (credits?.daily_fuel || 0) + (credits?.permanent_fuel || 0);
+
+  const getCost = useCallback((action: keyof typeof CREDIT_COSTS): number => {
+    return CREDIT_COSTS[action];
+  }, []);
 
   const refreshCredits = useCallback(async () => {
     if (!user) {
@@ -154,7 +174,8 @@ export const CreditsProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [user]);
 
-  const deductCredits = useCallback(async (action: string, customAmount?: number) => {
+  // Execute the actual deduction (called after confirmation or directly for small amounts)
+  const executeDeduction = useCallback(async (action: string, customAmount?: number): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Not authenticated' };
 
     try {
@@ -166,14 +187,11 @@ export const CreditsProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.error) {
         if (data.error === 'Insufficient credits') {
-          toast.error(
-            isRTL ? '❌ אין מספיק קרדיטים' : '❌ Insufficient credits',
-            {
-              description: isRTL 
-                ? `צריך ${data.required} קרדיטים, יש לך ${data.available}`
-                : `Need ${data.required} credits, you have ${data.available}`,
-            }
-          );
+          // Show insufficient fuel dialog
+          setInsufficientFuel({
+            required: data.required,
+            available: data.available,
+          });
         }
         return { success: false, error: data.error };
       }
@@ -192,7 +210,60 @@ export const CreditsProvider = ({ children }: { children: ReactNode }) => {
       console.error('[CreditsContext] Deduct error:', error);
       return { success: false, error: error.message };
     }
-  }, [user, isRTL, refreshCredits]);
+  }, [user, refreshCredits]);
+
+  // Main deduction function - shows confirmation for costs > threshold
+  const deductCredits = useCallback(async (action: string, customAmount?: number): Promise<{ success: boolean; error?: string }> => {
+    if (!user || !credits) return { success: false, error: 'Not authenticated' };
+
+    // Determine the cost
+    const actionKey = action.toUpperCase() as keyof typeof CREDIT_COSTS;
+    const cost = customAmount || CREDIT_COSTS[actionKey] || 0;
+
+    // Check if user can afford it first
+    if (totalCredits < cost) {
+      setInsufficientFuel({
+        required: cost,
+        available: totalCredits,
+      });
+      return { success: false, error: 'Insufficient credits' };
+    }
+
+    // If cost exceeds threshold, show confirmation dialog
+    if (cost > CONFIRMATION_THRESHOLD) {
+      return new Promise((resolve) => {
+        setPendingDeduction({
+          action,
+          cost,
+          resolve: async (result) => {
+            if (result.success) {
+              const deductResult = await executeDeduction(action, customAmount);
+              resolve(deductResult);
+            } else {
+              resolve(result);
+            }
+          },
+        });
+      });
+    }
+
+    // For small costs, deduct directly
+    return executeDeduction(action, customAmount);
+  }, [user, credits, totalCredits, executeDeduction]);
+
+  const handleConfirmDeduction = useCallback(() => {
+    if (pendingDeduction) {
+      pendingDeduction.resolve({ success: true });
+      setPendingDeduction(null);
+    }
+  }, [pendingDeduction]);
+
+  const handleCancelDeduction = useCallback(() => {
+    if (pendingDeduction) {
+      pendingDeduction.resolve({ success: false, error: 'Cancelled by user' });
+      setPendingDeduction(null);
+    }
+  }, [pendingDeduction]);
 
   const awardCredits = useCallback(async (action: string, taskId?: string, referralCode?: string) => {
     if (!user) return { success: false, error: 'Not authenticated' };
@@ -278,8 +349,30 @@ export const CreditsProvider = ({ children }: { children: ReactNode }) => {
       awardCredits,
       canAfford,
       markOnboarded,
+      getCost,
     }}>
       {children}
+      
+      {/* Confirmation Dialog */}
+      {pendingDeduction && credits && (
+        <CreditConfirmDialog
+          open={!!pendingDeduction}
+          action={pendingDeduction.action}
+          cost={pendingDeduction.cost}
+          dailyFuel={credits.daily_fuel}
+          permanentFuel={credits.permanent_fuel}
+          onConfirm={handleConfirmDeduction}
+          onCancel={handleCancelDeduction}
+        />
+      )}
+      
+      {/* Insufficient Fuel Dialog */}
+      <InsufficientFuelDialog
+        open={!!insufficientFuel}
+        required={insufficientFuel?.required || 0}
+        available={insufficientFuel?.available || 0}
+        onClose={() => setInsufficientFuel(null)}
+      />
     </CreditsContext.Provider>
   );
 };

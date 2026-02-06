@@ -1,13 +1,28 @@
 // Credit costs for various actions
 export const CREDIT_COSTS = {
   CV_BUILDER: 10,
-  INTERVIEW_PREP: 5,
   RESUME_MATCH: 3,
+  AI_INTERVIEW: 5,
+  HOME_TASK_REVIEW: 10,
+  SMART_SEARCH: 2,
   PING_AFTER_FREE: 15,
+} as const;
+
+// Action names mapped for display
+export const CREDIT_ACTION_LABELS = {
+  cv_builder: { en: 'CV Builder', he: 'בונה קורות חיים' },
+  resume_match: { en: 'Resume Match', he: 'התאמת קו"ח' },
+  ai_interview: { en: 'AI Interview Prep', he: 'הכנה לראיון AI' },
+  home_task_review: { en: 'Home Task Review', he: 'בדיקת משימת בית' },
+  smart_search: { en: 'Smart Search', he: 'חיפוש חכם' },
+  ping: { en: 'Internal Ping', he: 'פינג פנימי' },
 } as const;
 
 // Free pings per day before credits are charged
 export const FREE_PINGS_PER_DAY = 4;
+
+// Threshold for showing confirmation dialog (credits)
+export const CONFIRMATION_THRESHOLD = 5;
 
 // Social task rewards (one-time)
 export const SOCIAL_TASK_REWARDS: Record<string, { credits: number; label: string; labelHe: string; url: string; icon: string }> = {

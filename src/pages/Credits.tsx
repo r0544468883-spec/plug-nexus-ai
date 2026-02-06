@@ -455,12 +455,20 @@ const Credits = () => {
                   <span className="font-bold text-destructive">-{CREDIT_COSTS.CV_BUILDER}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                  <span>{isRTL ? 'הכנה לראיון' : 'Interview Prep'}</span>
-                  <span className="font-bold text-destructive">-{CREDIT_COSTS.INTERVIEW_PREP}</span>
+                  <span>{isRTL ? 'הכנה לראיון AI' : 'AI Interview Prep'}</span>
+                  <span className="font-bold text-destructive">-{CREDIT_COSTS.AI_INTERVIEW}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <span>{isRTL ? 'התאמת קו"ח' : 'Resume Match'}</span>
                   <span className="font-bold text-destructive">-{CREDIT_COSTS.RESUME_MATCH}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <span>{isRTL ? 'בדיקת משימת בית' : 'Home Task Review'}</span>
+                  <span className="font-bold text-destructive">-{CREDIT_COSTS.HOME_TASK_REVIEW}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <span>{isRTL ? 'חיפוש חכם' : 'Smart Search'}</span>
+                  <span className="font-bold text-destructive">-{CREDIT_COSTS.SMART_SEARCH}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div>

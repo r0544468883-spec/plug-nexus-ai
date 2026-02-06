@@ -9,8 +9,10 @@ const corsHeaders = {
 // Credit costs for different actions
 const CREDIT_COSTS: Record<string, number> = {
   'cv_builder': 10,
-  'interview_prep': 5,
   'resume_match': 3,
+  'ai_interview': 5,
+  'home_task_review': 10,
+  'smart_search': 2,
   'ping': 15, // Only charged after 4 free pings
 };
 
