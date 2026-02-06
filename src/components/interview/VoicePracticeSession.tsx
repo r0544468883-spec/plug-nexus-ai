@@ -73,6 +73,7 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
     const recognition = new SpeechRecognitionClass();
     recognition.continuous = true;
     recognition.interimResults = true;
+    // Support both Hebrew and English speech recognition
     recognition.lang = isRTL ? 'he-IL' : 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -117,6 +118,14 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
 
     return recognition;
   }, [isRTL, isListening]);
+
+  // Reinitialize speech recognition when language changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+  }, [isRTL]);
 
   const handleStartRecording = async () => {
     try {

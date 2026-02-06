@@ -16,7 +16,8 @@ import {
   Lightbulb,
   ArrowRight,
   ArrowLeft,
-  Download
+  Download,
+  Volume2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -44,12 +45,76 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
   const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [isListening, setIsListening] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackVideoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Speech recognition for Hebrew/English
+  const getSpeechRecognition = () => {
+    if (typeof window === 'undefined') return null;
+    return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  };
+
+  const initRecognition = useCallback(() => {
+    const SpeechRecognitionClass = getSpeechRecognition();
+    if (!SpeechRecognitionClass) return null;
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    // Support both Hebrew and English speech recognition
+    recognition.lang = isRTL ? 'he-IL' : 'en-US';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let finalTranscript = '';
+      let interim = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        setTranscript(prev => prev + ' ' + finalTranscript);
+      }
+      setInterimTranscript(interim);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('Speech recognition error:', event.error);
+    };
+
+    recognition.onend = () => {
+      if (isListening && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          console.log('Recognition restart failed:', e);
+        }
+      }
+    };
+
+    return recognition;
+  }, [isRTL, isListening]);
+
+  // Reinitialize speech recognition when language changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+  }, [isRTL]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -135,6 +200,17 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
       recorder.start(1000);
       setIsRecording(true);
 
+      // Start speech recognition for transcription
+      if (!recognitionRef.current) {
+        recognitionRef.current = initRecognition();
+      }
+      if (recognitionRef.current) {
+        setTranscript('');
+        setInterimTranscript('');
+        setIsListening(true);
+        recognitionRef.current.start();
+      }
+
       toast.success(isRTL ? 'ההקלטה החלה!' : 'Recording started!');
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -143,6 +219,12 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
   };
 
   const handleStopRecording = () => {
+    // Stop speech recognition
+    if (recognitionRef.current) {
+      setIsListening(false);
+      recognitionRef.current.stop();
+    }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
@@ -175,6 +257,8 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
 
   const handleReset = () => {
     setRecordedVideo(null);
+    setTranscript('');
+    setInterimTranscript('');
     if (playbackVideoRef.current) {
       playbackVideoRef.current.src = '';
     }
@@ -200,6 +284,9 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
@@ -319,6 +406,33 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
           </div>
         </CardContent>
       </Card>
+
+      {/* Transcript Display */}
+      {(transcript || interimTranscript || isRecording) && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-sm font-medium mb-2">
+              <Volume2 className="w-4 h-4 text-primary" />
+              {isRTL ? 'תמלול' : 'Transcript'}
+              {isRecording && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                  {isRTL ? 'מקליט...' : 'Recording...'}
+                </span>
+              )}
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 min-h-[60px] max-h-[150px] overflow-y-auto">
+              <p className="text-sm leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
+                {transcript + (interimTranscript ? ' ' + interimTranscript : '') || (
+                  <span className="text-muted-foreground italic">
+                    {isRTL ? 'התחל לדבר...' : 'Start speaking...'}
+                  </span>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Control Buttons */}
       <div className="flex flex-wrap items-center justify-center gap-3">
