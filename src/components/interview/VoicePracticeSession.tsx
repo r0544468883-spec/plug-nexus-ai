@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Lightbulb,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Languages,
+  VolumeX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -47,12 +49,15 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
   const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [recognitionLang, setRecognitionLang] = useState<'he' | 'en'>(isRTL ? 'he' : 'en');
 
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -73,8 +78,8 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
     const recognition = new SpeechRecognitionClass();
     recognition.continuous = true;
     recognition.interimResults = true;
-    // Support both Hebrew and English speech recognition
-    recognition.lang = isRTL ? 'he-IL' : 'en-US';
+    // Use the manually selected recognition language
+    recognition.lang = recognitionLang === 'he' ? 'he-IL' : 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
@@ -117,15 +122,57 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
     };
 
     return recognition;
-  }, [isRTL, isListening]);
+  }, [recognitionLang, isListening, isRTL]);
 
-  // Reinitialize speech recognition when language changes
+  // Reinitialize speech recognition when recognition language changes
   useEffect(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
-  }, [isRTL]);
+  }, [recognitionLang]);
+
+  // Text-to-Speech: Read question aloud
+  const speakQuestion = useCallback(() => {
+    if (!currentQuestion || isSpeaking) return;
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(currentQuestion.question);
+    utterance.lang = isRTL ? 'he-IL' : 'en-US';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+
+    // Try to find a voice for the language
+    const voices = window.speechSynthesis.getVoices();
+    const langCode = isRTL ? 'he' : 'en';
+    const voice = voices.find(v => v.lang.startsWith(langCode));
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error(isRTL ? 'שגיאה בהקראה' : 'Speech error');
+    };
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }, [currentQuestion, isRTL, isSpeaking]);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  const toggleRecognitionLang = () => {
+    const newLang = recognitionLang === 'he' ? 'en' : 'he';
+    setRecognitionLang(newLang);
+    toast.info(newLang === 'he' ? 'שפת זיהוי: עברית 🇮🇱' : 'Recognition: English 🇬🇧');
+  };
 
   const handleStartRecording = async () => {
     try {
@@ -313,11 +360,32 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
       {/* Current Question */}
       <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
         <CardContent className="p-6">
-          <Badge variant="outline" className="mb-4">
-            {currentQuestion?.category === 'behavioral' && (isRTL ? 'התנהגותי' : 'Behavioral')}
-            {currentQuestion?.category === 'technical' && (isRTL ? 'טכני' : 'Technical')}
-            {currentQuestion?.category === 'situational' && (isRTL ? 'סיטואציוני' : 'Situational')}
-          </Badge>
+          <div className="flex items-center justify-between mb-4">
+            <Badge variant="outline">
+              {currentQuestion?.category === 'behavioral' && (isRTL ? 'התנהגותי' : 'Behavioral')}
+              {currentQuestion?.category === 'technical' && (isRTL ? 'טכני' : 'Technical')}
+              {currentQuestion?.category === 'situational' && (isRTL ? 'סיטואציוני' : 'Situational')}
+            </Badge>
+            {/* Read aloud button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={isSpeaking ? stopSpeaking : speakQuestion}
+              className="gap-2"
+            >
+              {isSpeaking ? (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  {isRTL ? 'עצור' : 'Stop'}
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  {isRTL ? 'הקרא בקול' : 'Read Aloud'}
+                </>
+              )}
+            </Button>
+          </div>
           <h2 className="text-xl font-semibold mb-4">{currentQuestion?.question}</h2>
           {currentQuestion?.tip && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20">
@@ -357,8 +425,22 @@ export function VoicePracticeSession({ questions, onComplete, onBack }: VoicePra
             </p>
           </div>
 
+          {/* Language Toggle for Recognition */}
+          <div className="flex items-center justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleRecognitionLang}
+              disabled={isRecording}
+              className="gap-2"
+            >
+              <Languages className="w-4 h-4" />
+              {recognitionLang === 'he' ? '🇮🇱 עברית' : '🇬🇧 English'}
+            </Button>
+          </div>
+
           {/* Control Buttons */}
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {!isRecording ? (
               <Button
                 size="lg"

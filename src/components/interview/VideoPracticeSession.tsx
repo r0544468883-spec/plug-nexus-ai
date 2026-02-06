@@ -17,7 +17,9 @@ import {
   ArrowRight,
   ArrowLeft,
   Download,
-  Volume2
+  Volume2,
+  VolumeX,
+  Languages
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -48,6 +50,8 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [recognitionLang, setRecognitionLang] = useState<'he' | 'en'>(isRTL ? 'he' : 'en');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackVideoRef = useRef<HTMLVideoElement>(null);
@@ -55,6 +59,7 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
   const videoChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Speech recognition for Hebrew/English
   const getSpeechRecognition = () => {
@@ -69,8 +74,8 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
     const recognition = new SpeechRecognitionClass();
     recognition.continuous = true;
     recognition.interimResults = true;
-    // Support both Hebrew and English speech recognition
-    recognition.lang = isRTL ? 'he-IL' : 'en-US';
+    // Use manually selected recognition language
+    recognition.lang = recognitionLang === 'he' ? 'he-IL' : 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = '';
@@ -106,18 +111,58 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
     };
 
     return recognition;
-  }, [isRTL, isListening]);
+  }, [recognitionLang, isListening]);
 
-  // Reinitialize speech recognition when language changes
+  // Reinitialize speech recognition when recognition language changes
   useEffect(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
-  }, [isRTL]);
+  }, [recognitionLang]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
+  // Text-to-Speech: Read question aloud
+  const speakQuestion = useCallback(() => {
+    if (!currentQuestion || isSpeaking) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(currentQuestion.question);
+    utterance.lang = isRTL ? 'he-IL' : 'en-US';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const langCode = isRTL ? 'he' : 'en';
+    const voice = voices.find(v => v.lang.startsWith(langCode));
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error(isRTL ? 'שגיאה בהקראה' : 'Speech error');
+    };
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }, [currentQuestion, isRTL, isSpeaking]);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  const toggleRecognitionLang = () => {
+    const newLang = recognitionLang === 'he' ? 'en' : 'he';
+    setRecognitionLang(newLang);
+    toast.info(newLang === 'he' ? 'שפת זיהוי: עברית 🇮🇱' : 'Recognition: English 🇬🇧');
+  };
 
   const startCamera = useCallback(async () => {
     setIsInitializing(true);
@@ -326,11 +371,32 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
       {/* Current Question */}
       <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
         <CardContent className="p-6">
-          <Badge variant="outline" className="mb-4">
-            {currentQuestion?.category === 'behavioral' && (isRTL ? 'התנהגותי' : 'Behavioral')}
-            {currentQuestion?.category === 'technical' && (isRTL ? 'טכני' : 'Technical')}
-            {currentQuestion?.category === 'situational' && (isRTL ? 'סיטואציוני' : 'Situational')}
-          </Badge>
+          <div className="flex items-center justify-between mb-4">
+            <Badge variant="outline">
+              {currentQuestion?.category === 'behavioral' && (isRTL ? 'התנהגותי' : 'Behavioral')}
+              {currentQuestion?.category === 'technical' && (isRTL ? 'טכני' : 'Technical')}
+              {currentQuestion?.category === 'situational' && (isRTL ? 'סיטואציוני' : 'Situational')}
+            </Badge>
+            {/* Read aloud button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={isSpeaking ? stopSpeaking : speakQuestion}
+              className="gap-2"
+            >
+              {isSpeaking ? (
+                <>
+                  <VolumeX className="w-4 h-4" />
+                  {isRTL ? 'עצור' : 'Stop'}
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-4 h-4" />
+                  {isRTL ? 'הקרא בקול' : 'Read Aloud'}
+                </>
+              )}
+            </Button>
+          </div>
           <h2 className="text-xl font-semibold mb-4">{currentQuestion?.question}</h2>
           {currentQuestion?.tip && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20">
@@ -411,18 +477,31 @@ export function VideoPracticeSession({ questions, onComplete, onBack }: VideoPra
       {(transcript || interimTranscript || isRecording) && (
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-sm font-medium mb-2">
-              <Volume2 className="w-4 h-4 text-primary" />
-              {isRTL ? 'תמלול' : 'Transcript'}
-              {isRecording && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-                  {isRTL ? 'מקליט...' : 'Recording...'}
-                </span>
-              )}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Volume2 className="w-4 h-4 text-primary" />
+                {isRTL ? 'תמלול' : 'Transcript'}
+                {isRecording && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                    {isRTL ? 'מקליט...' : 'Recording...'}
+                  </span>
+                )}
+              </div>
+              {/* Language Toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleRecognitionLang}
+                disabled={isRecording}
+                className="gap-2"
+              >
+                <Languages className="w-4 h-4" />
+                {recognitionLang === 'he' ? '🇮🇱' : '🇬🇧'}
+              </Button>
             </div>
             <div className="p-3 rounded-lg bg-muted/50 min-h-[60px] max-h-[150px] overflow-y-auto">
-              <p className="text-sm leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
+              <p className="text-sm leading-relaxed" dir={recognitionLang === 'he' ? 'rtl' : 'ltr'}>
                 {transcript + (interimTranscript ? ' ' + interimTranscript : '') || (
                   <span className="text-muted-foreground italic">
                     {isRTL ? 'התחל לדבר...' : 'Start speaking...'}
