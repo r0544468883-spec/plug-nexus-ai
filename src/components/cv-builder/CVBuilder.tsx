@@ -18,6 +18,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { getTemplateById } from './templates';
+import { CreditCostBanner } from '@/components/credits/CreditCostBadge';
 
 interface ResumeSummary {
   skills?: {
@@ -562,6 +563,16 @@ export const CVBuilder = () => {
         html={generatedHtml}
         css={generatedCss}
       />
+
+      {/* Credit Cost Banner */}
+      <div className="px-4 pt-2">
+        <CreditCostBanner 
+          action="CV_BUILDER"
+          description={language === 'he' 
+            ? 'בניית קורות חיים מקצועיים עם AI'
+            : 'Build professional CVs with AI assistance'}
+        />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
