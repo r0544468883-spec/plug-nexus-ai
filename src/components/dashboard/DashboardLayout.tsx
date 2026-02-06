@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GiveVouchDialog } from '@/components/vouch/GiveVouchDialog';
 import { MessageBadge } from '@/components/messaging/MessageBadge';
+import { CreditHUD } from '@/components/credits/CreditHUD';
 import { NavTooltip } from '@/components/ui/nav-tooltip';
 import { VisibleToHRBanner } from '@/components/sidebar/VisibleToHRBanner';
 import { PlugFloatingHint } from '@/components/chat/PlugFloatingHint';
@@ -230,6 +231,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
           <div className="flex-1 lg:flex-initial" />
           
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Credit HUD */}
+            <CreditHUD />
+            
             {/* Realtime Message Badge */}
             <NavTooltip content={direction === 'rtl' ? 'תיבת הודעות - צפה בשיחות ושלח הודעות' : 'Inbox - View conversations and send messages'} side="bottom">
               <span>

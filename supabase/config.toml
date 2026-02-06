@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.cv-generate-design]
 verify_jwt = false
+
+[functions.deduct-credits]
+verify_jwt = false
+
+[functions.award-credits]
+verify_jwt = false
