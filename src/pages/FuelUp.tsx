@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
 import { FuelCard } from '@/components/credits/FuelCard';
+import { PromoCodeInput } from '@/components/credits/PromoCodeInput';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { SOCIAL_TASK_REWARDS, TOTAL_SOCIAL_CREDITS } from '@/lib/credit-costs';
@@ -135,7 +136,15 @@ const FuelUp = () => {
           )}
         </motion.div>
 
-        {/* High Value Tasks */}
+        {/* Promo Code Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="max-w-md mx-auto mb-12"
+        >
+          <PromoCodeInput />
+        </motion.div>
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
