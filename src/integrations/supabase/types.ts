@@ -372,6 +372,63 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_transactions: {
+        Row: {
+          action_type: string
+          amount: number
+          created_at: string
+          credit_type: string
+          description: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          amount: number
+          created_at?: string
+          credit_type: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          amount?: number
+          created_at?: string
+          credit_type?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_action_counts: {
+        Row: {
+          action_date: string
+          community_shares: number
+          created_at: string
+          id: string
+          job_shares: number
+          user_id: string
+        }
+        Insert: {
+          action_date?: string
+          community_shares?: number
+          created_at?: string
+          id?: string
+          job_shares?: number
+          user_id: string
+        }
+        Update: {
+          action_date?: string
+          community_shares?: number
+          created_at?: string
+          id?: string
+          job_shares?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           ai_summary: Json | null
@@ -1097,6 +1154,33 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          referred_credits_awarded: boolean
+          referred_id: string
+          referrer_credits_awarded: boolean
+          referrer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referred_credits_awarded?: boolean
+          referred_id: string
+          referrer_credits_awarded?: boolean
+          referrer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referred_credits_awarded?: boolean
+          referred_id?: string
+          referrer_credits_awarded?: boolean
+          referrer_id?: string
+        }
+        Relationships: []
+      }
       saved_jobs: {
         Row: {
           created_at: string | null
@@ -1125,6 +1209,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      social_task_completions: {
+        Row: {
+          completed_at: string
+          credits_awarded: number
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          credits_awarded?: number
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          credits_awarded?: number
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_credits: {
+        Row: {
+          created_at: string
+          daily_fuel: number
+          id: string
+          is_onboarded: boolean
+          last_refill_date: string
+          last_vouch_reset_month: string
+          permanent_fuel: number
+          pings_today: number
+          referral_code: string | null
+          updated_at: string
+          user_id: string
+          vouches_given_this_month: number
+          vouches_received_this_month: number
+        }
+        Insert: {
+          created_at?: string
+          daily_fuel?: number
+          id?: string
+          is_onboarded?: boolean
+          last_refill_date?: string
+          last_vouch_reset_month?: string
+          permanent_fuel?: number
+          pings_today?: number
+          referral_code?: string | null
+          updated_at?: string
+          user_id: string
+          vouches_given_this_month?: number
+          vouches_received_this_month?: number
+        }
+        Update: {
+          created_at?: string
+          daily_fuel?: number
+          id?: string
+          is_onboarded?: boolean
+          last_refill_date?: string
+          last_vouch_reset_month?: string
+          permanent_fuel?: number
+          pings_today?: number
+          referral_code?: string | null
+          updated_at?: string
+          user_id?: string
+          vouches_given_this_month?: number
+          vouches_received_this_month?: number
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -1447,7 +1603,9 @@ export type Database = {
         }
         Returns: string
       }
+      generate_referral_code: { Args: never; Returns: string }
       get_active_company_id: { Args: never; Returns: string }
+      get_total_credits: { Args: { p_user_id: string }; Returns: number }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

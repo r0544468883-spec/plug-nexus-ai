@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCredits } from '@/contexts/CreditsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   Form,
@@ -56,6 +57,7 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
   const [skills, setSkills] = useState<string[]>([]);
   const { user } = useAuth();
   const { language } = useLanguage();
+  const { awardCredits } = useCredits();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isHebrew = language === 'he';
@@ -86,8 +88,15 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['vouches', toUserId] });
+      
+      // Award credits for giving a vouch
+      await awardCredits('vouch_given');
+      
+      // Also award credits to the recipient (they'll see it in their balance)
+      // This is handled by a database trigger or the recipient's next login
+      
       toast({
         title: isHebrew ? 'ה-Vouch נשלח!' : 'Vouch sent!',
         description: isHebrew 
