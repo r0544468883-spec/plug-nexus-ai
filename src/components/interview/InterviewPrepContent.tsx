@@ -4,6 +4,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCredits } from '@/contexts/CreditsContext';
 import { CreditCostBanner } from '@/components/credits/CreditCostBadge';
+import { VoicePracticeSession } from './VoicePracticeSession';
+import { VideoPracticeSession } from './VideoPracticeSession';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,6 +41,8 @@ interface InterviewQuestion {
   tip?: string;
 }
 
+type PracticeMode = 'none' | 'text' | 'voice' | 'video';
+
 export function InterviewPrepContent() {
   const { language } = useLanguage();
   const { user } = useAuth();
@@ -53,6 +57,7 @@ export function InterviewPrepContent() {
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>('none');
 
   const cost = getCost('AI_INTERVIEW');
 
@@ -112,6 +117,39 @@ export function InterviewPrepContent() {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
+
+  const handleBackToModeSelection = () => {
+    setPracticeMode('none');
+  };
+
+  const handlePracticeComplete = () => {
+    toast.success(isRTL ? 'כל הכבוד! סיימת את האימון' : 'Great job! You completed the practice');
+    setSessionStarted(false);
+    setPracticeMode('none');
+    setQuestions([]);
+    setCurrentQuestionIndex(0);
+  };
+
+  // Render active practice session
+  if (sessionStarted && practiceMode === 'voice') {
+    return (
+      <VoicePracticeSession 
+        questions={questions} 
+        onComplete={handlePracticeComplete}
+        onBack={handleBackToModeSelection}
+      />
+    );
+  }
+
+  if (sessionStarted && practiceMode === 'video') {
+    return (
+      <VideoPracticeSession 
+        questions={questions} 
+        onComplete={handlePracticeComplete}
+        onBack={handleBackToModeSelection}
+      />
+    );
+  }
 
   const renderPracticeTab = () => (
     <div className="space-y-6">
@@ -186,9 +224,9 @@ export function InterviewPrepContent() {
             </CardContent>
           </Card>
 
-          {/* Practice Modes */}
+          {/* Practice Modes - Info cards only (selection happens after questions are generated) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-card/50 border-border hover:border-primary/50 transition-colors cursor-pointer">
+            <Card className="bg-card/50 border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
                   <MessageSquare className="w-6 h-6 text-primary" />
@@ -202,35 +240,103 @@ export function InterviewPrepContent() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-border opacity-60">
+            <Card className="bg-card/50 border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                  <Mic className="w-6 h-6 text-muted-foreground" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Mic className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold mb-1">
                   {isRTL ? 'אימון קולי' : 'Voice Practice'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'בקרוב!' : 'Coming soon!'}
+                  {isRTL ? 'דבר בקול ותמלל את התשובות' : 'Speak and transcribe your answers'}
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-border opacity-60">
+            <Card className="bg-card/50 border-border hover:border-primary/50 transition-colors">
               <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                  <Video className="w-6 h-6 text-muted-foreground" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Video className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="font-semibold mb-1">
                   {isRTL ? 'אימון וידאו' : 'Video Practice'}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'בקרוב!' : 'Coming soon!'}
+                  {isRTL ? 'הקלט את עצמך מול המצלמה' : 'Record yourself on camera'}
                 </p>
               </CardContent>
             </Card>
           </div>
         </>
+      ) : practiceMode === 'none' ? (
+        /* Mode Selection after questions generated */
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+            <CardContent className="p-6 text-center">
+              <Sparkles className="w-10 h-10 text-primary mx-auto mb-3" />
+              <h3 className="font-semibold text-lg mb-2">
+                {isRTL ? `${questions.length} שאלות מוכנות!` : `${questions.length} questions ready!`}
+              </h3>
+              <p className="text-muted-foreground">
+                {isRTL ? 'בחר את סגנון האימון שלך' : 'Choose your practice style'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card 
+              className="bg-card/50 border-border hover:border-primary/50 transition-all cursor-pointer hover:scale-105"
+              onClick={() => setPracticeMode('text')}
+            >
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <MessageSquare className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">
+                  {isRTL ? 'אימון טקסט' : 'Text Practice'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'ענה על שאלות בכתב' : 'Answer questions in writing'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="bg-card/50 border-border hover:border-primary/50 transition-all cursor-pointer hover:scale-105"
+              onClick={() => setPracticeMode('voice')}
+            >
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Mic className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">
+                  {isRTL ? 'אימון קולי' : 'Voice Practice'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'דבר בקול ותמלל את התשובות' : 'Speak and transcribe your answers'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="bg-card/50 border-border hover:border-primary/50 transition-all cursor-pointer hover:scale-105"
+              onClick={() => setPracticeMode('video')}
+            >
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <Video className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-semibold mb-1">
+                  {isRTL ? 'אימון וידאו' : 'Video Practice'}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'הקלט את עצמך מול המצלמה' : 'Record yourself on camera'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       ) : (
         /* Interview Session */
         <AnimatePresence mode="wait">
