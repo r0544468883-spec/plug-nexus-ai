@@ -25,6 +25,7 @@ import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
+import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -213,7 +214,7 @@ export default function Dashboard() {
           { 
             title: isRTL ? 'הכנה לראיון' : 'Interview Prep', 
             icon: Mic,
-            onClick: () => window.location.href = '/interview-prep',
+            onClick: () => setCurrentSection('interview-prep'),
           },
           { 
             title: t('actions.uploadCV') || 'Upload CV', 
@@ -508,6 +509,8 @@ export default function Dashboard() {
         return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
       case 'cv-builder':
         return <CVBuilder />;
+      case 'interview-prep':
+        return <InterviewPrepContent />;
       default:
         return renderOverviewContent();
     }
