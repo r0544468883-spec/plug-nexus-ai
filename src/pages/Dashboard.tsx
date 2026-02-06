@@ -29,7 +29,7 @@ import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -209,6 +209,11 @@ export default function Dashboard() {
             title: isRTL ? 'בניית קו״ח' : 'CV Builder', 
             icon: FileEdit,
             onClick: () => setCurrentSection('cv-builder'),
+          },
+          { 
+            title: isRTL ? 'הכנה לראיון' : 'Interview Prep', 
+            icon: Mic,
+            onClick: () => window.location.href = '/interview-prep',
           },
           { 
             title: t('actions.uploadCV') || 'Upload CV', 
