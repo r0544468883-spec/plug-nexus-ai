@@ -26,14 +26,23 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Heart, X, Loader2 } from 'lucide-react';
+import { Heart, Loader2 } from 'lucide-react';
+import { SkillSearch } from './SkillSearch';
+
+interface MasterSkill {
+  id: string;
+  name_en: string;
+  name_he: string;
+  category_en: string;
+  category_he: string;
+  skill_type: 'hard' | 'soft';
+  is_custom: boolean;
+}
 
 const vouchSchema = z.object({
   vouch_type: z.enum(['colleague', 'manager', 'recruiter', 'friend', 'mentor']),
   relationship: z.string().optional(),
   message: z.string().min(10, 'Message must be at least 10 characters'),
-  skills: z.array(z.string()).optional(),
 });
 
 type VouchFormData = z.infer<typeof vouchSchema>;
@@ -53,8 +62,7 @@ const vouchTypeOptions = [
 ];
 
 export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormContentProps) {
-  const [skillInput, setSkillInput] = useState('');
-  const [skills, setSkills] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<MasterSkill[]>([]);
   const { user } = useAuth();
   const { language } = useLanguage();
   const { awardCredits } = useCredits();
@@ -68,7 +76,6 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
       vouch_type: 'colleague',
       relationship: '',
       message: '',
-      skills: [],
     },
   });
 
@@ -76,26 +83,36 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
     mutationFn: async (data: VouchFormData) => {
       if (!user) throw new Error('Not authenticated');
       
+      // Calculate weight based on giver's status
+      const skillIds = selectedSkills.map(s => s.id);
+      const { data: weightData } = await supabase
+        .rpc('calculate_vouch_weight', { 
+          giver_id: user.id, 
+          skill_ids: skillIds 
+        });
+      
+      const weight = weightData || 1;
+      
       const { error } = await supabase.from('vouches').insert({
         from_user_id: user.id,
         to_user_id: toUserId,
         vouch_type: data.vouch_type,
         relationship: data.relationship || null,
         message: data.message,
-        skills: skills.length > 0 ? skills : null,
+        skill_ids: skillIds.length > 0 ? skillIds : null,
+        skills: selectedSkills.map(s => isHebrew ? s.name_he : s.name_en),
         is_public: true,
+        weight: weight,
       });
 
       if (error) throw error;
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['vouches', toUserId] });
+      queryClient.invalidateQueries({ queryKey: ['vouches-with-skills', toUserId] });
       
       // Award credits for giving a vouch
       await awardCredits('vouch_given');
-      
-      // Also award credits to the recipient (they'll see it in their balance)
-      // This is handled by a database trigger or the recipient's next login
       
       toast({
         title: isHebrew ? 'ה-Vouch נשלח!' : 'Vouch sent!',
@@ -104,7 +121,7 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
           : `Thank you for vouching for ${toUserName}`,
       });
       form.reset();
-      setSkills([]);
+      setSelectedSkills([]);
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -115,17 +132,6 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
       });
     },
   });
-
-  const handleAddSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills([...skills, skillInput.trim()]);
-      setSkillInput('');
-    }
-  };
-
-  const handleRemoveSkill = (skill: string) => {
-    setSkills(skills.filter((s) => s !== skill));
-  };
 
   const onSubmit = (data: VouchFormData) => {
     createVouchMutation.mutate(data);
@@ -176,6 +182,16 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
           )}
         />
 
+        {/* Skills Section */}
+        <div className="space-y-2">
+          <FormLabel>{isHebrew ? 'מיומנויות להמלצה' : 'Skills to Endorse'}</FormLabel>
+          <SkillSearch
+            selectedSkills={selectedSkills}
+            onSkillsChange={setSelectedSkills}
+            maxSkills={10}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="message"
@@ -196,41 +212,6 @@ export function VouchFormContent({ toUserId, toUserName, onSuccess }: VouchFormC
             </FormItem>
           )}
         />
-
-        <div>
-          <FormLabel>{isHebrew ? 'מיומנויות' : 'Skills'}</FormLabel>
-          <div className="flex gap-2 mt-1">
-            <Input
-              value={skillInput}
-              onChange={(e) => setSkillInput(e.target.value)}
-              placeholder={isHebrew ? 'הוסף מיומנות' : 'Add a skill'}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddSkill();
-                }
-              }}
-            />
-            <Button type="button" variant="secondary" onClick={handleAddSkill}>
-              +
-            </Button>
-          </div>
-          {skills.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {skills.map((skill) => (
-                <Badge 
-                  key={skill} 
-                  variant="secondary" 
-                  className="gap-1 cursor-pointer"
-                  onClick={() => handleRemoveSkill(skill)}
-                >
-                  {skill}
-                  <X className="h-3 w-3" />
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
 
         <Button 
           type="submit" 
