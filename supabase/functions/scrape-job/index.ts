@@ -704,7 +704,7 @@ The content may be in Hebrew - extract all information even if in Hebrew charact
   } catch (error) {
     console.error('scrape-job error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Failed to process job posting. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

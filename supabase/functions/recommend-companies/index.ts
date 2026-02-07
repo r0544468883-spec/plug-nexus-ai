@@ -149,11 +149,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: 'Failed to fetch company recommendations. Please try again.' 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error instanceof Error && error.message === 'Unauthorized' ? 401 : 500,
+        status: 500,
       }
     );
   }
