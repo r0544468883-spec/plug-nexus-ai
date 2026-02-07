@@ -258,9 +258,8 @@ ${recruiterProfile?.full_name || 'הצוות שלנו'}`;
 
   } catch (error: unknown) {
     console.error('Error in import-candidate:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Failed to import candidate. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

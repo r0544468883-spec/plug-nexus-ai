@@ -193,7 +193,7 @@ Create a realistic, printable resume image with clear typography, proper section
   } catch (error) {
     console.error("CV generation error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "Failed to generate CV. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

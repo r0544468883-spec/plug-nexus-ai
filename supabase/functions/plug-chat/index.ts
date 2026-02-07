@@ -192,7 +192,7 @@ ${context.vouches.skills?.length > 0 ? `- Skills mentioned: ${context.vouches.sk
     });
   } catch (error) {
     console.error("plug-chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Chat service temporarily unavailable. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
