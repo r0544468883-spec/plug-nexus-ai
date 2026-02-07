@@ -863,6 +863,42 @@ export type Database = {
           },
         ]
       }
+      master_skills: {
+        Row: {
+          category_en: string
+          category_he: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_custom: boolean
+          name_en: string
+          name_he: string
+          skill_type: string
+        }
+        Insert: {
+          category_en: string
+          category_he: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_custom?: boolean
+          name_en: string
+          name_he: string
+          skill_type?: string
+        }
+        Update: {
+          category_en?: string
+          category_he?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_custom?: boolean
+          name_en?: string
+          name_he?: string
+          skill_type?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -1335,10 +1371,12 @@ export type Database = {
           is_public: boolean | null
           message: string
           relationship: string | null
+          skill_ids: string[] | null
           skills: string[] | null
           to_user_id: string
           updated_at: string | null
           vouch_type: Database["public"]["Enums"]["vouch_type"]
+          weight: number
         }
         Insert: {
           created_at?: string | null
@@ -1347,10 +1385,12 @@ export type Database = {
           is_public?: boolean | null
           message: string
           relationship?: string | null
+          skill_ids?: string[] | null
           skills?: string[] | null
           to_user_id: string
           updated_at?: string | null
           vouch_type: Database["public"]["Enums"]["vouch_type"]
+          weight?: number
         }
         Update: {
           created_at?: string | null
@@ -1359,10 +1399,12 @@ export type Database = {
           is_public?: boolean | null
           message?: string
           relationship?: string | null
+          skill_ids?: string[] | null
           skills?: string[] | null
           to_user_id?: string
           updated_at?: string | null
           vouch_type?: Database["public"]["Enums"]["vouch_type"]
+          weight?: number
         }
         Relationships: []
       }
@@ -1613,6 +1655,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_vouch_weight: {
+        Args: { giver_id: string; skill_ids: string[] }
+        Returns: number
+      }
       can_view_contact_details: {
         Args: { profile_user_id: string }
         Returns: boolean
@@ -1641,6 +1687,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role:

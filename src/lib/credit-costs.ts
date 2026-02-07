@@ -119,6 +119,7 @@ export const RECURRING_REWARDS = {
   REFERRAL: { amount: 10 },
   VOUCH_RECEIVED: { amount: 25, monthlyCap: 5 },
   VOUCH_GIVEN: { amount: 5, monthlyCap: 5 },
+  SKILL_ADDED: { amount: 10 }, // Reward for adding new skill to global database
 } as const;
 
 // Calculate total potential from social tasks

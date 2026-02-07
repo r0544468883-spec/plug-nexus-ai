@@ -29,6 +29,7 @@ const RECURRING_REWARDS: Record<string, { amount: number; dailyCap?: number; mon
   'referral_bonus': { amount: 10 },
   'vouch_received': { amount: 25, monthlyCap: 5 },
   'vouch_given': { amount: 5, monthlyCap: 5 },
+  'skill_added': { amount: 10 }, // Reward for adding new skill to global database
 };
 
 serve(async (req) => {
