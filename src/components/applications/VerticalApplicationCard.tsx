@@ -26,6 +26,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import MatchScoreCircle from './MatchScoreCircle';
 import SwipeableCard from './SwipeableCard';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CompanyRatingBadge } from '@/components/vouch/CompanyRatingBadge';
 
 export interface Application {
   id: string;
@@ -40,6 +41,7 @@ export interface Application {
     location: string | null;
     job_type: string | null;
     company: {
+      id?: string;
       name: string;
       logo_url: string | null;
     } | null;
@@ -134,9 +136,17 @@ const VerticalApplicationCard = ({
               <h3 className="font-semibold text-foreground truncate">
                 {application.job.title}
               </h3>
-              <p className="text-sm text-primary font-medium">
-                {application.job.company?.name || (isRTL ? 'חברה לא ידועה' : 'Unknown Company')}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-primary font-medium">
+                  {application.job.company?.name || (isRTL ? 'חברה לא ידועה' : 'Unknown Company')}
+                </span>
+                {application.job.company?.id && (
+                  <CompanyRatingBadge 
+                    companyId={application.job.company.id} 
+                    companyName={application.job.company.name}
+                  />
+                )}
+              </div>
             </div>
 
             {/* Meta info */}
