@@ -53,6 +53,7 @@ import { StageProgressBar } from './StageProgressBar';
 import MatchScoreCircle from './MatchScoreCircle';
 import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
 import { CompanyRatingBadge } from '@/components/vouch/CompanyRatingBadge';
+import { CompanyVouchModal } from '@/components/vouch/CompanyVouchModal';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 
 interface ApplicationDetails {
@@ -103,6 +104,13 @@ export function ApplicationDetailsSheet({
   const [notes, setNotes] = useState(application?.notes || '');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Company Vouch modal state
+  const [showVouchModal, setShowVouchModal] = useState(false);
+  const [vouchTrigger, setVouchTrigger] = useState<{
+    type: 'time_based' | 'stage_change' | 'completion';
+    stage?: string;
+  } | null>(null);
 
   // Fetch candidate profile for recruiters
   const { data: candidateProfile } = useQuery({
@@ -161,6 +169,10 @@ export function ApplicationDetailsSheet({
       setHasChanges(stageChanged || notesChanged);
     }
   }, [currentStage, notes, application]);
+
+  // Stages that trigger vouch prompts
+  const VOUCH_STAGES = ['interview', 'technical', 'offer'];
+  const COMPLETION_STAGES = ['hired', 'rejected', 'withdrawn'];
 
   const handleStageChange = (stage: string) => {
     setCurrentStage(stage);
@@ -224,6 +236,17 @@ export function ApplicationDetailsSheet({
       toast.success(isRTL ? 'השינויים נשמרו' : 'Changes saved');
       setHasChanges(false);
       onUpdate();
+
+      // Check if we should show vouch modal for stage changes
+      if (currentStage !== oldStage && company?.id) {
+        if (COMPLETION_STAGES.includes(currentStage)) {
+          setVouchTrigger({ type: 'completion', stage: currentStage });
+          setShowVouchModal(true);
+        } else if (VOUCH_STAGES.includes(currentStage)) {
+          setVouchTrigger({ type: 'stage_change', stage: currentStage });
+          setShowVouchModal(true);
+        }
+      }
     } catch (error) {
       console.error('Error saving application:', error);
       toast.error(isRTL ? 'שגיאה בשמירה' : 'Error saving changes');
@@ -251,7 +274,14 @@ export function ApplicationDetailsSheet({
 
       toast.success(isRTL ? 'המועמדות בוטלה' : 'Application withdrawn');
       onUpdate();
-      onOpenChange(false);
+      
+      // Show vouch modal for withdrawal
+      if (company?.id) {
+        setVouchTrigger({ type: 'completion', stage: 'withdrawn' });
+        setShowVouchModal(true);
+      } else {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error withdrawing application:', error);
       toast.error(isRTL ? 'שגיאה בביטול' : 'Error withdrawing');
@@ -608,6 +638,28 @@ export function ApplicationDetailsSheet({
             </Button>
           </div>
         </div>
+
+        {/* Company Vouch Modal */}
+        {company?.id && vouchTrigger && (
+          <CompanyVouchModal
+            open={showVouchModal}
+            onOpenChange={(open) => {
+              setShowVouchModal(open);
+              if (!open) {
+                setVouchTrigger(null);
+              }
+            }}
+            applicationId={application.id}
+            companyId={company.id}
+            companyName={company.name}
+            triggerType={vouchTrigger.type}
+            triggerStage={vouchTrigger.stage}
+            onComplete={() => {
+              setShowVouchModal(false);
+              setVouchTrigger(null);
+            }}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
