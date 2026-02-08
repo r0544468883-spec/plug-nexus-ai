@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -18,12 +19,12 @@ interface CompanyRatingBadgeProps {
   className?: string;
 }
 
-export function CompanyRatingBadge({ 
+export const CompanyRatingBadge = forwardRef<HTMLDivElement, CompanyRatingBadgeProps>(({ 
   companyId, 
   companyName,
   showDetails = false,
   className 
-}: CompanyRatingBadgeProps) {
+}, ref) => {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
@@ -137,4 +138,6 @@ export function CompanyRatingBadge({
       </Tooltip>
     </TooltipProvider>
   );
-}
+});
+
+CompanyRatingBadge.displayName = 'CompanyRatingBadge';
