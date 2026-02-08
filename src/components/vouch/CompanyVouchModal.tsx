@@ -100,40 +100,79 @@ export function CompanyVouchModal({
       const scores = calculateScores();
 
       // Submit the company vouch
-      const { error: vouchError } = await supabase
+      // First try to find existing vouch
+      const { data: existingVouch } = await supabase
         .from('company_vouches')
-        .upsert({
-          user_id: user.id,
-          company_id: companyId,
-          application_id: applicationId,
-          communication_rating: scores.communication ? Math.round(scores.communication) : null,
-          process_speed_rating: scores.process_speed ? Math.round(scores.process_speed) : null,
-          transparency_rating: scores.transparency ? Math.round(scores.transparency) : null,
-          overall_rating: scores.overall,
-          process_outcome: outcome || null,
-          feedback_text: feedback || null,
-          would_recommend: wouldRecommend,
-        }, {
-          onConflict: 'user_id,company_id,application_id'
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .eq('application_id', applicationId)
+        .maybeSingle();
+
+      const vouchData = {
+        user_id: user.id,
+        company_id: companyId,
+        application_id: applicationId,
+        communication_rating: scores.communication ? Math.round(scores.communication) : null,
+        process_speed_rating: scores.process_speed ? Math.round(scores.process_speed) : null,
+        transparency_rating: scores.transparency ? Math.round(scores.transparency) : null,
+        overall_rating: scores.overall,
+        process_outcome: outcome || null,
+        feedback_text: feedback || null,
+        would_recommend: wouldRecommend,
+        updated_at: new Date().toISOString(),
+      };
+
+      let vouchError;
+      if (existingVouch) {
+        const { error } = await supabase
+          .from('company_vouches')
+          .update(vouchData)
+          .eq('id', existingVouch.id);
+        vouchError = error;
+      } else {
+        const { error } = await supabase
+          .from('company_vouches')
+          .insert(vouchData);
+        vouchError = error;
+      }
 
       if (vouchError) throw vouchError;
 
       // Mark the prompt as completed and award credits
-      const { error: promptError } = await supabase
+      const { data: existingPrompt } = await supabase
         .from('company_vouch_prompts')
-        .upsert({
-          user_id: user.id,
-          application_id: applicationId,
-          company_id: companyId,
-          trigger_type: triggerType,
-          trigger_stage: triggerStage,
-          vouch_completed: true,
-          vouch_completed_at: new Date().toISOString(),
-          credits_awarded: creditsReward,
-        }, {
-          onConflict: 'user_id,application_id,trigger_type,trigger_stage'
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('application_id', applicationId)
+        .eq('trigger_type', triggerType)
+        .eq('trigger_stage', triggerStage || '')
+        .maybeSingle();
+
+      const promptData = {
+        user_id: user.id,
+        application_id: applicationId,
+        company_id: companyId,
+        trigger_type: triggerType,
+        trigger_stage: triggerStage,
+        vouch_completed: true,
+        vouch_completed_at: new Date().toISOString(),
+        credits_awarded: creditsReward,
+      };
+
+      let promptError;
+      if (existingPrompt) {
+        const { error } = await supabase
+          .from('company_vouch_prompts')
+          .update(promptData)
+          .eq('id', existingPrompt.id);
+        promptError = error;
+      } else {
+        const { error } = await supabase
+          .from('company_vouch_prompts')
+          .insert(promptData);
+        promptError = error;
+      }
 
       if (promptError) throw promptError;
 
@@ -170,18 +209,36 @@ export function CompanyVouchModal({
   const handleDismiss = async () => {
     if (!user?.id) return;
 
-    await supabase
-      .from('company_vouch_prompts')
-      .upsert({
-        user_id: user.id,
-        application_id: applicationId,
-        company_id: companyId,
-        trigger_type: triggerType,
-        trigger_stage: triggerStage,
-        dismissed: true,
-      }, {
-        onConflict: 'user_id,application_id,trigger_type,trigger_stage'
-      });
+    try {
+      const { data: existingPrompt } = await supabase
+        .from('company_vouch_prompts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('application_id', applicationId)
+        .eq('trigger_type', triggerType)
+        .eq('trigger_stage', triggerStage || '')
+        .maybeSingle();
+
+      if (existingPrompt) {
+        await supabase
+          .from('company_vouch_prompts')
+          .update({ dismissed: true })
+          .eq('id', existingPrompt.id);
+      } else {
+        await supabase
+          .from('company_vouch_prompts')
+          .insert({
+            user_id: user.id,
+            application_id: applicationId,
+            company_id: companyId,
+            trigger_type: triggerType,
+            trigger_stage: triggerStage,
+            dismissed: true,
+          });
+      }
+    } catch (error) {
+      console.error('Failed to dismiss prompt:', error);
+    }
 
     onOpenChange(false);
   };
