@@ -61,7 +61,7 @@ export const CompanyRatingBadge = forwardRef<HTMLDivElement, CompanyRatingBadgeP
 
   if (showDetails) {
     return (
-      <div className={cn('space-y-2 p-3 bg-muted/30 rounded-lg', className)} dir={isHebrew ? 'rtl' : 'ltr'}>
+      <div ref={ref} className={cn('space-y-2 p-3 bg-muted/30 rounded-lg', className)} dir={isHebrew ? 'rtl' : 'ltr'}>
         <div className="flex items-center gap-2 text-sm font-medium">
           <Building2 className="h-4 w-4 text-primary" />
           {isHebrew ? 'דירוג קהילת PLUG' : 'PLUG Community Rating'}
@@ -108,35 +108,37 @@ export const CompanyRatingBadge = forwardRef<HTMLDivElement, CompanyRatingBadgeP
 
   // Compact badge version
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge 
-            variant="outline" 
-            className={cn(
-              'gap-1 cursor-help',
-              getOverallColor(rating.avg_overall || 0),
-              className
-            )}
-          >
-            <Building2 className="h-3 w-3" />
-            {rating.avg_overall?.toFixed(1)}
-            <span className="text-xs opacity-70">({rating.total_reviews})</span>
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            <p className="font-medium">{companyName || isHebrew ? 'דירוג חברה' : 'Company Rating'}</p>
-            <div className="flex gap-3">
-              <span className="text-green-500">{recommendPercent}% {isHebrew ? 'ממליצים' : 'recommend'}</span>
-              {ghostedPercent > 0 && (
-                <span className="text-red-400">{ghostedPercent}% {isHebrew ? 'גוסטינג' : 'ghosted'}</span>
+    <div ref={ref} className="inline-block">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge 
+              variant="outline" 
+              className={cn(
+                'gap-1 cursor-help',
+                getOverallColor(rating.avg_overall || 0),
+                className
               )}
+            >
+              <Building2 className="h-3 w-3" />
+              {rating.avg_overall?.toFixed(1)}
+              <span className="text-xs opacity-70">({rating.total_reviews})</span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="space-y-1 text-xs">
+              <p className="font-medium">{companyName || isHebrew ? 'דירוג חברה' : 'Company Rating'}</p>
+              <div className="flex gap-3">
+                <span className="text-green-500">{recommendPercent}% {isHebrew ? 'ממליצים' : 'recommend'}</span>
+                {ghostedPercent > 0 && (
+                  <span className="text-red-400">{ghostedPercent}% {isHebrew ? 'גוסטינג' : 'ghosted'}</span>
+                )}
+              </div>
             </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 });
 
