@@ -32,6 +32,15 @@ const RECURRING_REWARDS: Record<string, { amount: number; dailyCap?: number; mon
   'skill_added': { amount: 10 }, // Reward for adding new skill to global database
 };
 
+// Direct credit award (from client with explicit amount)
+interface DirectAwardRequest {
+  userId: string;
+  amount: number;
+  creditType: 'daily' | 'permanent';
+  actionType: string;
+  description?: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -62,7 +71,67 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { action, taskId, referralCode } = await req.json();
+    const requestBody = await req.json();
+    const { action, taskId, referralCode, userId, amount, creditType, actionType, description: customDescription } = requestBody;
+    
+    // Handle direct credit award (from client with explicit amount)
+    if (userId && amount && actionType) {
+      // Verify the caller is the user or has admin rights
+      if (userId !== user.id) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized: can only award credits to yourself' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: credits, error: creditsError } = await supabase
+        .from('user_credits')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (creditsError || !credits) {
+        return new Response(
+          JSON.stringify({ error: 'Credits not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const fieldToUpdate = creditType === 'daily' ? 'daily_fuel' : 'permanent_fuel';
+      const newValue = credits[fieldToUpdate] + amount;
+
+      const { error: updateError } = await supabase
+        .from('user_credits')
+        .update({ 
+          [fieldToUpdate]: newValue,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+
+      if (updateError) throw updateError;
+
+      // Log transaction
+      await supabase.from('credit_transactions').insert({
+        user_id: userId,
+        amount,
+        credit_type: creditType,
+        action_type: actionType,
+        description: customDescription || `Awarded ${amount} ${creditType} credits for ${actionType}`
+      });
+
+      console.log(`[award-credits] Direct award: ${amount} ${creditType} fuel to ${userId} for ${actionType}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          awarded: amount,
+          daily_fuel: creditType === 'daily' ? newValue : credits.daily_fuel,
+          permanent_fuel: creditType === 'permanent' ? newValue : credits.permanent_fuel,
+          total_credits: (creditType === 'daily' ? newValue : credits.daily_fuel) + (creditType === 'permanent' ? newValue : credits.permanent_fuel)
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!action) {
       return new Response(
