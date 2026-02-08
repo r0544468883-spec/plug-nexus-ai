@@ -64,8 +64,15 @@ export function ApplicationsPage() {
   
   // Company vouch prompt state
   const [showVouchModal, setShowVouchModal] = useState(false);
+  const [directVouchPrompt, setDirectVouchPrompt] = useState<{
+    applicationId: string;
+    companyId: string;
+    companyName: string;
+    triggerType: 'time_based' | 'stage_change' | 'completion';
+    triggerStage?: string;
+  } | null>(null);
 
-  // Company vouch prompts hook
+  // Company vouch prompts hook (for time-based triggers)
   const { pendingPrompt, triggerStagePrompt, clearPrompt } = useCompanyVouchPrompts(applications);
 
   // Fetch applications
@@ -217,6 +224,10 @@ export function ApplicationsPage() {
   }, [user?.id, isRTL, t]);
 
   const handleStageChange = useCallback(async (id: string, newStage: string) => {
+    // Stages that trigger vouch prompts
+    const VOUCH_STAGES = ['interview', 'technical', 'offer'];
+    const COMPLETION_STAGES = ['hired', 'rejected', 'withdrawn'];
+
     try {
       const updateData: Record<string, string> = {
         current_stage: newStage,
@@ -240,24 +251,47 @@ export function ApplicationsPage() {
 
       if (error) throw error;
 
+      // Find the application to get company info
+      const app = applications.find(a => a.id === id);
+
       // Update local state
       setApplications((prev) =>
-        prev.map((app) =>
-          app.id === id 
-            ? { ...app, current_stage: newStage, status: updateData.status } 
-            : app
+        prev.map((a) =>
+          a.id === id 
+            ? { ...a, current_stage: newStage, status: updateData.status } 
+            : a
         )
       );
 
       toast.success(isRTL ? 'השלב עודכן' : 'Stage updated');
       
-      // Trigger company vouch prompt on stage change
-      triggerStagePrompt(id, newStage);
+      // Show vouch modal directly for relevant stage changes
+      if (app?.job?.company?.id) {
+        if (COMPLETION_STAGES.includes(newStage)) {
+          setDirectVouchPrompt({
+            applicationId: id,
+            companyId: app.job.company.id,
+            companyName: app.job.company.name,
+            triggerType: 'completion',
+            triggerStage: newStage,
+          });
+          setShowVouchModal(true);
+        } else if (VOUCH_STAGES.includes(newStage)) {
+          setDirectVouchPrompt({
+            applicationId: id,
+            companyId: app.job.company.id,
+            companyName: app.job.company.name,
+            triggerType: 'stage_change',
+            triggerStage: newStage,
+          });
+          setShowVouchModal(true);
+        }
+      }
     } catch (error) {
       console.error('Error updating stage:', error);
       toast.error(t('common.error') || 'Failed to update stage');
     }
-  }, [user?.id, isRTL, t, triggerStagePrompt]);
+  }, [user?.id, isRTL, t, applications]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -475,10 +509,31 @@ export function ApplicationsPage() {
         onDismiss={clearPrompt}
       />
 
-      {/* Company Vouch Modal */}
-      {pendingPrompt && (
+      {/* Company Vouch Modal - Direct from stage change */}
+      {directVouchPrompt && (
         <CompanyVouchModal
           open={showVouchModal}
+          onOpenChange={(open) => {
+            setShowVouchModal(open);
+            if (!open) setDirectVouchPrompt(null);
+          }}
+          applicationId={directVouchPrompt.applicationId}
+          companyId={directVouchPrompt.companyId}
+          companyName={directVouchPrompt.companyName}
+          triggerType={directVouchPrompt.triggerType}
+          triggerStage={directVouchPrompt.triggerStage}
+          onComplete={() => {
+            setDirectVouchPrompt(null);
+            setShowVouchModal(false);
+            fetchApplications();
+          }}
+        />
+      )}
+
+      {/* Company Vouch Modal - From time-based prompts */}
+      {pendingPrompt && !directVouchPrompt && (
+        <CompanyVouchModal
+          open={showVouchModal && !directVouchPrompt}
           onOpenChange={(open) => {
             setShowVouchModal(open);
             if (!open) clearPrompt();
