@@ -223,6 +223,157 @@ export type Database = {
         }
         Relationships: []
       }
+      company_vouch_prompts: {
+        Row: {
+          application_id: string
+          company_id: string | null
+          created_at: string
+          credits_awarded: number | null
+          dismissed: boolean | null
+          id: string
+          prompted_at: string
+          trigger_stage: string | null
+          trigger_type: string
+          user_id: string
+          vouch_completed: boolean | null
+          vouch_completed_at: string | null
+        }
+        Insert: {
+          application_id: string
+          company_id?: string | null
+          created_at?: string
+          credits_awarded?: number | null
+          dismissed?: boolean | null
+          id?: string
+          prompted_at?: string
+          trigger_stage?: string | null
+          trigger_type: string
+          user_id: string
+          vouch_completed?: boolean | null
+          vouch_completed_at?: string | null
+        }
+        Update: {
+          application_id?: string
+          company_id?: string | null
+          created_at?: string
+          credits_awarded?: number | null
+          dismissed?: boolean | null
+          id?: string
+          prompted_at?: string
+          trigger_stage?: string | null
+          trigger_type?: string
+          user_id?: string
+          vouch_completed?: boolean | null
+          vouch_completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_vouch_prompts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouch_prompts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouch_prompts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouch_prompts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_vouches: {
+        Row: {
+          application_id: string | null
+          communication_rating: number | null
+          company_id: string
+          created_at: string
+          feedback_text: string | null
+          id: string
+          overall_rating: number | null
+          process_outcome: string | null
+          process_speed_rating: number | null
+          transparency_rating: number | null
+          updated_at: string
+          user_id: string
+          would_recommend: boolean | null
+        }
+        Insert: {
+          application_id?: string | null
+          communication_rating?: number | null
+          company_id: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          overall_rating?: number | null
+          process_outcome?: string | null
+          process_speed_rating?: number | null
+          transparency_rating?: number | null
+          updated_at?: string
+          user_id: string
+          would_recommend?: boolean | null
+        }
+        Update: {
+          application_id?: string | null
+          communication_rating?: number | null
+          company_id?: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          overall_rating?: number | null
+          process_outcome?: string | null
+          process_speed_rating?: number | null
+          transparency_rating?: number | null
+          updated_at?: string
+          user_id?: string
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_vouches_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouches_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string | null
@@ -1543,6 +1694,35 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      company_ratings: {
+        Row: {
+          avg_communication: number | null
+          avg_overall: number | null
+          avg_process_speed: number | null
+          avg_transparency: number | null
+          company_id: string | null
+          ghosted_count: number | null
+          hired_count: number | null
+          recommend_count: number | null
+          total_reviews: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_vouches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_vouches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_secure: {
         Row: {

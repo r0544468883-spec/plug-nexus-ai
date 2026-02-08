@@ -11,6 +11,9 @@ import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
 import PlugBubble from './PlugBubble';
 import { EmptyApplicationsState } from './EmptyApplicationsState';
 import { BulkImportDialog } from './BulkImportDialog';
+import { CompanyVouchModal } from '@/components/vouch/CompanyVouchModal';
+import { CompanyVouchToast } from '@/components/vouch/CompanyVouchToast';
+import { useCompanyVouchPrompts } from '@/hooks/useCompanyVouchPrompts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Briefcase, Loader2, Sparkles, BarChart3, X, FileSpreadsheet } from 'lucide-react';
@@ -58,6 +61,12 @@ export function ApplicationsPage() {
   // Sheet state
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  
+  // Company vouch prompt state
+  const [showVouchModal, setShowVouchModal] = useState(false);
+
+  // Company vouch prompts hook
+  const { pendingPrompt, triggerStagePrompt, clearPrompt } = useCompanyVouchPrompts(applications);
 
   // Fetch applications
   const fetchApplications = useCallback(async () => {
@@ -241,11 +250,14 @@ export function ApplicationsPage() {
       );
 
       toast.success(isRTL ? 'השלב עודכן' : 'Stage updated');
+      
+      // Trigger company vouch prompt on stage change
+      triggerStagePrompt(id, newStage);
     } catch (error) {
       console.error('Error updating stage:', error);
       toast.error(t('common.error') || 'Failed to update stage');
     }
-  }, [user?.id, isRTL, t]);
+  }, [user?.id, isRTL, t, triggerStagePrompt]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -453,6 +465,35 @@ export function ApplicationsPage() {
         onOpenChange={setShowBulkImport}
         onComplete={fetchApplications}
       />
+
+      {/* Company Vouch Toast (notification) */}
+      <CompanyVouchToast
+        visible={!!pendingPrompt && !showVouchModal}
+        companyName={pendingPrompt?.companyName || ''}
+        reward={pendingPrompt?.triggerType === 'completion' ? 50 : 10}
+        onAccept={() => setShowVouchModal(true)}
+        onDismiss={clearPrompt}
+      />
+
+      {/* Company Vouch Modal */}
+      {pendingPrompt && (
+        <CompanyVouchModal
+          open={showVouchModal}
+          onOpenChange={(open) => {
+            setShowVouchModal(open);
+            if (!open) clearPrompt();
+          }}
+          applicationId={pendingPrompt.applicationId}
+          companyId={pendingPrompt.companyId}
+          companyName={pendingPrompt.companyName}
+          triggerType={pendingPrompt.triggerType}
+          triggerStage={pendingPrompt.triggerStage}
+          onComplete={() => {
+            clearPrompt();
+            fetchApplications();
+          }}
+        />
+      )}
     </div>
   );
 }
