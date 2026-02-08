@@ -52,6 +52,7 @@ import { ApplicationPlugChat } from './ApplicationPlugChat';
 import { StageProgressBar } from './StageProgressBar';
 import MatchScoreCircle from './MatchScoreCircle';
 import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
+import { CompanyRatingBadge } from '@/components/vouch/CompanyRatingBadge';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 
 interface ApplicationDetails {
@@ -316,6 +317,15 @@ export function ApplicationDetailsSheet({
               {timeAgo}
             </span>
           </div>
+
+          {/* Company Rating (from PLUG community) */}
+          {company?.id && (
+            <CompanyRatingBadge 
+              companyId={company.id} 
+              companyName={company.name}
+              showDetails={true}
+            />
+          )}
 
           {/* Candidate Vouches Badge */}
           <CandidateVouchBadge 

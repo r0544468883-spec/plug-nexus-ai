@@ -14,9 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { Star, Loader2, Fuel, AlertTriangle, Building2 } from 'lucide-react';
+import { Star, Loader2, Fuel, Building2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CompanyVouchModalProps {
@@ -38,6 +37,10 @@ const CREDIT_REWARDS = {
 
 type ProcessOutcome = 'hired' | 'rejected' | 'ghosted' | 'withdrew' | 'ongoing';
 
+interface YesNoAnswer {
+  yes: boolean | null;
+}
+
 export function CompanyVouchModal({
   open,
   onOpenChange,
@@ -54,21 +57,47 @@ export function CompanyVouchModal({
   const queryClient = useQueryClient();
   const isHebrew = language === 'he';
 
-  const [ratings, setRatings] = useState({
-    communication: 0,
-    process_speed: 0,
-    transparency: 0,
-    overall: 0,
+  // Yes/No questions state
+  const [answers, setAnswers] = useState({
+    responded_after_interview: null as boolean | null,
+    reasonable_assignment: null as boolean | null,
+    responded_after_assignment: null as boolean | null,
+    clear_process: null as boolean | null,
+    respectful_communication: null as boolean | null,
   });
+  
   const [outcome, setOutcome] = useState<ProcessOutcome | ''>('');
   const [feedback, setFeedback] = useState('');
   const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
 
   const creditsReward = CREDIT_REWARDS[triggerType];
 
+  // Calculate scores from yes/no answers
+  const calculateScores = () => {
+    const yesCount = Object.values(answers).filter(v => v === true).length;
+    const answeredCount = Object.values(answers).filter(v => v !== null).length;
+    
+    if (answeredCount === 0) return { communication: null, process_speed: null, transparency: null, overall: null };
+    
+    // Convert to 1-5 scale based on yes ratio
+    const ratio = yesCount / answeredCount;
+    const score = Math.round(ratio * 4) + 1; // 1-5 scale
+    
+    return {
+      communication: answers.respectful_communication !== null ? (answers.respectful_communication ? 5 : 2) : null,
+      process_speed: answers.responded_after_interview !== null || answers.responded_after_assignment !== null
+        ? ((answers.responded_after_interview === true ? 2.5 : 0) + (answers.responded_after_assignment === true ? 2.5 : 0)) || 2
+        : null,
+      transparency: answers.clear_process !== null ? (answers.clear_process ? 5 : 2) : null,
+      overall: score,
+    };
+  };
+
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('Not authenticated');
+
+      const scores = calculateScores();
 
       // Submit the company vouch
       const { error: vouchError } = await supabase
@@ -77,10 +106,10 @@ export function CompanyVouchModal({
           user_id: user.id,
           company_id: companyId,
           application_id: applicationId,
-          communication_rating: ratings.communication || null,
-          process_speed_rating: ratings.process_speed || null,
-          transparency_rating: ratings.transparency || null,
-          overall_rating: ratings.overall || null,
+          communication_rating: scores.communication ? Math.round(scores.communication) : null,
+          process_speed_rating: scores.process_speed ? Math.round(scores.process_speed) : null,
+          transparency_rating: scores.transparency ? Math.round(scores.transparency) : null,
+          overall_rating: scores.overall,
           process_outcome: outcome || null,
           feedback_text: feedback || null,
           would_recommend: wouldRecommend,
@@ -129,6 +158,7 @@ export function CompanyVouchModal({
       );
       refreshCredits();
       queryClient.invalidateQueries({ queryKey: ['company-vouch-prompts'] });
+      queryClient.invalidateQueries({ queryKey: ['company-ratings'] });
       onComplete?.();
       onOpenChange(false);
     },
@@ -156,38 +186,47 @@ export function CompanyVouchModal({
     onOpenChange(false);
   };
 
-  const StarRating = ({ 
-    value, 
-    onChange, 
-    label 
+  // Yes/No Question Component
+  const YesNoQuestion = ({ 
+    questionKey,
+    questionHe,
+    questionEn,
   }: { 
-    value: number; 
-    onChange: (v: number) => void; 
-    label: string;
-  }) => (
-    <div className="space-y-2">
-      <Label className="text-sm">{label}</Label>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
+    questionKey: keyof typeof answers;
+    questionHe: string;
+    questionEn: string;
+  }) => {
+    const value = answers[questionKey];
+    
+    return (
+      <div className="flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0">
+        <p className="text-sm flex-1">{isHebrew ? questionHe : questionEn}</p>
+        <div className="flex gap-1">
+          <Button
             type="button"
-            onClick={() => onChange(star)}
-            className="p-1 hover:scale-110 transition-transform"
+            size="sm"
+            variant={value === true ? 'default' : 'outline'}
+            className={cn(
+              'h-8 w-8 p-0',
+              value === true && 'bg-green-600 hover:bg-green-700'
+            )}
+            onClick={() => setAnswers(a => ({ ...a, [questionKey]: true }))}
           >
-            <Star
-              className={cn(
-                'h-6 w-6 transition-colors',
-                star <= value 
-                  ? 'fill-accent text-accent' 
-                  : 'text-muted-foreground/30'
-              )}
-            />
-          </button>
-        ))}
+            <ThumbsUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={value === false ? 'destructive' : 'outline'}
+            className="h-8 w-8 p-0"
+            onClick={() => setAnswers(a => ({ ...a, [questionKey]: false }))}
+          >
+            <ThumbsDown className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const outcomeOptions: { value: ProcessOutcome; label: string; labelHe: string }[] = [
     { value: 'hired', label: 'Got hired! 🎉', labelHe: 'התקבלתי! 🎉' },
@@ -197,7 +236,8 @@ export function CompanyVouchModal({
     { value: 'ongoing', label: 'Still ongoing', labelHe: 'עדיין בתהליך' },
   ];
 
-  const isValid = ratings.overall > 0;
+  // At least one question answered
+  const isValid = Object.values(answers).some(v => v !== null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -217,59 +257,65 @@ export function CompanyVouchModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4" dir={isHebrew ? 'rtl' : 'ltr'}>
-          {/* Ratings */}
-          <div className="grid gap-4">
-            <StarRating
-              value={ratings.communication}
-              onChange={(v) => setRatings((r) => ({ ...r, communication: v }))}
-              label={isHebrew ? 'תקשורת ומענה' : 'Communication & Response'}
+        <div className="space-y-5 py-4" dir={isHebrew ? 'rtl' : 'ltr'}>
+          {/* Yes/No Questions */}
+          <div className="space-y-1 bg-muted/30 rounded-lg p-3">
+            <YesNoQuestion
+              questionKey="responded_after_interview"
+              questionHe="האם חזרו אליך לאחר הראיון?"
+              questionEn="Did they respond after the interview?"
             />
-            <StarRating
-              value={ratings.process_speed}
-              onChange={(v) => setRatings((r) => ({ ...r, process_speed: v }))}
-              label={isHebrew ? 'מהירות התהליך' : 'Process Speed'}
+            <YesNoQuestion
+              questionKey="reasonable_assignment"
+              questionHe="האם מטלת הבית היתה סבירה בהתאם לדרישות המשרה?"
+              questionEn="Was the assignment reasonable for the position?"
             />
-            <StarRating
-              value={ratings.transparency}
-              onChange={(v) => setRatings((r) => ({ ...r, transparency: v }))}
-              label={isHebrew ? 'שקיפות' : 'Transparency'}
+            <YesNoQuestion
+              questionKey="responded_after_assignment"
+              questionHe="האם חזרו אליך לאחר מטלת הבית?"
+              questionEn="Did they respond after the home assignment?"
             />
-            <StarRating
-              value={ratings.overall}
-              onChange={(v) => setRatings((r) => ({ ...r, overall: v }))}
-              label={isHebrew ? 'ציון כללי *' : 'Overall Rating *'}
+            <YesNoQuestion
+              questionKey="clear_process"
+              questionHe="האם התהליך היה ברור ושקוף?"
+              questionEn="Was the process clear and transparent?"
+            />
+            <YesNoQuestion
+              questionKey="respectful_communication"
+              questionHe="האם התקשורת היתה מכבדת ומקצועית?"
+              questionEn="Was communication respectful and professional?"
             />
           </div>
 
           {/* Process Outcome */}
           <div className="space-y-2">
             <Label>{isHebrew ? 'איך הסתיים התהליך?' : 'How did it end?'}</Label>
-            <RadioGroup
-              value={outcome}
-              onValueChange={(v) => setOutcome(v as ProcessOutcome)}
-              className="grid grid-cols-2 gap-2"
-            >
+            <div className="flex flex-wrap gap-2">
               {outcomeOptions.map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-2 rtl:space-x-reverse">
-                  <RadioGroupItem value={opt.value} id={opt.value} />
-                  <Label htmlFor={opt.value} className="text-sm cursor-pointer">
-                    {isHebrew ? opt.labelHe : opt.label}
-                  </Label>
-                </div>
+                <Button
+                  key={opt.value}
+                  type="button"
+                  size="sm"
+                  variant={outcome === opt.value ? 'default' : 'outline'}
+                  onClick={() => setOutcome(opt.value)}
+                  className="text-xs"
+                >
+                  {isHebrew ? opt.labelHe : opt.label}
+                </Button>
               ))}
-            </RadioGroup>
+            </div>
           </div>
 
           {/* Would Recommend */}
           <div className="space-y-2">
-            <Label>{isHebrew ? 'האם תמליץ על החברה?' : 'Would you recommend this company?'}</Label>
+            <Label>{isHebrew ? 'האם תמליץ על החברה לחברים?' : 'Would you recommend this company to friends?'}</Label>
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant={wouldRecommend === true ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setWouldRecommend(true)}
+                className={cn(wouldRecommend === true && 'bg-green-600 hover:bg-green-700')}
               >
                 {isHebrew ? 'כן 👍' : 'Yes 👍'}
               </Button>
@@ -292,7 +338,7 @@ export function CompanyVouchModal({
               onChange={(e) => setFeedback(e.target.value)}
               placeholder={isHebrew ? 'שתף את החוויה שלך...' : 'Share your experience...'}
               className="resize-none"
-              rows={3}
+              rows={2}
             />
           </div>
 
