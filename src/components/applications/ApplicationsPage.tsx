@@ -319,38 +319,7 @@ export function ApplicationsPage() {
     }
   }, [isRTL]);
 
-  // Generate AI suggestions based on applications
-  const plugSuggestions = useMemo(() => {
-    const suggestions = [];
-    
-    // Find high match application
-    const highMatch = applications.find(a => (a.match_score || 0) >= 80);
-    if (highMatch) {
-      suggestions.push({
-        id: 'high-match',
-        message: isRTL 
-          ? `היי! ראיתי ${highMatch.match_score}% התאמה ל${highMatch.job?.company?.name}. רוצה שאכין אותך לראיון?`
-          : `Hey! I see ${highMatch.match_score}% match for ${highMatch.job?.company?.name}. Want me to prep you for the interview?`,
-        action: 'interview_prep',
-        priority: 'high' as const,
-      });
-    }
-
-    // Find interview stage
-    const hasInterview = applications.find(a => a.current_stage === 'interview');
-    if (hasInterview) {
-      suggestions.push({
-        id: 'interview',
-        message: isRTL
-          ? `יש לך ראיון ב-${hasInterview.job?.company?.name}! בוא נתרגל שאלות נפוצות`
-          : `You have an interview at ${hasInterview.job?.company?.name}! Let's practice common questions`,
-        action: 'interview_prep',
-        priority: 'high' as const,
-      });
-    }
-
-    return suggestions;
-  }, [applications, isRTL]);
+  // Note: PlugBubble now generates suggestions internally based on applications
 
   if (isLoading) {
     return (
@@ -489,7 +458,7 @@ export function ApplicationsPage() {
 
       {/* Plug AI Bubble */}
       <PlugBubble 
-        suggestions={plugSuggestions}
+        applications={applications}
         onActionClick={handlePlugAction}
       />
       
