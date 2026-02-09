@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,19 +11,35 @@ interface Suggestion {
   message: string;
   action: string;
   priority: 'high' | 'medium' | 'low';
+  companyName?: string;
+}
+
+interface Application {
+  id: string;
+  status: string;
+  current_stage: string;
+  match_score: number | null;
+  created_at: string;
+  last_interaction: string;
+  job: {
+    title: string;
+    company: {
+      name: string;
+    } | null;
+  } | null;
 }
 
 interface PlugBubbleProps {
-  suggestions?: Suggestion[];
-  onActionClick?: (action: string) => void;
+  applications?: Application[];
+  onActionClick?: (action: string, data?: any) => void;
 }
 
 const BUBBLE_STORAGE_KEY = 'plug_bubble_last_shown';
 const BUBBLE_DISMISSED_KEY = 'plug_bubble_dismissed_ids';
-const MIN_HOURS_BETWEEN_BUBBLES = 4; // Don't show more than once every 4 hours
-const SHOW_PROBABILITY = 0.3; // 30% chance to show when triggered
+const MIN_HOURS_BETWEEN_BUBBLES = 2; // Show every 2 hours max
+const SHOW_PROBABILITY = 0.5; // 50% chance to show when triggered
 
-const PlugBubble = ({ suggestions = [], onActionClick }: PlugBubbleProps) => {
+const PlugBubble = ({ applications = [], onActionClick }: PlugBubbleProps) => {
   const { language } = useLanguage();
   const { user, profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -33,47 +49,121 @@ const PlugBubble = ({ suggestions = [], onActionClick }: PlugBubbleProps) => {
 
   const isRTL = language === 'he';
 
-  // Default suggestions based on context
-  const defaultSuggestions: Suggestion[] = [
-    {
-      id: '1',
-      message: isRTL 
-        ? 'היי! ראיתי שיש לך מועמדויות פתוחות. רוצה שאעזור לך להתכונן לראיון?' 
-        : 'Hey! I see you have open applications. Want me to help you prepare for an interview?',
-      action: 'interview_prep',
-      priority: 'high',
-    },
-    {
-      id: '2',
-      message: isRTL
-        ? 'טיפ: עדכון קורות החיים שלך יכול להעלות את אחוז ההתאמה שלך'
-        : 'Tip: Updating your resume can increase your match score',
-      action: 'update_resume',
-      priority: 'medium',
-    },
-    {
-      id: '3',
-      message: isRTL
-        ? 'גיליתי משרות חדשות שיכולות להתאים לך! רוצה לראות?'
-        : 'I found new jobs that might match you! Want to see?',
-      action: 'view_jobs',
-      priority: 'high',
-    },
-    {
-      id: '4',
-      message: isRTL
-        ? 'השלמת הפרופיל שלך תגדיל את הסיכויים שמגייסים ימצאו אותך'
-        : 'Completing your profile will increase chances of recruiters finding you',
-      action: 'complete_profile',
-      priority: 'medium',
-    },
-  ];
+  // Generate dynamic suggestions based on user's actual applications
+  const dynamicSuggestions = useMemo((): Suggestion[] => {
+    const suggestions: Suggestion[] = [];
+    
+    if (applications.length === 0) {
+      // No applications - encourage to start
+      suggestions.push({
+        id: 'no_apps',
+        message: isRTL 
+          ? 'היי! 👋 בוא נתחיל לחפש משרות מתאימות בשבילך!'
+          : 'Hey! 👋 Let\'s start finding matching jobs for you!',
+        action: 'view_jobs',
+        priority: 'high',
+      });
+      return suggestions;
+    }
 
-  const activeSuggestions = suggestions.length > 0 ? suggestions : defaultSuggestions;
+    // Find applications in interview stages
+    const interviewApps = applications.filter(a => 
+      ['interview', 'technical'].includes(a.current_stage)
+    );
+    
+    if (interviewApps.length > 0) {
+      const app = interviewApps[0];
+      const companyName = app.job?.company?.name || '';
+      suggestions.push({
+        id: `interview_prep_${app.id}`,
+        message: isRTL 
+          ? `🎯 יש לך ראיון ב-${companyName}! רוצה שאעזור לך להתכונן?`
+          : `🎯 You have an interview at ${companyName}! Want me to help you prepare?`,
+        action: 'interview_prep',
+        priority: 'high',
+        companyName,
+      });
+    }
+
+    // Find stale applications (no update in 2+ weeks)
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    
+    const staleApps = applications.filter(a => {
+      const lastUpdate = new Date(a.last_interaction || a.created_at);
+      return lastUpdate < twoWeeksAgo && 
+             !['rejected', 'withdrawn', 'hired'].includes(a.current_stage);
+    });
+    
+    if (staleApps.length > 0) {
+      const app = staleApps[0];
+      const companyName = app.job?.company?.name || '';
+      suggestions.push({
+        id: `followup_${app.id}`,
+        message: isRTL 
+          ? `💡 לא היה עדכון מ-${companyName} זמן מה. אולי כדאי לעקוב?`
+          : `💡 No update from ${companyName} in a while. Maybe follow up?`,
+        action: 'followup',
+        priority: 'medium',
+        companyName,
+      });
+    }
+
+    // Find applications with high match score
+    const highMatchApps = applications.filter(a => 
+      (a.match_score || 0) >= 80 && a.status === 'active'
+    );
+    
+    if (highMatchApps.length > 0) {
+      const app = highMatchApps[0];
+      const companyName = app.job?.company?.name || '';
+      suggestions.push({
+        id: `high_match_${app.id}`,
+        message: isRTL 
+          ? `⭐ יש לך התאמה גבוהה ל-${companyName}! זה נראה מבטיח!`
+          : `⭐ You have a high match with ${companyName}! This looks promising!`,
+        action: 'view_application',
+        priority: 'high',
+        companyName,
+      });
+    }
+
+    // Offer stage - celebration
+    const offerApps = applications.filter(a => a.current_stage === 'offer');
+    if (offerApps.length > 0) {
+      const app = offerApps[0];
+      const companyName = app.job?.company?.name || '';
+      suggestions.push({
+        id: `offer_${app.id}`,
+        message: isRTL 
+          ? `🎉 מזל טוב! יש לך הצעה מ-${companyName}! צריך עזרה בהחלטה?`
+          : `🎉 Congrats! You got an offer from ${companyName}! Need help deciding?`,
+        action: 'offer_help',
+        priority: 'high',
+        companyName,
+      });
+    }
+
+    // Active applications encouragement
+    const activeApps = applications.filter(a => a.status === 'active');
+    if (activeApps.length > 0 && suggestions.length === 0) {
+      suggestions.push({
+        id: 'active_encouragement',
+        message: isRTL 
+          ? `💪 יש לך ${activeApps.length} מועמדויות פעילות! המשך כך!`
+          : `💪 You have ${activeApps.length} active applications! Keep it up!`,
+        action: 'view_applications',
+        priority: 'medium',
+      });
+    }
+
+    return suggestions;
+  }, [applications, isRTL]);
 
   // Check if we should show the proactive bubble
   const shouldShowBubble = useCallback(() => {
     if (!user) return false;
+    if (dynamicSuggestions.length === 0) return false;
     
     // Check last shown time
     const lastShown = localStorage.getItem(BUBBLE_STORAGE_KEY);
@@ -86,23 +176,23 @@ const PlugBubble = ({ suggestions = [], onActionClick }: PlugBubbleProps) => {
     const dismissed = JSON.parse(localStorage.getItem(BUBBLE_DISMISSED_KEY) || '[]');
     
     // Filter out dismissed suggestions
-    const availableSuggestions = activeSuggestions.filter(s => !dismissed.includes(s.id));
+    const availableSuggestions = dynamicSuggestions.filter(s => !dismissed.includes(s.id));
     if (availableSuggestions.length === 0) return false;
 
     // Random chance to show (to avoid being annoying)
     return Math.random() < SHOW_PROBABILITY;
-  }, [user, activeSuggestions]);
+  }, [user, dynamicSuggestions]);
 
   // Proactive bubble logic - appears occasionally
   useEffect(() => {
-    if (!user || currentSuggestion) return;
+    if (!user || currentSuggestion || dynamicSuggestions.length === 0) return;
 
     // Initial delay before considering showing
     const initialDelay = setTimeout(() => {
       if (shouldShowBubble()) {
         // Get a random available suggestion
         const dismissed = JSON.parse(localStorage.getItem(BUBBLE_DISMISSED_KEY) || '[]');
-        const available = activeSuggestions.filter(s => !dismissed.includes(s.id));
+        const available = dynamicSuggestions.filter(s => !dismissed.includes(s.id));
         
         if (available.length > 0) {
           // Prioritize high priority suggestions
@@ -116,10 +206,10 @@ const PlugBubble = ({ suggestions = [], onActionClick }: PlugBubbleProps) => {
           localStorage.setItem(BUBBLE_STORAGE_KEY, Date.now().toString());
         }
       }
-    }, 10000); // Wait 10 seconds before potentially showing
+    }, 5000); // Wait 5 seconds before potentially showing
 
     return () => clearTimeout(initialDelay);
-  }, [user, activeSuggestions, shouldShowBubble, currentSuggestion]);
+  }, [user, dynamicSuggestions, shouldShowBubble, currentSuggestion]);
 
   // Auto-hide after some time if not interacted with
   useEffect(() => {
@@ -300,7 +390,7 @@ const PlugBubble = ({ suggestions = [], onActionClick }: PlugBubbleProps) => {
                     {isRTL ? 'מה אתה רוצה לעשות?' : 'What would you like to do?'}
                   </p>
                   
-                  {activeSuggestions.slice(0, 4).map((suggestion) => (
+                  {dynamicSuggestions.slice(0, 4).map((suggestion) => (
                     <motion.button
                       key={suggestion.id}
                       onClick={() => handleAction(suggestion.action)}
