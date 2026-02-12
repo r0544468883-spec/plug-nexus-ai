@@ -11,6 +11,7 @@ import { SparkleAnimation } from './SparkleAnimation';
 import { FeedPollCard } from './FeedPollCard';
 import { VideoPlayer } from './VideoPlayer';
 import { FeedPost } from './feedMockData';
+import { FollowButton } from './FollowButton';
 import { Heart, MessageCircle, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -88,6 +89,9 @@ export function FeedCard({ post }: FeedCardProps) {
                 {post.companyName} · {timeLabel}
               </p>
             </div>
+            {(post as any).authorId && (
+              <FollowButton targetUserId={(post as any).authorId} />
+            )}
           </div>
 
           {/* Content */}

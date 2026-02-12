@@ -778,6 +778,30 @@ export type Database = {
           },
         ]
       }
+      follows: {
+        Row: {
+          created_at: string
+          followed_company_id: string | null
+          followed_user_id: string | null
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          followed_company_id?: string | null
+          followed_user_id?: string | null
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          followed_company_id?: string | null
+          followed_user_id?: string | null
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       home_assignments: {
         Row: {
           application_id: string
@@ -1653,6 +1677,101 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      webinar_registrations: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          webinar_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          webinar_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          webinar_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinar_registrations_webinar_id_fkey"
+            columns: ["webinar_id"]
+            isOneToOne: false
+            referencedRelation: "webinars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webinars: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          creator_id: string
+          description_en: string | null
+          description_he: string | null
+          id: string
+          internal_stream_url: string | null
+          is_internal: boolean
+          link_url: string | null
+          reminder_1_minutes: number
+          reminder_2_minutes: number
+          scheduled_at: string
+          title_en: string
+          title_he: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          creator_id: string
+          description_en?: string | null
+          description_he?: string | null
+          id?: string
+          internal_stream_url?: string | null
+          is_internal?: boolean
+          link_url?: string | null
+          reminder_1_minutes?: number
+          reminder_2_minutes?: number
+          scheduled_at: string
+          title_en?: string
+          title_he?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          creator_id?: string
+          description_en?: string | null
+          description_he?: string | null
+          id?: string
+          internal_stream_url?: string | null
+          is_internal?: boolean
+          link_url?: string | null
+          reminder_1_minutes?: number
+          reminder_2_minutes?: number
+          scheduled_at?: string
+          title_en?: string
+          title_he?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinars_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webinars_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

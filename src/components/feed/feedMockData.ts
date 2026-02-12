@@ -14,6 +14,8 @@ export interface FeedPost {
   comments: number;
   createdAt: string;
   pollOptions?: PollOption[];
+  authorId?: string;
+  companyId?: string;
 }
 
 export interface PollOption {
