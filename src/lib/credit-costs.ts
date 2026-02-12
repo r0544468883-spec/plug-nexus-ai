@@ -6,6 +6,7 @@ export const CREDIT_COSTS = {
   HOME_TASK_REVIEW: 10,
   SMART_SEARCH: 2,
   PING_AFTER_FREE: 15,
+  FEED_INTERACTION: 1,
 } as const;
 
 // Action names mapped for display
@@ -16,6 +17,9 @@ export const CREDIT_ACTION_LABELS = {
   home_task_review: { en: 'Home Task Review', he: 'בדיקת משימת בית' },
   smart_search: { en: 'Smart Search', he: 'חיפוש חכם' },
   ping: { en: 'Internal Ping', he: 'פינג פנימי' },
+  feed_like: { en: 'Feed Like', he: 'לייק בפיד' },
+  feed_comment: { en: 'Feed Comment', he: 'תגובה בפיד' },
+  feed_poll_vote: { en: 'Feed Poll Vote', he: 'הצבעה בסקר' },
 } as const;
 
 // Free pings per day before credits are charged

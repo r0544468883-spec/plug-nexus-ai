@@ -26,11 +26,12 @@ import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
+import { FeedPage } from '@/components/feed/FeedPage';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic, Newspaper } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -295,6 +296,28 @@ export default function Dashboard() {
         />
       )}
 
+      {/* PLUG Feed Entry Card - job seekers only */}
+      {role === 'job_seeker' && (
+        <Card 
+          className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 cursor-pointer plug-card-hover"
+          onClick={() => setCurrentSection('feed')}
+        >
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/20">
+              <Newspaper className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-base">PLUG Feed</h3>
+              <p className="text-sm text-muted-foreground">
+                {isRTL
+                  ? 'טיפים, תרבות ארגונית וסקרים – הרוויחו דלק מכל אינטראקציה ⚡'
+                  : 'Tips, culture & polls – earn fuel from every interaction ⚡'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Welcome Card with Plug CTA */}
       <WelcomeCard onSendMessage={handleWelcomeMessage} />
 
@@ -511,6 +534,8 @@ export default function Dashboard() {
         return <CVBuilder />;
       case 'interview-prep':
         return <InterviewPrepContent />;
+      case 'feed':
+        return <FeedPage />;
       default:
         return renderOverviewContent();
     }
