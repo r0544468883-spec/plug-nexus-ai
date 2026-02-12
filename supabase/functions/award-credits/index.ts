@@ -75,10 +75,10 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const requestBody = await req.json();
-    const { action, taskId, referralCode, userId, amount, creditType, actionType, description: customDescription } = requestBody;
+    const { action, taskId, referralCode, userId, amount, creditType, actionType: reqActionType, description: customDescription } = requestBody;
     
     // Handle direct credit award (from client with explicit amount)
-    if (userId && amount && actionType) {
+    if (userId && amount && reqActionType) {
       // Verify the caller is the user or has admin rights
       if (userId !== user.id) {
         return new Response(
@@ -118,11 +118,11 @@ serve(async (req) => {
         user_id: userId,
         amount,
         credit_type: creditType,
-        action_type: actionType,
-        description: customDescription || `Awarded ${amount} ${creditType} credits for ${actionType}`
+        action_type: reqActionType,
+        description: customDescription || `Awarded ${amount} ${creditType} credits for ${reqActionType}`
       });
 
-      console.log(`[award-credits] Direct award: ${amount} ${creditType} fuel to ${userId} for ${actionType}`);
+      console.log(`[award-credits] Direct award: ${amount} ${creditType} fuel to ${userId} for ${reqActionType}`);
 
       return new Response(
         JSON.stringify({ 
