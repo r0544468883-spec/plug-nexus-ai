@@ -65,6 +65,9 @@ const Credits = () => {
       vouch_given: { en: 'Vouch Given', he: 'המלצה ניתנה' },
       community_share: { en: 'Community Share', he: 'שיתוף לקהילה' },
       job_share: { en: 'Job Share', he: 'שיתוף משרה' },
+      feed_like: { en: 'Feed Like', he: 'לייק בפיד' },
+      feed_comment: { en: 'Feed Comment', he: 'תגובה בפיד' },
+      feed_poll_vote: { en: 'Feed Poll Vote', he: 'הצבעה בסקר' },
     };
     
     const label = labels[actionType];

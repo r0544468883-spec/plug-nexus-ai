@@ -33,7 +33,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const checkSubscription = async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       setIsSubscribed(!!subscription);
     } catch (error) {
       console.error('Error checking subscription:', error);
@@ -81,7 +81,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       // Subscribe to push notifications
       // Note: In production, you'd need a VAPID key from your server
       const vapidKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidKey,
       });
@@ -116,7 +116,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       setIsLoading(true);
 
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
 
       if (subscription) {
         await subscription.unsubscribe();
