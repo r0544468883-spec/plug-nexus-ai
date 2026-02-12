@@ -683,6 +683,101 @@ export type Database = {
         }
         Relationships: []
       }
+      feed_poll_options: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          text_en: string
+          text_he: string
+          votes_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          text_en: string
+          text_he: string
+          votes_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          text_en?: string
+          text_he?: string
+          votes_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_poll_options_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_posts: {
+        Row: {
+          author_id: string
+          comments_count: number
+          company_id: string | null
+          content_en: string | null
+          content_he: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          likes_count: number
+          post_type: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          author_id: string
+          comments_count?: number
+          company_id?: string | null
+          content_en?: string | null
+          content_he?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          likes_count?: number
+          post_type: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          author_id?: string
+          comments_count?: number
+          company_id?: string | null
+          content_en?: string | null
+          content_he?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          likes_count?: number
+          post_type?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_posts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_posts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       home_assignments: {
         Row: {
           application_id: string

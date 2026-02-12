@@ -27,6 +27,7 @@ import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
 import { FeedPage } from '@/components/feed/FeedPage';
+import { CreateFeedPost } from '@/components/feed/CreateFeedPost';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -536,6 +537,8 @@ export default function Dashboard() {
         return <InterviewPrepContent />;
       case 'feed':
         return <FeedPage />;
+      case 'create-feed-post':
+        return <CreateFeedPost />;
       default:
         return renderOverviewContent();
     }
