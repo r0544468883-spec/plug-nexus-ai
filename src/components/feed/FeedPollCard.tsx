@@ -34,7 +34,7 @@ export function FeedPollCard({ options, postId }: FeedPollCardProps) {
     const result = await awardCredits('feed_poll_vote');
     if (result.success) {
       setSparkle(true);
-      toast.success(isRTL ? '⚡ +1 דלק קבוע!' : '⚡ +1 Fuel Credit earned!', {
+      toast.success(isRTL ? '⚡ +1 דלק יומי!' : '⚡ +1 Daily Fuel earned!', {
         duration: 2000,
         style: { background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' },
       });
