@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Bell, Calendar, Briefcase, Heart, CheckCircle, AlertCircle } from 'lucide-react';
+import { Bell, Calendar, Briefcase, Heart, CheckCircle, AlertCircle, Newspaper, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NotificationItemProps {
@@ -23,6 +23,13 @@ const notificationIcons: Record<string, typeof Bell> = {
   new_vouch: Heart,
   success: CheckCircle,
   alert: AlertCircle,
+  new_content: Newspaper,
+  webinar_reminder: Video,
+};
+
+const notificationColors: Record<string, string> = {
+  new_content: 'bg-purple-500/10 text-purple-500',
+  webinar_reminder: 'bg-emerald-400/10 text-emerald-400',
 };
 
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
@@ -47,11 +54,11 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       <div className="flex gap-3">
         <div className={cn(
           "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
-          notification.is_read ? "bg-muted" : "bg-primary/10"
+          notificationColors[notification.type] || (notification.is_read ? "bg-muted" : "bg-primary/10")
         )}>
           <Icon className={cn(
             "w-4 h-4",
-            notification.is_read ? "text-muted-foreground" : "text-primary"
+            notificationColors[notification.type] ? '' : (notification.is_read ? "text-muted-foreground" : "text-primary")
           )} />
         </div>
         <div className="flex-1 min-w-0">

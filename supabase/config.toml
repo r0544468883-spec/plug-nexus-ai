@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.award-credits]
 verify_jwt = false
+
+[functions.send-content-notifications]
+verify_jwt = false
+
+[functions.webinar-reminders]
+verify_jwt = false

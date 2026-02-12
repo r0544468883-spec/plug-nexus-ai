@@ -30,12 +30,13 @@ import {
   Route,
   Sparkles,
   Mic,
-  Newspaper
+  Newspaper,
+  Video
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post';
+export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -101,6 +102,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
         { icon: Newspaper, label: 'Create Feed Content', section: 'create-feed-post', tooltipHe: 'יצירת תוכן לפיד – טיפים, תרבות וסקרים למועמדים', tooltipEn: 'Create feed content – tips, culture & polls for candidates' },
+        { icon: Video, label: 'Webinars', section: 'create-webinar', tooltipHe: 'יצירת וניהול וובינרים למועמדים', tooltipEn: 'Create and manage webinars for candidates' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
         { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים וקבצים', tooltipEn: 'Documents and files' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },

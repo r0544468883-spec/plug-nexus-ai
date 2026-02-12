@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { VideoPlayer } from './VideoPlayer';
-import { Newspaper, Plus, Trash2, Upload, Loader2, Eye } from 'lucide-react';
+import { Newspaper, Plus, Trash2, Upload, Loader2, Eye, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type PostType = 'tip' | 'culture' | 'poll';
@@ -36,6 +37,7 @@ export function CreateFeedPost() {
   ]);
   const [publishing, setPublishing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [pushToFollowers, setPushToFollowers] = useState(false);
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,6 +142,19 @@ export function CreateFeedPost() {
           .insert(options);
 
         if (optError) throw optError;
+      }
+
+      // Push to followers if toggled
+      if (pushToFollowers && post) {
+        const { data: profileData2 } = await supabase
+          .from('profiles')
+          .select('active_company_id')
+          .eq('user_id', user.id)
+          .single();
+
+        supabase.functions.invoke('send-content-notifications', {
+          body: { postId: post.id, authorId: user.id, companyId: profileData2?.active_company_id },
+        }).catch(console.error);
       }
 
       toast.success(isRTL ? 'הפוסט פורסם בהצלחה! 🎉' : 'Post published successfully! 🎉');
@@ -277,6 +292,20 @@ export function CreateFeedPost() {
               )}
             </div>
           )}
+
+          {/* Push to Followers */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+            <Bell className="w-4 h-4 text-muted-foreground" />
+            <div className="flex-1">
+              <Label className="text-sm font-medium">
+                {isRTL ? 'שלח לעוקבים ואנשי קשר קודמים' : 'Push to Followers & Previous Contacts'}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {isRTL ? 'ישלח התראה לכל מי שעוקב אחריך או שהגיש מועמדות בעבר' : 'Sends notification to all followers and past applicants'}
+              </p>
+            </div>
+            <Switch checked={pushToFollowers} onCheckedChange={setPushToFollowers} />
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
