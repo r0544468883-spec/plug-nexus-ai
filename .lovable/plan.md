@@ -1,106 +1,171 @@
 
-# מסך יצירת תוכן למגייסים/חברות + תמיכה בוידאו
+# Creator Suite, Follow System & Webinar Management
 
-## מה קיים היום
-- הפיד עובד עם **mock data בלבד** (קבוע בקוד)
-- אין טבלת `feed_posts` בבסיס הנתונים
-- אין מסך יצירת תוכן למגייסים
-- אין תמיכה בסרטונים
-
-## מה ייבנה
-
-### 1. טבלת בסיס נתונים: `feed_posts`
-| עמודה | סוג | תיאור |
-|-------|------|--------|
-| id | uuid | מזהה |
-| author_id | uuid | המגייס/ת שפרסמ/ה |
-| company_id | uuid | החברה (FK ל-companies) |
-| post_type | text | 'tip' / 'culture' / 'poll' |
-| content_en | text | תוכן באנגלית |
-| content_he | text | תוכן בעברית |
-| video_url | text | קישור לסרטון (Storage) |
-| likes_count | int | מונה לייקים |
-| comments_count | int | מונה תגובות |
-| is_published | boolean | האם פורסם |
-| created_at | timestamptz | תאריך יצירה |
-
-### 2. טבלת `feed_poll_options`
-| עמודה | סוג | תיאור |
-|-------|------|--------|
-| id | uuid | מזהה |
-| post_id | uuid | FK ל-feed_posts |
-| text_en | text | טקסט באנגלית |
-| text_he | text | טקסט בעברית |
-| votes_count | int | מונה הצבעות |
-
-### 3. Storage Bucket: `feed-videos`
-- Bucket פרטי להעלאת סרטונים
-- הגבלת גודל: 100MB
-- RLS: מגייסים מעלים, מועמדים צופים
-
-### 4. מסך יצירת תוכן למגייסים (חדש)
-**קובץ: `src/components/feed/CreateFeedPost.tsx`**
-- טופס עם שדות: סוג פוסט, תוכן EN/HE, העלאת וידאו
-- אם סוג = poll: אפשרות להוסיף 2-4 אפשרויות
-- כפתור "פרסם" ששומר ל-DB
-- תצוגה מקדימה לפני פרסום
-
-### 5. ניווט למגייסים
-- הוספת `'create-feed-post'` ל-`DashboardSection`
-- הוספת פריט ניווט חדש בסייד-בר למגייסים: "Create Feed Content"
-- הוספת `case 'create-feed-post'` ב-Dashboard.tsx
-
-### 6. עדכון הפיד למועמדים
-- `FeedPage.tsx` יטען פוסטים **אמיתיים מה-DB** (במקום mock data)
-- Fallback ל-mock data כשאין פוסטים אמיתיים
-- תמיכה בנגן וידאו בתוך `FeedCard.tsx` (HTML5 `<video>`)
-
-### 7. נגן וידאו ב-FeedCard
-- כשפוסט מכיל `video_url`, יוצג נגן וידאו עם controls
-- תמיכה ב-poster/thumbnail
-- Aspect ratio 16:9
-
-### 8. RLS Policies
-- **feed_posts**: מגייסים יכולים ליצור/לערוך פוסטים שלהם; מועמדים יכולים לקרוא פוסטים מפורסמים
-- **feed_poll_options**: מגייסים יוצרים; כולם קוראים
-- **feed-videos bucket**: מגייסים מעלים; כולם קוראים (signed URLs)
+## Overview
+This plan adds three major systems: (1) Follow logic so candidates can follow Hunters/Companies, (2) a notification engine for new content, and (3) a full Webinar management system with reminders, registration, and in-feed display.
 
 ---
 
-## פירוט טכני
+## 1. Database Tables
 
-### קבצים חדשים
-| קובץ | תיאור |
-|-------|--------|
-| `src/components/feed/CreateFeedPost.tsx` | טופס יצירת פוסט (סוג, תוכן, וידאו, סקר) |
-| `src/components/feed/VideoPlayer.tsx` | קומפוננטת נגן וידאו |
+### `follows`
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid PK | |
+| follower_id | uuid | Candidate who follows |
+| followed_user_id | uuid (nullable) | Followed Hunter |
+| followed_company_id | uuid (nullable) | Followed Company |
+| created_at | timestamptz | |
 
-### קבצים מעודכנים
-| קובץ | שינוי |
-|-------|--------|
-| `src/components/dashboard/DashboardLayout.tsx` | הוספת `create-feed-post` לסייד-בר מגייסים |
-| `src/pages/Dashboard.tsx` | הוספת case ל-`create-feed-post` |
-| `src/components/feed/FeedPage.tsx` | טעינת פוסטים מה-DB + fallback למוק |
-| `src/components/feed/FeedCard.tsx` | תמיכה בנגן וידאו |
-| `src/components/feed/feedMockData.ts` | הוספת שדה `videoUrl` לטיפוס |
+- Unique constraint: `(follower_id, followed_user_id)` and `(follower_id, followed_company_id)`
+- CHECK: at least one of `followed_user_id` or `followed_company_id` is not null
 
-### Migration SQL
-1. יצירת טבלת `feed_posts` + אינדקסים
-2. יצירת טבלת `feed_poll_options`
-3. יצירת bucket `feed-videos`
-4. RLS policies לכל הטבלאות + הבאקט
-5. Enable realtime על `feed_posts`
+### `webinars`
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid PK | |
+| creator_id | uuid | Hunter or HR who created it |
+| company_id | uuid (nullable) | FK to companies |
+| title_en | text | |
+| title_he | text | |
+| description_en | text | |
+| description_he | text | |
+| scheduled_at | timestamptz | Webinar date/time |
+| link_url | text | Zoom/Meet URL or null for internal |
+| is_internal | boolean | If true, embed video player in feed |
+| internal_stream_url | text (nullable) | For internal stream |
+| reminder_1_minutes | int | First reminder (e.g. 1440 = 24h) |
+| reminder_2_minutes | int | Second reminder (e.g. 60 = 1h) |
+| created_at | timestamptz | |
 
-### זרימת השימוש
+### `webinar_registrations`
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid PK | |
+| webinar_id | uuid FK | |
+| user_id | uuid | Candidate who registered |
+| created_at | timestamptz | |
 
-**מגייסת:**
-1. נכנסת לדשבורד --> לוחצת "Create Feed Content" בסייד-בר
-2. בוחרת סוג פוסט (טיפ/תרבות/סקר)
-3. כותבת תוכן + מעלה סרטון (אופציונלי)
-4. אם סקר -- מוסיפה אפשרויות
-5. לוחצת "פרסום" --> נשמר ב-DB
+- Unique constraint: `(webinar_id, user_id)`
 
-**מועמד:**
-1. נכנס ל-PLUG Feed
-2. רואה פוסטים אמיתיים מה-DB + mock data כ-fallback
-3. צופה בסרטון, עושה לייק/תגובה/הצבעה --> מקבל +1 דלק יומי
+### RLS Policies
+- **follows**: Candidates can insert/delete their own follows; all authenticated users can read
+- **webinars**: Recruiters (freelance_hr, inhouse_hr) can CRUD their own; all authenticated can read
+- **webinar_registrations**: Candidates can insert/delete their own; creators can read registrations for their webinars
+
+---
+
+## 2. Edge Function: `send-content-notifications`
+
+Triggered when a recruiter publishes a post with "Push to Followers" toggled on.
+
+Logic:
+1. Receive `{ postId, authorId, companyId }` 
+2. Query `follows` for all followers of this author or company
+3. Query `applications` for candidates who previously applied to jobs from this company
+4. Deduplicate user IDs
+5. Insert a notification row per user into the `notifications` table
+6. Notification type: `new_content` (Soft Purple) or `webinar_reminder` (Mint Green)
+
+---
+
+## 3. Edge Function: `webinar-reminders`
+
+A scheduled/cron-style function (or called from the publish flow):
+- Queries `webinars` where `scheduled_at - reminder_X_minutes` is within the current window
+- For each matching webinar, fetches registered users from `webinar_registrations`
+- Inserts reminder notifications into the `notifications` table
+
+For MVP: reminders are triggered by a Supabase cron (pg_cron) that runs every 5 minutes calling this function.
+
+---
+
+## 4. UI Changes
+
+### A. "Push to Followers" Toggle in `CreateFeedPost.tsx`
+- Add a Switch component: "Push to Followers & Previous Contacts"
+- When toggled on and post is published, call `send-content-notifications` edge function
+
+### B. Webinar Creation Form: `CreateWebinar.tsx`
+New component accessible to freelance_hr and inhouse_hr roles:
+- Fields: Title (EN/HE), Description (EN/HE), Date/Time picker, Link URL or "Internal Stream" toggle
+- Two reminder dropdowns (preset options: 24h, 12h, 6h, 1h, 30min, 15min)
+- Publish button saves to `webinars` table
+
+### C. Navigation Updates (`DashboardLayout.tsx`)
+- Add `'create-webinar'` to `DashboardSection` type
+- Add nav item for recruiters: "Webinars" with Video icon
+- Add case in `Dashboard.tsx`
+
+### D. Follow Button (`FollowButton.tsx`)
+New component that candidates see on:
+- Feed cards (next to recruiter name)
+- Public profiles of Hunters/Companies
+
+Clicking toggles a follow/unfollow in the `follows` table.
+
+### E. Webinar Cards in Feed (`WebinarFeedCard.tsx`)
+- Specialized card showing: title, description, date/time, "Register" / "Join" button
+- If `is_internal` is true: embed a `VideoPlayer` placeholder with "Live" badge
+- If external: "Join" opens link in new tab
+- Registration inserts into `webinar_registrations`
+
+### F. Feed Updates (`FeedPage.tsx`)
+- Add a "Webinars" tab alongside existing tabs
+- Fetch upcoming webinars and display as `WebinarFeedCard`
+- Prioritize content from followed accounts at the top
+
+### G. Notification Styling (`NotificationItem.tsx`)
+- `new_content` type: Soft Purple icon/badge (#A855F7)
+- `webinar_reminder` type: Mint Green icon/badge (#00FF9D)
+
+---
+
+## 5. File Summary
+
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/components/feed/CreateWebinar.tsx` | Webinar creation form for recruiters |
+| `src/components/feed/WebinarFeedCard.tsx` | Webinar display card in candidate feed |
+| `src/components/feed/FollowButton.tsx` | Follow/Unfollow toggle component |
+| `supabase/functions/send-content-notifications/index.ts` | Push notifications to followers on new content |
+| `supabase/functions/webinar-reminders/index.ts` | Automated webinar reminder notifications |
+
+### Modified Files
+| File | Change |
+|------|--------|
+| `src/components/feed/CreateFeedPost.tsx` | Add "Push to Followers" switch |
+| `src/components/feed/FeedPage.tsx` | Add "Webinars" tab, prioritize followed content |
+| `src/components/feed/FeedCard.tsx` | Add FollowButton next to recruiter name |
+| `src/components/dashboard/DashboardLayout.tsx` | Add `create-webinar` section for recruiters |
+| `src/pages/Dashboard.tsx` | Add webinar case to section renderer |
+| `src/components/notifications/NotificationItem.tsx` | Add purple/green color coding by type |
+| SQL Migration | Create `follows`, `webinars`, `webinar_registrations` tables + RLS + realtime |
+
+---
+
+## 6. User Flows
+
+### Recruiter publishes content
+1. Goes to "Create Feed Content"
+2. Writes post, toggles "Push to Followers & Previous Contacts"
+3. Clicks Publish --> post saved + edge function notifies followers
+
+### Recruiter creates webinar
+1. Goes to "Webinars" in sidebar
+2. Fills title, description, date, link, selects 2 reminder intervals
+3. Clicks Create --> saved to DB
+4. Reminders auto-fire at configured times via cron
+
+### Candidate follows a company
+1. Sees a post in feed from "TechCo"
+2. Clicks Follow button on the card
+3. Future TechCo content appears prioritized in feed
+4. Gets Soft Purple notification when TechCo publishes new content
+
+### Candidate registers for webinar
+1. Sees webinar card in feed
+2. Clicks "Register"
+3. Gets Mint Green reminder notifications before the event
+4. If internal: clicks "Join" to watch embedded stream
