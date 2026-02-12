@@ -23,16 +23,16 @@ const SOCIAL_TASK_REWARDS: Record<string, number> = {
 };
 
 // Recurring rewards (with caps)
-const RECURRING_REWARDS: Record<string, { amount: number; dailyCap?: number; monthlyCap?: number }> = {
+const RECURRING_REWARDS: Record<string, { amount: number; dailyCap?: number; monthlyCap?: number; fuelType?: 'daily' | 'permanent' }> = {
   'community_share': { amount: 5, dailyCap: 3 },
   'job_share': { amount: 5, dailyCap: 5 },
   'referral_bonus': { amount: 10 },
   'vouch_received': { amount: 25, monthlyCap: 5 },
   'vouch_given': { amount: 5, monthlyCap: 5 },
   'skill_added': { amount: 10 },
-  'feed_like': { amount: 1 },
-  'feed_comment': { amount: 1 },
-  'feed_poll_vote': { amount: 1 },
+  'feed_like': { amount: 1, fuelType: 'daily' },
+  'feed_comment': { amount: 1, fuelType: 'daily' },
+  'feed_poll_vote': { amount: 1, fuelType: 'daily' },
 };
 
 // Direct credit award (from client with explicit amount)
@@ -353,7 +353,47 @@ serve(async (req) => {
       );
     }
 
-    // Award permanent fuel
+    // Determine fuel type - feed actions go to daily, everything else to permanent
+    const rewardConfig = RECURRING_REWARDS[action];
+    const fuelType = rewardConfig?.fuelType || 'permanent';
+
+    if (fuelType === 'daily') {
+      // Award daily fuel (can exceed 20 via feed interactions)
+      const newDailyFuel = credits.daily_fuel + amountToAward;
+      
+      const { error: updateError } = await supabase
+        .from('user_credits')
+        .update({ 
+          daily_fuel: newDailyFuel,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      await supabase.from('credit_transactions').insert({
+        user_id: user.id,
+        amount: amountToAward,
+        credit_type: 'daily',
+        action_type: actionType,
+        description
+      });
+
+      console.log(`[award-credits] Awarded ${amountToAward} daily fuel to ${user.id}`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          awarded: amountToAward,
+          daily_fuel: newDailyFuel,
+          permanent_fuel: credits.permanent_fuel,
+          total_credits: newDailyFuel + credits.permanent_fuel
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Award permanent fuel (default)
     const newPermanentFuel = credits.permanent_fuel + amountToAward;
     
     const { error: updateError } = await supabase

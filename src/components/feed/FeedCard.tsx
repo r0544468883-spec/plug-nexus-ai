@@ -38,7 +38,7 @@ export function FeedCard({ post }: FeedCardProps) {
     const result = await awardCredits('feed_like');
     if (result.success) {
       setLikeSparkle(true);
-      toast.success(isRTL ? '⚡ +1 דלק קבוע!' : '⚡ +1 Fuel Credit earned!', {
+      toast.success(isRTL ? '⚡ +1 דלק יומי!' : '⚡ +1 Daily Fuel earned!', {
         duration: 2000,
         style: { background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' },
       });
@@ -55,7 +55,7 @@ export function FeedCard({ post }: FeedCardProps) {
     const result = await awardCredits('feed_comment');
     if (result.success) {
       setCommentSparkle(true);
-      toast.success(isRTL ? '⚡ +1 דלק קבוע!' : '⚡ +1 Fuel Credit earned!', {
+      toast.success(isRTL ? '⚡ +1 דלק יומי!' : '⚡ +1 Daily Fuel earned!', {
         duration: 2000,
         style: { background: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' },
       });
