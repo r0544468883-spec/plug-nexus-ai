@@ -9,6 +9,7 @@ export interface FeedPost {
   content: string;
   contentHe: string;
   imageUrl?: string;
+  videoUrl?: string;
   likes: number;
   comments: number;
   createdAt: string;

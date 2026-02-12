@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SparkleAnimation } from './SparkleAnimation';
 import { FeedPollCard } from './FeedPollCard';
+import { VideoPlayer } from './VideoPlayer';
 import { FeedPost } from './feedMockData';
 import { Heart, MessageCircle, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -93,6 +94,11 @@ export function FeedCard({ post }: FeedCardProps) {
           <p className="text-sm leading-relaxed mb-3">
             {isRTL ? post.contentHe : post.content}
           </p>
+
+          {/* Video */}
+          {post.videoUrl && (
+            <VideoPlayer src={post.videoUrl} />
+          )}
 
           {/* Poll */}
           {post.postType === 'poll' && post.pollOptions && (
