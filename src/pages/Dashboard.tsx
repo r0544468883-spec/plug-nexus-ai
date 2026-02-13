@@ -29,6 +29,9 @@ import { InterviewPrepContent } from '@/components/interview/InterviewPrepConten
 import { FeedPage } from '@/components/feed/FeedPage';
 import { CreateFeedPost } from '@/components/feed/CreateFeedPost';
 import { CreateWebinar } from '@/components/feed/CreateWebinar';
+import { CommunityHubsList } from '@/components/communities/CommunityHubsList';
+import { CreateCommunityHub } from '@/components/communities/CreateCommunityHub';
+import { CommunityHubView } from '@/components/communities/CommunityHubView';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,6 +98,7 @@ export default function Dashboard() {
   const [pendingMessageKey, setPendingMessageKey] = useState(0);
   const [chatContextSection, setChatContextSection] = useState<DashboardSection>('overview');
   const [showResumeDialog, setShowResumeDialog] = useState(false);
+  const [viewingHubId, setViewingHubId] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === 'he';
@@ -542,7 +546,20 @@ export default function Dashboard() {
         return <CreateFeedPost />;
       case 'create-webinar':
         return <CreateWebinar />;
-      default:
+      case 'communities':
+        return <CommunityHubsList 
+          onViewHub={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
+          onCreateHub={() => setCurrentSection('create-community')} 
+        />;
+      case 'create-community':
+        return <CreateCommunityHub 
+          onSuccess={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
+          onCancel={() => setCurrentSection('communities')} 
+        />;
+      case 'community-view':
+        return viewingHubId ? (
+          <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />
+        ) : null;
         return renderOverviewContent();
     }
   };
