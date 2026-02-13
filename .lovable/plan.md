@@ -1,171 +1,211 @@
 
-# Creator Suite, Follow System & Webinar Management
+# תוכנית: שיפור הודעות למגייסות, תיקון חיפוש מועמדים, ומערכת קהילות
 
-## Overview
-This plan adds three major systems: (1) Follow logic so candidates can follow Hunters/Companies, (2) a notification engine for new content, and (3) a full Webinar management system with reminders, registration, and in-feed display.
+## סקירה
+שלושה נושאים עיקריים: (1) שדרוג מערכת ההודעות למגייסות, (2) תיקון באג בחיפוש מועמדים, (3) מערכת קהילות בסגנון Discord.
+
+בגלל שהנושאים עצומים בהיקף (במיוחד הקהילות), ממליץ לפצל ליישום בשלבים. הנה התוכנית המלאה:
 
 ---
 
-## 1. Database Tables
+## 1. שדרוג מערכת ההודעות למגייסות
 
-### `follows`
-| Column | Type | Description |
-|--------|------|-------------|
+### בעיה
+כרגע ה-`SendMessageDialog` פשוט מציג שדה טקסט -- אין תצוגת פרופיל של המועמד ואין אפשרות לצרף קובץ או קישור למשרה.
+
+### פתרון
+
+#### A. תצוגת פרופיל מועמד בדיאלוג ההודעה
+- שדרוג `SendMessageDialog.tsx` להוסיף פאנל פרופיל בראש הדיאלוג
+- שליפת נתוני המועמד: אווטאר, שם, tagline, bio, לינקים מקצועיים, vouch count
+- המגייסת רואה את המועמד "מול העיניים" לפני שליחת ההודעה
+
+#### B. צירוף קבצים
+- הוספת כפתור "Attach File" (Paperclip icon) ל-`SendMessageDialog`
+- שימוש ב-bucket `message-attachments` שכבר קיים
+- הגבלה: 10MB, סוגי קבצים: PDF, Word, Excel, תמונות
+- שמירת metadata בהודעה: `attachment_url`, `attachment_name`, `attachment_type`, `attachment_size`
+
+#### C. קישור למשרה פנימית
+- הוספת dropdown/autocomplete "Attach Job Link" שמושך משרות של המגייסת מטבלת `jobs`
+- כשהמגייסת בוחרת משרה, מופיע כרטיס משרה מוקטן בהודעה
+- שמירת `related_job_id` (כבר קיים בסכמה!) בהודעה
+
+#### D. עדכון ConversationThread
+- הצגת קבצים מצורפים בתוך בועות ההודעה (download link)
+- הצגת כרטיס משרה מקושרת (אם `related_job_id` קיים)
+
+### קבצים מעודכנים
+| קובץ | שינוי |
+|-------|--------|
+| `src/components/messaging/SendMessageDialog.tsx` | פאנל פרופיל + צירוף קובץ + קישור משרה |
+| `src/components/messaging/ConversationThread.tsx` | הצגת קבצים מצורפים + כרטיס משרה |
+
+---
+
+## 2. תיקון חיפוש מועמדים
+
+### בעיה
+עמוד ה-Candidates (`CandidatesPage.tsx`) מציג **רק** מועמדים שהגישו מועמדות למשרות של המגייסת. אם אין למגייסת משרות, או שאף אחד לא הגיש -- הרשימה ריקה. אין חיפוש גלובלי על כל המשתמשים הרשומים.
+
+### פתרון
+- הוספת **טאב שלישי** ל-`CandidatesPage`: "Search All Candidates" / "חיפוש כל המועמדים"
+- חיפוש על `profiles_secure` view לפי שם, אימייל, bio
+- סינון לפי `visible_to_hr = true` (רק מועמדים שהפעילו "גלוי למגייסים")
+- כרטיסי מועמד עם כפתור "Profile", "Message", "Import"
+
+### קבצים מעודכנים
+| קובץ | שינוי |
+|-------|--------|
+| `src/components/candidates/CandidatesPage.tsx` | הוספת טאב "Search All" + לוגיקת חיפוש גלובלית |
+
+---
+
+## 3. מערכת קהילות (Community Hubs) -- שלב 1
+
+### סקירה
+מערכת קהילות בסגנון Discord עם תתי-קהילות (channels), תבניות, בקרת גישה, ואינטגרציה עם Fuel.
+
+### טבלאות חדשות
+
+#### `community_hubs`
+| עמודה | סוג | תיאור |
+|-------|------|--------|
 | id | uuid PK | |
-| follower_id | uuid | Candidate who follows |
-| followed_user_id | uuid (nullable) | Followed Hunter |
-| followed_company_id | uuid (nullable) | Followed Company |
-| created_at | timestamptz | |
-
-- Unique constraint: `(follower_id, followed_user_id)` and `(follower_id, followed_company_id)`
-- CHECK: at least one of `followed_user_id` or `followed_company_id` is not null
-
-### `webinars`
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid PK | |
-| creator_id | uuid | Hunter or HR who created it |
-| company_id | uuid (nullable) | FK to companies |
-| title_en | text | |
-| title_he | text | |
+| creator_id | uuid | Hunter/HR שיצר |
+| company_id | uuid (nullable) | FK ל-companies |
+| name_en | text | שם באנגלית |
+| name_he | text | שם בעברית |
 | description_en | text | |
 | description_he | text | |
-| scheduled_at | timestamptz | Webinar date/time |
-| link_url | text | Zoom/Meet URL or null for internal |
-| is_internal | boolean | If true, embed video player in feed |
-| internal_stream_url | text (nullable) | For internal stream |
-| reminder_1_minutes | int | First reminder (e.g. 1440 = 24h) |
-| reminder_2_minutes | int | Second reminder (e.g. 60 = 1h) |
+| template | text | 'expert_hub' / 'branding_lounge' / 'career_academy' / 'custom' |
+| avatar_url | text | |
+| is_public | boolean DEFAULT true | |
+| member_count | int DEFAULT 0 | |
 | created_at | timestamptz | |
 
-### `webinar_registrations`
-| Column | Type | Description |
-|--------|------|-------------|
+#### `community_channels`
+| עמודה | סוג | תיאור |
+|-------|------|--------|
 | id | uuid PK | |
-| webinar_id | uuid FK | |
-| user_id | uuid | Candidate who registered |
+| hub_id | uuid FK | FK ל-community_hubs |
+| name_en | text | שם הערוץ |
+| name_he | text | |
+| description_en | text | |
+| description_he | text | |
+| access_mode | text | 'open' / 'request' / 'private_code' |
+| private_code | text (nullable) | קוד כניסה לערוצים פרטיים |
+| sort_order | int DEFAULT 0 | |
 | created_at | timestamptz | |
 
-- Unique constraint: `(webinar_id, user_id)`
+#### `community_members`
+| עמודה | סוג | תיאור |
+|-------|------|--------|
+| id | uuid PK | |
+| hub_id | uuid FK | |
+| user_id | uuid | |
+| role | text | 'admin' / 'moderator' / 'member' |
+| joined_at | timestamptz | |
 
-### RLS Policies
-- **follows**: Candidates can insert/delete their own follows; all authenticated users can read
-- **webinars**: Recruiters (freelance_hr, inhouse_hr) can CRUD their own; all authenticated can read
-- **webinar_registrations**: Candidates can insert/delete their own; creators can read registrations for their webinars
+- Unique: `(hub_id, user_id)`
 
----
+#### `community_messages`
+| עמודה | סוג | תיאור |
+|-------|------|--------|
+| id | uuid PK | |
+| channel_id | uuid FK | FK ל-community_channels |
+| author_id | uuid | |
+| content | text | |
+| message_type | text | 'text' / 'image' / 'video' / 'poll' |
+| attachment_url | text (nullable) | |
+| parent_message_id | uuid (nullable) | לתגובות threaded |
+| likes_count | int DEFAULT 0 | |
+| created_at | timestamptz | |
 
-## 2. Edge Function: `send-content-notifications`
+#### `community_join_requests`
+| עמודה | סוג | תיאור |
+|-------|------|--------|
+| id | uuid PK | |
+| channel_id | uuid FK | |
+| user_id | uuid | |
+| status | text | 'pending' / 'approved' / 'rejected' |
+| created_at | timestamptz | |
 
-Triggered when a recruiter publishes a post with "Push to Followers" toggled on.
+### RLS
+- **community_hubs**: כולם קוראים hubs ציבוריים; admins יכולים CRUD
+- **community_channels**: members קוראים; admins יוצרים/עורכים
+- **community_members**: authenticated can read; users insert/delete themselves (open hubs); admins manage
+- **community_messages**: members of the channel can read/write
+- **community_join_requests**: user can create own; admins can read/update
 
-Logic:
-1. Receive `{ postId, authorId, companyId }` 
-2. Query `follows` for all followers of this author or company
-3. Query `applications` for candidates who previously applied to jobs from this company
-4. Deduplicate user IDs
-5. Insert a notification row per user into the `notifications` table
-6. Notification type: `new_content` (Soft Purple) or `webinar_reminder` (Mint Green)
+### UI Components
 
----
+#### A. רשימת קהילות (`CommunityHubsList.tsx`)
+- Grid/List של כל הקהילות הציבוריות
+- חיפוש ופילטרים לפי template
+- כרטיס קהילה עם שם, תיאור, מספר חברים, כפתור "Join"
 
-## 3. Edge Function: `webinar-reminders`
+#### B. יצירת קהילה (`CreateCommunityHub.tsx`)
+- זמין ל-freelance_hr ו-inhouse_hr
+- בחירת template (Expert Hub / Branding Lounge / Career Academy / Custom)
+- כל template יוצר ערוצי ברירת מחדל:
+  - Expert Hub: `#general`, `#skill-challenges`, `#resources`
+  - Branding Lounge: `#behind-the-scenes`, `#announcements`, `#qa`
+  - Career Academy: `#interview-prep`, `#salary-talk`, `#mentoring`
+- שם, תיאור, אווטאר
 
-A scheduled/cron-style function (or called from the publish flow):
-- Queries `webinars` where `scheduled_at - reminder_X_minutes` is within the current window
-- For each matching webinar, fetches registered users from `webinar_registrations`
-- Inserts reminder notifications into the `notifications` table
+#### C. תצוגת קהילה (`CommunityHubView.tsx`)
+- סייד-בר שמאלי (Discord-style) עם רשימת ערוצים
+- אזור הודעות מרכזי עם real-time chat
+- רשימת חברים בצד ימין (desktop)
 
-For MVP: reminders are triggered by a Supabase cron (pg_cron) that runs every 5 minutes calling this function.
+#### D. ערוץ צ'אט (`CommunityChannel.tsx`)
+- הודעות real-time (Supabase Realtime)
+- תמיכה בטקסט, תמונות, סרטונים, סקרים
+- תגובות threaded
+- לייקים = +1 Daily Fuel (שימוש באותו edge function `award-credits`)
 
----
+### Navigation
+- הוספת `'communities'` ל-`DashboardSection`
+- פריט ניווט חדש לכל הרולים: "Communities" עם icon מתאים
+- הוספת `'create-community'` לרולים של מגייסות
 
-## 4. UI Changes
-
-### A. "Push to Followers" Toggle in `CreateFeedPost.tsx`
-- Add a Switch component: "Push to Followers & Previous Contacts"
-- When toggled on and post is published, call `send-content-notifications` edge function
-
-### B. Webinar Creation Form: `CreateWebinar.tsx`
-New component accessible to freelance_hr and inhouse_hr roles:
-- Fields: Title (EN/HE), Description (EN/HE), Date/Time picker, Link URL or "Internal Stream" toggle
-- Two reminder dropdowns (preset options: 24h, 12h, 6h, 1h, 30min, 15min)
-- Publish button saves to `webinars` table
-
-### C. Navigation Updates (`DashboardLayout.tsx`)
-- Add `'create-webinar'` to `DashboardSection` type
-- Add nav item for recruiters: "Webinars" with Video icon
-- Add case in `Dashboard.tsx`
-
-### D. Follow Button (`FollowButton.tsx`)
-New component that candidates see on:
-- Feed cards (next to recruiter name)
-- Public profiles of Hunters/Companies
-
-Clicking toggles a follow/unfollow in the `follows` table.
-
-### E. Webinar Cards in Feed (`WebinarFeedCard.tsx`)
-- Specialized card showing: title, description, date/time, "Register" / "Join" button
-- If `is_internal` is true: embed a `VideoPlayer` placeholder with "Live" badge
-- If external: "Join" opens link in new tab
-- Registration inserts into `webinar_registrations`
-
-### F. Feed Updates (`FeedPage.tsx`)
-- Add a "Webinars" tab alongside existing tabs
-- Fetch upcoming webinars and display as `WebinarFeedCard`
-- Prioritize content from followed accounts at the top
-
-### G. Notification Styling (`NotificationItem.tsx`)
-- `new_content` type: Soft Purple icon/badge (#A855F7)
-- `webinar_reminder` type: Mint Green icon/badge (#00FF9D)
-
----
-
-## 5. File Summary
-
-### New Files
-| File | Purpose |
-|------|---------|
-| `src/components/feed/CreateWebinar.tsx` | Webinar creation form for recruiters |
-| `src/components/feed/WebinarFeedCard.tsx` | Webinar display card in candidate feed |
-| `src/components/feed/FollowButton.tsx` | Follow/Unfollow toggle component |
-| `supabase/functions/send-content-notifications/index.ts` | Push notifications to followers on new content |
-| `supabase/functions/webinar-reminders/index.ts` | Automated webinar reminder notifications |
-
-### Modified Files
-| File | Change |
-|------|--------|
-| `src/components/feed/CreateFeedPost.tsx` | Add "Push to Followers" switch |
-| `src/components/feed/FeedPage.tsx` | Add "Webinars" tab, prioritize followed content |
-| `src/components/feed/FeedCard.tsx` | Add FollowButton next to recruiter name |
-| `src/components/dashboard/DashboardLayout.tsx` | Add `create-webinar` section for recruiters |
-| `src/pages/Dashboard.tsx` | Add webinar case to section renderer |
-| `src/components/notifications/NotificationItem.tsx` | Add purple/green color coding by type |
-| SQL Migration | Create `follows`, `webinars`, `webinar_registrations` tables + RLS + realtime |
+### Fuel Integration
+- לייק/תגובה/סקר בקהילה = +1 Daily Fuel (שימוש ב-`award-credits` edge function הקיים עם action types חדשים: `community_like`, `community_comment`, `community_poll_vote`)
 
 ---
 
-## 6. User Flows
+## פירוט טכני -- סיכום קבצים
 
-### Recruiter publishes content
-1. Goes to "Create Feed Content"
-2. Writes post, toggles "Push to Followers & Previous Contacts"
-3. Clicks Publish --> post saved + edge function notifies followers
+### קבצים חדשים
+| קובץ | תיאור |
+|-------|--------|
+| `src/components/communities/CommunityHubsList.tsx` | רשימת קהילות + חיפוש |
+| `src/components/communities/CreateCommunityHub.tsx` | טופס יצירת קהילה |
+| `src/components/communities/CommunityHubView.tsx` | תצוגת קהילה (ערוצים + צ'אט) |
+| `src/components/communities/CommunityChannel.tsx` | ערוץ צ'אט + real-time |
+| `src/components/communities/ChannelSidebar.tsx` | סייד-בר ערוצים (Discord-style) |
+| `src/components/communities/CommunityCard.tsx` | כרטיס קהילה ברשימה |
 
-### Recruiter creates webinar
-1. Goes to "Webinars" in sidebar
-2. Fills title, description, date, link, selects 2 reminder intervals
-3. Clicks Create --> saved to DB
-4. Reminders auto-fire at configured times via cron
+### קבצים מעודכנים
+| קובץ | שינוי |
+|-------|--------|
+| `src/components/messaging/SendMessageDialog.tsx` | פאנל פרופיל + צירוף קבצים + קישור משרה |
+| `src/components/messaging/ConversationThread.tsx` | הצגת קבצים ומשרות מצורפות |
+| `src/components/candidates/CandidatesPage.tsx` | טאב חיפוש גלובלי |
+| `src/components/dashboard/DashboardLayout.tsx` | הוספת Communities + Create Community לניווט |
+| `src/pages/Dashboard.tsx` | הוספת cases לרינדור |
+| `supabase/functions/award-credits/index.ts` | הוספת community action types |
+| SQL Migration | יצירת 5 טבלאות + RLS + Realtime |
 
-### Candidate follows a company
-1. Sees a post in feed from "TechCo"
-2. Clicks Follow button on the card
-3. Future TechCo content appears prioritized in feed
-4. Gets Soft Purple notification when TechCo publishes new content
+---
 
-### Candidate registers for webinar
-1. Sees webinar card in feed
-2. Clicks "Register"
-3. Gets Mint Green reminder notifications before the event
-4. If internal: clicks "Join" to watch embedded stream
+## סדר ביצוע
+1. Migration SQL -- טבלאות קהילות
+2. תיקון חיפוש מועמדים (טאב גלובלי)
+3. שדרוג SendMessageDialog (פרופיל + קבצים + משרות)
+4. עדכון ConversationThread (הצגת קבצים/משרות)
+5. רכיבי קהילות: CommunityHubsList, CreateCommunityHub, CommunityCard
+6. תצוגת קהילה: CommunityHubView, ChannelSidebar, CommunityChannel
+7. ניווט + Dashboard routing
+8. Fuel integration (award-credits)
