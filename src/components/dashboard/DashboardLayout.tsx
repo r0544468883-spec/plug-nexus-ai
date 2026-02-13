@@ -31,12 +31,13 @@ import {
   Sparkles,
   Mic,
   Newspaper,
-  Video
+  Video,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar';
+export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -91,6 +92,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
         { icon: Mic, label: 'Interview Prep', section: 'interview-prep', tooltipHe: 'הכנה לראיון עבודה עם שאלות ותרגול AI', tooltipEn: 'Interview preparation with AI questions and practice' },
         { icon: Newspaper, label: 'PLUG Feed', section: 'feed', tooltipHe: 'פיד תוכן מותאם אישית – הרוויחו דלק מכל אינטראקציה', tooltipEn: 'Personalized content feed – earn fuel from every interaction' },
+        { icon: Globe, label: 'Communities', section: 'communities', tooltipHe: 'קהילות מקצועיות לחיפוש עבודה', tooltipEn: 'Professional job search communities' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות מקבלים ומגייסים', tooltipEn: 'Internal messages from recruiters and contacts' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל, פרטיות והעדפות', tooltipEn: 'Profile settings, privacy, and preferences' },
       ];
@@ -103,6 +105,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
         { icon: Newspaper, label: 'Create Feed Content', section: 'create-feed-post', tooltipHe: 'יצירת תוכן לפיד – טיפים, תרבות וסקרים למועמדים', tooltipEn: 'Create feed content – tips, culture & polls for candidates' },
         { icon: Video, label: 'Webinars', section: 'create-webinar', tooltipHe: 'יצירת וניהול וובינרים למועמדים', tooltipEn: 'Create and manage webinars for candidates' },
+        { icon: Globe, label: 'Communities', section: 'communities', tooltipHe: 'קהילות מקצועיות – יצירה וניהול', tooltipEn: 'Professional communities – create & manage' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
         { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים וקבצים', tooltipEn: 'Documents and files' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },

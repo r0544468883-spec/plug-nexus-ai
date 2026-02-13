@@ -172,6 +172,228 @@ export type Database = {
         }
         Relationships: []
       }
+      community_channels: {
+        Row: {
+          access_mode: string
+          created_at: string
+          description_en: string | null
+          description_he: string | null
+          hub_id: string
+          id: string
+          name_en: string
+          name_he: string
+          private_code: string | null
+          sort_order: number
+        }
+        Insert: {
+          access_mode?: string
+          created_at?: string
+          description_en?: string | null
+          description_he?: string | null
+          hub_id: string
+          id?: string
+          name_en: string
+          name_he?: string
+          private_code?: string | null
+          sort_order?: number
+        }
+        Update: {
+          access_mode?: string
+          created_at?: string
+          description_en?: string | null
+          description_he?: string | null
+          hub_id?: string
+          id?: string
+          name_en?: string
+          name_he?: string
+          private_code?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_channels_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "community_hubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_hubs: {
+        Row: {
+          avatar_url: string | null
+          company_id: string | null
+          created_at: string
+          creator_id: string
+          description_en: string | null
+          description_he: string | null
+          id: string
+          is_public: boolean
+          member_count: number
+          name_en: string
+          name_he: string
+          template: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          creator_id: string
+          description_en?: string | null
+          description_he?: string | null
+          id?: string
+          is_public?: boolean
+          member_count?: number
+          name_en: string
+          name_he?: string
+          template?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string | null
+          created_at?: string
+          creator_id?: string
+          description_en?: string | null
+          description_he?: string | null
+          id?: string
+          is_public?: boolean
+          member_count?: number
+          name_en?: string
+          name_he?: string
+          template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_hubs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_hubs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_join_requests: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_join_requests_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_members: {
+        Row: {
+          hub_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          hub_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          hub_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_members_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "community_hubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_messages: {
+        Row: {
+          attachment_url: string | null
+          author_id: string
+          channel_id: string
+          content: string
+          created_at: string
+          id: string
+          likes_count: number
+          message_type: string
+          parent_message_id: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          author_id: string
+          channel_id: string
+          content: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          message_type?: string
+          parent_message_id?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          author_id?: string
+          channel_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          likes_count?: number
+          message_type?: string
+          parent_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "community_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           avg_hiring_speed_days: number | null
