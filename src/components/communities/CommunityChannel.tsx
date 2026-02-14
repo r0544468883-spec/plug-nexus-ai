@@ -13,18 +13,27 @@ import { Send, Loader2, Hash, Heart } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+interface HubSettings {
+  allow_posts: boolean;
+  allow_comments: boolean;
+}
+
 interface CommunityChannelProps {
   channelId: string;
   channelName: string;
+  hubSettings?: HubSettings;
+  isAdmin?: boolean;
 }
 
-export function CommunityChannel({ channelId, channelName }: CommunityChannelProps) {
+export function CommunityChannel({ channelId, channelName, hubSettings, isAdmin }: CommunityChannelProps) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState('');
+
+  const canPost = isAdmin || hubSettings?.allow_posts !== false;
 
   // Fetch messages
   const { data: messages = [], isLoading } = useQuery({
@@ -82,11 +91,8 @@ export function CommunityChannel({ channelId, channelName }: CommunityChannelPro
     onSuccess: () => {
       setNewMessage('');
       queryClient.invalidateQueries({ queryKey: ['community-messages', channelId] });
-      // Award fuel for community comment
       if (user?.id) {
-        supabase.functions.invoke('award-credits', {
-          body: { action: 'feed_comment' },
-        }).catch(() => {});
+        supabase.functions.invoke('award-credits', { body: { action: 'feed_comment' } }).catch(() => {});
       }
     },
     onError: () => toast.error(isHebrew ? 'שגיאה בשליחת ההודעה' : 'Failed to send'),
@@ -94,11 +100,9 @@ export function CommunityChannel({ channelId, channelName }: CommunityChannelPro
 
   const likeMutation = useMutation({
     mutationFn: async (messageId: string) => {
-      // Simple increment likes_count — in production would track per-user
       const msg = messages.find(m => m.id === messageId);
       if (!msg) return;
       await supabase.from('community_messages').update({ likes_count: msg.likes_count + 1 }).eq('id', messageId);
-      // Award fuel
       if (user?.id) {
         supabase.functions.invoke('award-credits', { body: { action: 'feed_like' } }).catch(() => {});
       }
@@ -171,21 +175,27 @@ export function CommunityChannel({ channelId, channelName }: CommunityChannelPro
         )}
       </ScrollArea>
 
-      {/* Input */}
-      <div className="p-4 border-t border-border">
-        <form onSubmit={(e) => { e.preventDefault(); sendMutation.mutate(); }} className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={isHebrew ? `הודעה ב-${channelName}...` : `Message ${channelName}...`}
-            disabled={sendMutation.isPending}
-            dir={isHebrew ? 'rtl' : 'ltr'}
-          />
-          <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMutation.isPending}>
-            {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </Button>
-        </form>
-      </div>
+      {/* Input - hidden if posts not allowed for non-admins */}
+      {canPost ? (
+        <div className="p-4 border-t border-border">
+          <form onSubmit={(e) => { e.preventDefault(); sendMutation.mutate(); }} className="flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={isHebrew ? `הודעה ב-${channelName}...` : `Message ${channelName}...`}
+              disabled={sendMutation.isPending}
+              dir={isHebrew ? 'rtl' : 'ltr'}
+            />
+            <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMutation.isPending}>
+              {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </form>
+        </div>
+      ) : (
+        <div className="p-4 border-t border-border text-center text-sm text-muted-foreground">
+          {isHebrew ? 'פרסום הודעות מוגבל למנהלים בקהילה זו' : 'Posting is restricted to admins in this community'}
+        </div>
+      )}
     </div>
   );
 }

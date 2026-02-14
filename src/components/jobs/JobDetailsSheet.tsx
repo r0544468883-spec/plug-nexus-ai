@@ -12,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { he, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EditJobFieldForm } from './EditJobFieldForm';
+import { formatSalaryRange, getILSFootnote } from '@/lib/salary-utils';
 
 interface Job {
   id: string;
@@ -21,6 +22,11 @@ interface Job {
   location: string | null;
   job_type: string | null;
   salary_range: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_currency?: string | null;
+  salary_period?: string | null;
+  hybrid_office_days?: number | null;
   source_url: string | null;
   created_at: string;
   field_id?: string | null;
@@ -47,6 +53,7 @@ interface JobDetailsSheetProps {
 const jobTypeLabels: Record<string, { en: string; he: string }> = {
   'full-time': { en: 'Full-time', he: 'משרה מלאה' },
   'part-time': { en: 'Part-time', he: 'משרה חלקית' },
+  'hybrid': { en: 'Hybrid', he: 'היברידי' },
   'contract': { en: 'Contract', he: 'חוזה' },
   'freelance': { en: 'Freelance', he: 'פרילנס' },
   'internship': { en: 'Internship', he: 'התמחות' },
@@ -71,6 +78,19 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply, onRefresh }:
   const jobTypeLabel = job.job_type && jobTypeLabels[job.job_type]
     ? (isHebrew ? jobTypeLabels[job.job_type].he : jobTypeLabels[job.job_type].en)
     : job.job_type;
+
+  // Structured salary
+  const structuredSalary = formatSalaryRange(
+    job.salary_min ?? null, job.salary_max ?? null,
+    job.salary_currency ?? null, job.salary_period ?? null
+  );
+  const salaryDisplay = structuredSalary || job.salary_range;
+  const ilsFootnote = isHebrew ? getILSFootnote(job.salary_min ?? null, job.salary_max ?? null, job.salary_currency ?? null, job.salary_period ?? null) : null;
+
+  // Hybrid
+  const hybridLabel = job.job_type === 'hybrid' && job.hybrid_office_days
+    ? (isHebrew ? `היברידי (${job.hybrid_office_days} ימים מהמשרד)` : `Hybrid (${job.hybrid_office_days} days in office)`)
+    : null;
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/job/${job.id}`;
@@ -112,17 +132,25 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply, onRefresh }:
                   {job.location}
                 </Badge>
               )}
-              {jobTypeLabel && (
+              {hybridLabel ? (
+                <Badge variant="secondary" className="gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {hybridLabel}
+                </Badge>
+              ) : jobTypeLabel ? (
                 <Badge variant="secondary" className="gap-1">
                   <Briefcase className="w-3 h-3" />
                   {jobTypeLabel}
                 </Badge>
-              )}
-              {job.salary_range && (
+              ) : null}
+              {salaryDisplay && (
                 <Badge variant="secondary" className="gap-1">
                   <DollarSign className="w-3 h-3" />
-                  {job.salary_range}
+                  {salaryDisplay}
                 </Badge>
+              )}
+              {ilsFootnote && (
+                <p className="w-full text-xs text-muted-foreground">* {ilsFootnote}</p>
               )}
               <Badge variant="outline" className="gap-1">
                 <Clock className="w-3 h-3" />
