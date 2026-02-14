@@ -221,6 +221,12 @@ export type Database = {
       }
       community_hubs: {
         Row: {
+          allow_comments: boolean
+          allow_images: boolean
+          allow_member_invite: boolean
+          allow_polls: boolean
+          allow_posts: boolean
+          allow_video: boolean
           avatar_url: string | null
           company_id: string | null
           created_at: string
@@ -235,6 +241,12 @@ export type Database = {
           template: string
         }
         Insert: {
+          allow_comments?: boolean
+          allow_images?: boolean
+          allow_member_invite?: boolean
+          allow_polls?: boolean
+          allow_posts?: boolean
+          allow_video?: boolean
           avatar_url?: string | null
           company_id?: string | null
           created_at?: string
@@ -249,6 +261,12 @@ export type Database = {
           template?: string
         }
         Update: {
+          allow_comments?: boolean
+          allow_images?: boolean
+          allow_member_invite?: boolean
+          allow_polls?: boolean
+          allow_posts?: boolean
+          allow_video?: boolean
           avatar_url?: string | null
           company_id?: string | null
           created_at?: string
@@ -1240,6 +1258,7 @@ export type Database = {
           description: string | null
           experience_level_id: string | null
           field_id: string | null
+          hybrid_office_days: number | null
           id: string
           is_community_shared: boolean | null
           job_type: string | null
@@ -1248,6 +1267,10 @@ export type Database = {
           longitude: number | null
           requirements: string | null
           role_id: string | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
           salary_range: string | null
           shared_by_user_id: string | null
           source_url: string | null
@@ -1264,6 +1287,7 @@ export type Database = {
           description?: string | null
           experience_level_id?: string | null
           field_id?: string | null
+          hybrid_office_days?: number | null
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
@@ -1272,6 +1296,10 @@ export type Database = {
           longitude?: number | null
           requirements?: string | null
           role_id?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
           source_url?: string | null
@@ -1288,6 +1316,7 @@ export type Database = {
           description?: string | null
           experience_level_id?: string | null
           field_id?: string | null
+          hybrid_office_days?: number | null
           id?: string
           is_community_shared?: boolean | null
           job_type?: string | null
@@ -1296,6 +1325,10 @@ export type Database = {
           longitude?: number | null
           requirements?: string | null
           role_id?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           salary_range?: string | null
           shared_by_user_id?: string | null
           source_url?: string | null

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ChannelSidebar } from './ChannelSidebar';
 import { CommunityChannel } from './CommunityChannel';
@@ -14,6 +15,7 @@ interface CommunityHubViewProps {
 }
 
 export function CommunityHubView({ hubId, onBack }: CommunityHubViewProps) {
+  const { user } = useAuth();
   const { language } = useLanguage();
   const isHebrew = language === 'he';
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
@@ -36,7 +38,6 @@ export function CommunityHubView({ hubId, onBack }: CommunityHubViewProps) {
         .eq('hub_id', hubId)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      // Auto-select first channel
       if (data && data.length > 0 && !activeChannelId) {
         setActiveChannelId(data[0].id);
       }
@@ -44,15 +45,41 @@ export function CommunityHubView({ hubId, onBack }: CommunityHubViewProps) {
     },
   });
 
+  // Check if current user is admin
+  const { data: membership } = useQuery({
+    queryKey: ['community-membership', hubId, user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('community_members')
+        .select('role')
+        .eq('hub_id', hubId)
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const isAdmin = membership?.role === 'admin';
+
   if (hubLoading || channelsLoading) {
     return <div className="flex gap-4 h-[600px]"><Skeleton className="w-60 h-full" /><Skeleton className="flex-1 h-full" /></div>;
   }
 
   const activeChannel = channels.find(c => c.id === activeChannelId);
 
+  const hubSettings = hub ? {
+    allow_posts: (hub as any).allow_posts ?? true,
+    allow_comments: (hub as any).allow_comments ?? true,
+    allow_polls: (hub as any).allow_polls ?? true,
+    allow_video: (hub as any).allow_video ?? true,
+    allow_images: (hub as any).allow_images ?? true,
+    allow_member_invite: (hub as any).allow_member_invite ?? true,
+  } : undefined;
+
   return (
     <div className="flex h-[600px] rounded-xl overflow-hidden border border-border bg-card" dir={isHebrew ? 'rtl' : 'ltr'}>
-      {/* Channel Sidebar */}
       <ChannelSidebar
         hubName={isHebrew ? (hub?.name_he || hub?.name_en || '') : (hub?.name_en || '')}
         channels={channels}
@@ -60,14 +87,18 @@ export function CommunityHubView({ hubId, onBack }: CommunityHubViewProps) {
         onSelectChannel={setActiveChannelId}
         onBack={onBack}
         memberCount={hub?.member_count || 0}
+        isAdmin={isAdmin}
+        hubId={hubId}
+        hubSettings={hubSettings}
       />
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {activeChannel ? (
           <CommunityChannel
             channelId={activeChannel.id}
             channelName={isHebrew ? activeChannel.name_he : activeChannel.name_en}
+            hubSettings={hubSettings ? { allow_posts: hubSettings.allow_posts, allow_comments: hubSettings.allow_comments } : undefined}
+            isAdmin={isAdmin}
           />
         ) : (
           <Card className="m-auto border-none shadow-none bg-transparent">
