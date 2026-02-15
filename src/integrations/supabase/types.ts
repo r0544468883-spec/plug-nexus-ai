@@ -61,6 +61,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          ai_candidate_summary: Json | null
           candidate_id: string
           created_at: string
           current_stage: string | null
@@ -68,12 +69,16 @@ export type Database = {
           internal_notes: string | null
           job_id: string
           last_interaction: string | null
+          last_stage_change_at: string | null
           match_score: number | null
           notes: string | null
+          retention_risk_score: number | null
+          stagnation_snoozed_until: string | null
           status: string | null
           updated_at: string
         }
         Insert: {
+          ai_candidate_summary?: Json | null
           candidate_id: string
           created_at?: string
           current_stage?: string | null
@@ -81,12 +86,16 @@ export type Database = {
           internal_notes?: string | null
           job_id: string
           last_interaction?: string | null
+          last_stage_change_at?: string | null
           match_score?: number | null
           notes?: string | null
+          retention_risk_score?: number | null
+          stagnation_snoozed_until?: string | null
           status?: string | null
           updated_at?: string
         }
         Update: {
+          ai_candidate_summary?: Json | null
           candidate_id?: string
           created_at?: string
           current_stage?: string | null
@@ -94,8 +103,11 @@ export type Database = {
           internal_notes?: string | null
           job_id?: string
           last_interaction?: string | null
+          last_stage_change_at?: string | null
           match_score?: number | null
           notes?: string | null
+          retention_risk_score?: number | null
+          stagnation_snoozed_until?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -424,6 +436,7 @@ export type Database = {
           logo_url: string | null
           metadata: Json | null
           name: string
+          response_rate: number | null
           size: string | null
           total_hires: number | null
           updated_at: string
@@ -440,6 +453,7 @@ export type Database = {
           logo_url?: string | null
           metadata?: Json | null
           name: string
+          response_rate?: number | null
           size?: string | null
           total_hires?: number | null
           updated_at?: string
@@ -456,6 +470,7 @@ export type Database = {
           logo_url?: string | null
           metadata?: Json | null
           name?: string
+          response_rate?: number | null
           size?: string | null
           total_hires?: number | null
           updated_at?: string
@@ -970,8 +985,11 @@ export type Database = {
           is_published: boolean
           likes_count: number
           post_type: string
+          shares_count: number | null
+          unique_viewers: number | null
           updated_at: string
           video_url: string | null
+          views_count: number | null
         }
         Insert: {
           author_id: string
@@ -984,8 +1002,11 @@ export type Database = {
           is_published?: boolean
           likes_count?: number
           post_type: string
+          shares_count?: number | null
+          unique_viewers?: number | null
           updated_at?: string
           video_url?: string | null
+          views_count?: number | null
         }
         Update: {
           author_id?: string
@@ -998,8 +1019,11 @@ export type Database = {
           is_published?: boolean
           likes_count?: number
           post_type?: string
+          shares_count?: number | null
+          unique_viewers?: number | null
           updated_at?: string
           video_url?: string | null
+          views_count?: number | null
         }
         Relationships: [
           {

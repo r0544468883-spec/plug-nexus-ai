@@ -18,9 +18,10 @@ import {
 } from '@/components/ui/select';
 import { CandidateCard } from './CandidateCard';
 import { MatchingCandidatesTab } from './MatchingCandidatesTab';
+import { TopTalentPing } from './TopTalentPing';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Filter, Sparkles, UserCheck, Globe, Heart, MessageSquare, ExternalLink } from 'lucide-react';
+import { Users, Search, Filter, Sparkles, UserCheck, Globe, Heart, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Candidate {
@@ -136,6 +137,26 @@ export function CandidatesPage() {
         </h2>
       </div>
 
+      {/* Stagnation Banner */}
+      {(() => {
+        const stagnant = candidates.filter(c => {
+          const ref = (c as any).last_stage_change_at || c.created_at;
+          const days = Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24));
+          const snoozed = (c as any).stagnation_snoozed_until;
+          return days >= 7 && (!snoozed || new Date(snoozed) <= new Date()) && !['rejected', 'withdrawn', 'hired'].includes(c.current_stage);
+        });
+        return stagnant.length > 0 ? (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+            <p className="text-sm text-destructive font-medium">
+              {isHebrew
+                ? `${stagnant.length} מועמדים לא פעילים כבר 7+ ימים`
+                : `${stagnant.length} candidates stagnant for 7+ days`}
+            </p>
+          </div>
+        ) : null;
+      })()}
+
       <Tabs defaultValue="applications" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="applications" className="gap-2">
@@ -200,7 +221,12 @@ export function CandidatesPage() {
         </TabsContent>
 
         {/* Matching Candidates Tab */}
-        <TabsContent value="matching"><MatchingCandidatesTab /></TabsContent>
+        <TabsContent value="matching">
+          <div className="space-y-6">
+            <MatchingCandidatesTab />
+            <TopTalentPing />
+          </div>
+        </TabsContent>
 
         {/* Search All Candidates Tab */}
         <TabsContent value="search-all" className="space-y-4">

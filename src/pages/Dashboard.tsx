@@ -32,7 +32,11 @@ import { CreateWebinar } from '@/components/feed/CreateWebinar';
 import { CommunityHubsList } from '@/components/communities/CommunityHubsList';
 import { CreateCommunityHub } from '@/components/communities/CreateCommunityHub';
 import { CommunityHubView } from '@/components/communities/CommunityHubView';
-
+import { ContentDashboard } from '@/components/feed/ContentDashboard';
+import { NegotiationSandbox } from '@/components/interview/NegotiationSandbox';
+import { PlacementRevenue } from '@/components/dashboard/PlacementRevenue';
+import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
+import { PersonalizedFeedWidget } from '@/components/feed/PersonalizedFeedWidget';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -546,6 +550,10 @@ export default function Dashboard() {
         return <CreateFeedPost />;
       case 'create-webinar':
         return <CreateWebinar />;
+      case 'content-dashboard':
+        return <ContentDashboard />;
+      case 'negotiation-sandbox':
+        return <NegotiationSandbox />;
       case 'communities':
         return <CommunityHubsList 
           onViewHub={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 

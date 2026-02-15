@@ -10,6 +10,7 @@ import { he, enUS } from 'date-fns/locale';
 import { useSavedJobs, useSaveJobMutation } from '@/hooks/useSavedJobs';
 import { useMatchScore } from '@/hooks/useMatchScore';
 import { formatSalaryRange, getILSFootnote } from '@/lib/salary-utils';
+import { GhostingMeter } from './GhostingMeter';
 
 interface Job {
   id: string;
@@ -224,6 +225,14 @@ export function JobCard({ job, onViewDetails, onApply, isCommunityShared, sharer
                   <Zap className="w-3 h-3" />
                   {isHebrew ? `ממוצע ${Math.round(job.company.avg_hiring_speed_days)} ימים לגיוס` : `Avg ${Math.round(job.company.avg_hiring_speed_days)} days to hire`}
                 </Badge>
+              )}
+
+              {/* Ghosting Protection Meter */}
+              {job.company && (
+                <GhostingMeter
+                  companyId={job.company.id}
+                  avgHiringSpeedDays={job.company.avg_hiring_speed_days}
+                />
               )}
             </div>
 
