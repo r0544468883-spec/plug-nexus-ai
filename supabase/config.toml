@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.webinar-reminders]
 verify_jwt = false
+
+[functions.generate-candidate-summary]
+verify_jwt = false

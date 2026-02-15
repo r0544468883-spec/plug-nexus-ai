@@ -33,6 +33,9 @@ const RECURRING_REWARDS: Record<string, { amount: number; dailyCap?: number; mon
   'feed_like': { amount: 1, fuelType: 'daily' },
   'feed_comment': { amount: 1, fuelType: 'daily' },
   'feed_poll_vote': { amount: 1, fuelType: 'daily' },
+  'community_like': { amount: 1, fuelType: 'daily' },
+  'community_comment': { amount: 1, fuelType: 'daily' },
+  'community_poll_vote': { amount: 1, fuelType: 'daily' },
 };
 
 // Direct credit award (from client with explicit amount)
