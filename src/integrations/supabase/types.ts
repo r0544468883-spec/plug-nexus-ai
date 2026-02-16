@@ -975,51 +975,66 @@ export type Database = {
       }
       feed_posts: {
         Row: {
+          allow_comments: boolean
           author_id: string
+          comment_permission: string
           comments_count: number
           company_id: string | null
           content_en: string | null
           content_he: string | null
+          content_language: string
           created_at: string
           id: string
           is_published: boolean
           likes_count: number
           post_type: string
           shares_count: number | null
+          target_channel_id: string | null
+          target_hub_id: string | null
           unique_viewers: number | null
           updated_at: string
           video_url: string | null
           views_count: number | null
         }
         Insert: {
+          allow_comments?: boolean
           author_id: string
+          comment_permission?: string
           comments_count?: number
           company_id?: string | null
           content_en?: string | null
           content_he?: string | null
+          content_language?: string
           created_at?: string
           id?: string
           is_published?: boolean
           likes_count?: number
           post_type: string
           shares_count?: number | null
+          target_channel_id?: string | null
+          target_hub_id?: string | null
           unique_viewers?: number | null
           updated_at?: string
           video_url?: string | null
           views_count?: number | null
         }
         Update: {
+          allow_comments?: boolean
           author_id?: string
+          comment_permission?: string
           comments_count?: number
           company_id?: string | null
           content_en?: string | null
           content_he?: string | null
+          content_language?: string
           created_at?: string
           id?: string
           is_published?: boolean
           likes_count?: number
           post_type?: string
           shares_count?: number | null
+          target_channel_id?: string | null
+          target_hub_id?: string | null
           unique_viewers?: number | null
           updated_at?: string
           video_url?: string | null
@@ -1038,6 +1053,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_posts_target_channel_id_fkey"
+            columns: ["target_channel_id"]
+            isOneToOne: false
+            referencedRelation: "community_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_posts_target_hub_id_fkey"
+            columns: ["target_hub_id"]
+            isOneToOne: false
+            referencedRelation: "community_hubs"
             referencedColumns: ["id"]
           },
         ]
@@ -1585,6 +1614,13 @@ export type Database = {
           preferred_language: string | null
           preferred_roles: string[] | null
           profile_visibility: string | null
+          recruiter_background: string | null
+          recruiter_companies: string[] | null
+          recruiter_education: string | null
+          recruiter_industries: string[] | null
+          recruiter_philosophy: string | null
+          recruiter_tip: string | null
+          recruiter_video_url: string | null
           response_rate: number | null
           theme: string | null
           total_applications: number | null
@@ -1618,6 +1654,13 @@ export type Database = {
           preferred_language?: string | null
           preferred_roles?: string[] | null
           profile_visibility?: string | null
+          recruiter_background?: string | null
+          recruiter_companies?: string[] | null
+          recruiter_education?: string | null
+          recruiter_industries?: string[] | null
+          recruiter_philosophy?: string | null
+          recruiter_tip?: string | null
+          recruiter_video_url?: string | null
           response_rate?: number | null
           theme?: string | null
           total_applications?: number | null
@@ -1651,6 +1694,13 @@ export type Database = {
           preferred_language?: string | null
           preferred_roles?: string[] | null
           profile_visibility?: string | null
+          recruiter_background?: string | null
+          recruiter_companies?: string[] | null
+          recruiter_education?: string | null
+          recruiter_industries?: string[] | null
+          recruiter_philosophy?: string | null
+          recruiter_tip?: string | null
+          recruiter_video_url?: string | null
           response_rate?: number | null
           theme?: string | null
           total_applications?: number | null

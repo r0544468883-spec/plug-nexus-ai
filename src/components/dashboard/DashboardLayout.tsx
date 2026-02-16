@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view' | 'content-dashboard' | 'negotiation-sandbox';
+export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view' | 'content-dashboard' | 'negotiation-sandbox' | 'content-hub' | 'b2b-suite' | 'recruiter-profile';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -36,7 +36,8 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, direction, language } = useLanguage();
+  const isRTL = language === 'he';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plugHintSignal, setPlugHintSignal] = useState(0);
   const navigate = useNavigate();
@@ -83,13 +84,10 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על הפעילות שלך', tooltipEn: 'Overview of your activity' },
         { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
-        { icon: BarChart3, label: 'Content Dashboard', section: 'content-dashboard', tooltipHe: 'דאשבורד תוכן – צפיות, לייקים ואינגייג\'מנט', tooltipEn: 'Content analytics – views, likes & engagement' },
-        { icon: DollarSign, label: 'Negotiation Sandbox', section: 'negotiation-sandbox', tooltipHe: 'סימולטור משא ומתן על שכר', tooltipEn: 'Salary negotiation practice simulator' },
-        { icon: Newspaper, label: 'Create Feed Content', section: 'create-feed-post', tooltipHe: 'יצירת תוכן לפיד – טיפים, תרבות וסקרים למועמדים', tooltipEn: 'Create feed content – tips, culture & polls for candidates' },
-        { icon: Video, label: 'Webinars', section: 'create-webinar', tooltipHe: 'יצירת וניהול וובינרים למועמדים', tooltipEn: 'Create and manage webinars for candidates' },
-        { icon: Globe, label: 'Communities', section: 'communities', tooltipHe: 'קהילות מקצועיות – יצירה וניהול', tooltipEn: 'Professional communities – create & manage' },
+        { icon: Newspaper, label: isRTL ? 'תוכן וקהילה' : 'Content & Community', section: 'content-hub' as DashboardSection, tooltipHe: 'דאשבורד תוכן, יצירת פוסטים, וובינרים וקהילות', tooltipEn: 'Content dashboard, posts, webinars & communities' },
+        { icon: DollarSign, label: 'B2B Suite', section: 'b2b-suite' as DashboardSection, tooltipHe: 'כלים עסקיים – SLA, עלות משרה פנויה, הכנסות', tooltipEn: 'Business tools – SLA, vacancy cost, revenue' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
-        { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים וקבצים', tooltipEn: 'Documents and files' },
+        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'recruiter-profile' as DashboardSection, tooltipHe: 'עריכת הפרופיל המקצועי שלך', tooltipEn: 'Edit your professional profile' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },
       ];
     }
