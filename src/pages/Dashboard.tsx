@@ -36,11 +36,13 @@ import { ContentDashboard } from '@/components/feed/ContentDashboard';
 import { NegotiationSandbox } from '@/components/interview/NegotiationSandbox';
 import { PlacementRevenue } from '@/components/dashboard/PlacementRevenue';
 import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
+import { VacancyCalculator } from '@/components/jobs/VacancyCalculator';
 import { PersonalizedFeedWidget } from '@/components/feed/PersonalizedFeedWidget';
+import { RecruiterProfileEditor } from '@/components/profile/RecruiterProfileEditor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic, Newspaper } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -520,53 +522,111 @@ export default function Dashboard() {
   };
 
 
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+
+  // Wrapper for non-overview sections with back button
+  const withBackButton = (content: React.ReactNode, backTo: DashboardSection = 'overview') => (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => setCurrentSection(backTo)}>
+        <BackIcon className="w-4 h-4" />
+        {isRTL ? 'חזרה' : 'Back'}
+      </Button>
+      {content}
+    </div>
+  );
+
+  // Content Hub for recruiters
+  const renderContentHub = () => (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <Newspaper className="w-6 h-6 text-primary" />
+        {isRTL ? 'תוכן וקהילה' : 'Content & Community'}
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[
+          { icon: BarChart3, label: isRTL ? 'דאשבורד תוכן' : 'Content Dashboard', desc: isRTL ? 'צפיות, לייקים ואנליטיקס' : 'Views, likes & analytics', section: 'content-dashboard' as DashboardSection },
+          { icon: Newspaper, label: isRTL ? 'יצירת תוכן' : 'Create Content', desc: isRTL ? 'טיפים, סקרים, וידאו ועוד' : 'Tips, polls, video & more', section: 'create-feed-post' as DashboardSection },
+          { icon: Video, label: isRTL ? 'וובינרים' : 'Webinars', desc: isRTL ? 'יצירה וניהול וובינרים' : 'Create & manage webinars', section: 'create-webinar' as DashboardSection },
+          { icon: Globe, label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'קהילות מקצועיות' : 'Professional communities', section: 'communities' as DashboardSection },
+        ].map((item) => (
+          <Card key={item.section} className="bg-card border-border cursor-pointer plug-card-hover" onClick={() => setCurrentSection(item.section)}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10"><item.icon className="w-6 h-6 text-primary" /></div>
+              <div><h3 className="font-semibold">{item.label}</h3><p className="text-sm text-muted-foreground">{item.desc}</p></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  // B2B Suite
+  const renderB2BSuite = () => (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <DollarSign className="w-6 h-6 text-primary" />
+        {isRTL ? 'כלים עסקיים' : 'B2B Suite'}
+      </h2>
+      <SLAMonitor />
+      <VacancyCalculator />
+      <PlacementRevenue />
+    </div>
+  );
+
   const renderSectionContent = () => {
     switch (currentSection) {
       case 'overview':
         return renderOverviewContent();
       case 'profile-docs':
-        return renderProfileDocsContent();
+        return withBackButton(renderProfileDocsContent());
       case 'chat':
-        return renderChatContent();
+        return withBackButton(renderChatContent());
       case 'settings':
-        return renderSettingsContent();
+        return withBackButton(renderSettingsContent());
       case 'applications':
-        return <ApplicationsPage />;
+        return withBackButton(<ApplicationsPage />);
       case 'job-search':
-        return <JobSearchPage />;
+        return withBackButton(<JobSearchPage />);
       case 'messages':
-        return <MessageInbox />;
+        return withBackButton(<MessageInbox />);
       case 'candidates':
-        return <CandidatesPage />;
+        return withBackButton(<CandidatesPage />);
       case 'post-job':
-        return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
+        return withBackButton(<PostJobForm onSuccess={() => setCurrentSection('overview')} />);
       case 'cv-builder':
-        return <CVBuilder />;
+        return withBackButton(<CVBuilder />);
       case 'interview-prep':
-        return <InterviewPrepContent />;
+        return withBackButton(<InterviewPrepContent />);
       case 'feed':
-        return <FeedPage />;
+        return withBackButton(<FeedPage />);
       case 'create-feed-post':
-        return <CreateFeedPost />;
+        return withBackButton(<CreateFeedPost />, 'content-hub' as DashboardSection);
       case 'create-webinar':
-        return <CreateWebinar />;
+        return withBackButton(<CreateWebinar />, 'content-hub' as DashboardSection);
       case 'content-dashboard':
-        return <ContentDashboard />;
+        return withBackButton(<ContentDashboard onNavigate={(s) => setCurrentSection(s as DashboardSection)} />, 'content-hub' as DashboardSection);
+      case 'content-hub' as DashboardSection:
+        return withBackButton(renderContentHub());
+      case 'b2b-suite' as DashboardSection:
+        return withBackButton(renderB2BSuite());
+      case 'recruiter-profile' as DashboardSection:
+        return withBackButton(<RecruiterProfileEditor />);
       case 'negotiation-sandbox':
-        return <NegotiationSandbox />;
+        return withBackButton(<NegotiationSandbox />);
       case 'communities':
-        return <CommunityHubsList 
+        return withBackButton(<CommunityHubsList 
           onViewHub={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
           onCreateHub={() => setCurrentSection('create-community')} 
-        />;
+        />, 'content-hub' as DashboardSection);
       case 'create-community':
-        return <CreateCommunityHub 
+        return withBackButton(<CreateCommunityHub 
           onSuccess={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
           onCancel={() => setCurrentSection('communities')} 
-        />;
+        />, 'communities');
       case 'community-view':
-        return viewingHubId ? (
-          <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />
+        return viewingHubId ? withBackButton(
+          <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />,
+          'communities'
         ) : null;
         return renderOverviewContent();
     }
