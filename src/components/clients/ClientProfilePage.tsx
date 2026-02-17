@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { ClientPlugChat } from '@/components/clients/ClientPlugChat';
 import {
   Building2, Clock, Users, DollarSign, TrendingUp, FileText, Upload, Plus, Loader2, CheckCircle, Mail, Phone, Linkedin,
   Calendar, MessageSquare, Briefcase, FolderOpen, Sparkles, ExternalLink, BarChart3, Target, Presentation
@@ -105,7 +106,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
-  // Fetch applications per job for kanban-style view
+  // Fetch applications per job
   const { data: jobApplications = {} } = useQuery({
     queryKey: ['client-job-applications', companyId, activeJobs],
     queryFn: async () => {
@@ -184,11 +185,24 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
       if (!user?.id) throw new Error('Not authenticated');
       const { error } = await supabase.from('client_timeline').insert({ ...event, company_id: companyId, recruiter_id: user.id });
       if (error) throw error;
+      // Auto-update last contact + auto-create follow-up task for meetings
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
+      if (event.event_type === 'meeting') {
+        await supabase.from('client_tasks').insert({
+          title: isRTL ? `פולואפ: ${event.title}` : `Follow up: ${event.title}`,
+          description: isRTL ? 'נוצר אוטומטית לאחר רישום פגישה' : 'Auto-created after meeting log',
+          company_id: companyId,
+          recruiter_id: user.id,
+          priority: 'high',
+          source: 'automation',
+          due_date: new Date(Date.now() + 3 * 86400000).toISOString(),
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-timeline', companyId] });
       queryClient.invalidateQueries({ queryKey: ['client-company', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddTimeline(false);
       setNewEvent({ event_type: 'note', title: '', description: '' });
       toast.success(isRTL ? 'פעילות נוספה' : 'Activity added');
@@ -260,9 +274,20 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
   const slaScore = company?.avg_hiring_speed_days ? Math.min(100, Math.max(0, 100 - (Number(company.avg_hiring_speed_days) - 14) * 5)) : null;
 
   const stages = ['applied', 'screening', 'interview', 'technical', 'offer', 'hired'];
-  const stageLabels: Record<string, string> = isRTL 
+  const stageLabels: Record<string, string> = isRTL
     ? { applied: 'הגשה', screening: 'סינון', interview: 'ראיון', technical: 'טכני', offer: 'הצעה', hired: 'נשכר' }
     : { applied: 'Applied', screening: 'Screen', interview: 'Interview', technical: 'Technical', offer: 'Offer', hired: 'Hired' };
+
+  // Tab config for clear visual tabs
+  const tabItems = [
+    { value: 'timeline', icon: Clock, label: isRTL ? 'ציר זמן' : 'Timeline' },
+    { value: 'projects', icon: Briefcase, label: isRTL ? 'פרויקטים' : 'Projects' },
+    { value: 'analytics', icon: BarChart3, label: isRTL ? 'אנליטיקס' : 'Analytics' },
+    { value: 'contacts', icon: Users, label: isRTL ? 'אנשי קשר' : 'Contacts' },
+    { value: 'tasks', icon: CheckCircle, label: isRTL ? 'משימות' : 'Tasks' },
+    { value: 'vault', icon: FolderOpen, label: isRTL ? 'כספת' : 'Vault' },
+    { value: 'plug', icon: Sparkles, label: isRTL ? 'שאל את Plug' : 'Ask Plug' },
+  ];
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -290,7 +315,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
             {company?.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{company.description}</p>}
           </div>
         </div>
-        {/* Meeting Prep Button */}
         <Button onClick={handleMeetingPrep} className="gap-2 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90">
           <Presentation className="w-4 h-4" />
           {isRTL ? 'הכנה לפגישה' : 'Prep Meeting'}
@@ -362,15 +386,19 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
         </CardContent></Card>
       </div>
 
-      {/* Main Tabs */}
+      {/* Main Tabs - Enhanced visual clarity */}
       <Tabs defaultValue="timeline" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="timeline" className="gap-1 text-xs"><Clock className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'ציר זמן' : 'Timeline'}</span></TabsTrigger>
-          <TabsTrigger value="projects" className="gap-1 text-xs"><Briefcase className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'פרויקטים' : 'Projects'}</span></TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-1 text-xs"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'אנליטיקס' : 'Analytics'}</span></TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'אנשי קשר' : 'Contacts'}</span></TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-1 text-xs"><CheckCircle className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'משימות' : 'Tasks'}</span></TabsTrigger>
-          <TabsTrigger value="vault" className="gap-1 text-xs"><FolderOpen className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'כספת' : 'Vault'}</span></TabsTrigger>
+        <TabsList className="w-full h-auto p-1.5 bg-muted/60 rounded-xl flex flex-wrap gap-1">
+          {tabItems.map(tab => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all flex-1 min-w-0"
+            >
+              <tab.icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* Timeline Tab */}
@@ -410,6 +438,11 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                     {event.description && <p className="text-xs text-muted-foreground mt-1">{event.description}</p>}
                     <p className="text-xs text-muted-foreground mt-1">{format(new Date(event.event_date), 'dd/MM/yyyy HH:mm')}</p>
                   </div>
+                  {event.event_type === 'meeting' && (
+                    <Badge variant="outline" className="text-[10px] shrink-0 h-5">
+                      {isRTL ? '⚡ פולואפ אוטומטי' : '⚡ Auto follow-up'}
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>
@@ -442,7 +475,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Mini Kanban */}
                       <div className="grid grid-cols-6 gap-1">
                         {stages.map(stage => (
                           <div key={stage} className="text-center">
@@ -466,7 +498,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Revenue Pipeline */}
             <Card className="bg-card">
               <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" />{isRTL ? 'צינור הכנסות' : 'Revenue Pipeline'}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -476,8 +507,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                 <p className="text-xs text-muted-foreground">{isRTL ? 'יחס מומש מול צפוי' : 'Realized vs Pipeline ratio'}</p>
               </CardContent>
             </Card>
-
-            {/* Hiring Velocity */}
             <Card className="bg-card">
               <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" />{isRTL ? 'מהירות גיוס' : 'Hiring Velocity'}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -487,8 +516,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
               </CardContent>
             </Card>
           </div>
-
-          {/* Market Benchmark placeholder */}
           <Card className="bg-muted/30 border-dashed">
             <CardContent className="p-6 text-center">
               <Target className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -581,7 +608,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                     {task.due_date && <p className="text-xs text-muted-foreground">{format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
                   </div>
                   <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'default' : 'secondary'} className="text-xs shrink-0">{task.priority}</Badge>
-                  {task.source === 'ai_suggested' && <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />}
+                  {task.source === 'ai_suggested' || task.source === 'automation' ? <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" /> : null}
                 </div>
               ))}
             </div>
@@ -612,6 +639,37 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Plug AI Consultation Tab */}
+        <TabsContent value="plug" className="space-y-4">
+          <Card className="bg-card border-border">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                {isRTL ? `שוחח עם Plug על ${company?.name || 'הלקוח'}` : `Chat with Plug about ${company?.name || 'this client'}`}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {isRTL ? 'Plug מכיר את כל הנתונים על הלקוח ויכול לעזור עם אסטרטגיה, ניתוח ועוד' : 'Plug knows all client data and can help with strategy, analysis and more'}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ClientPlugChat
+                companyId={companyId}
+                companyName={company?.name || ''}
+                companyData={{
+                  industry: company?.industry,
+                  lead_status: company?.lead_status,
+                  historical_value: Number(company?.historical_value) || 0,
+                  total_hires: company?.total_hires,
+                  avg_hiring_speed_days: company?.avg_hiring_speed_days ? Number(company.avg_hiring_speed_days) : null,
+                }}
+                activeJobsCount={activeJobs.length}
+                contactsCount={contacts.length}
+                pendingTasksCount={tasks.filter(t => t.status === 'pending').length}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

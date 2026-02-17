@@ -17,7 +17,8 @@ import { Progress } from '@/components/ui/progress';
 import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
 import { VacancyCalculator } from '@/components/jobs/VacancyCalculator';
 import { PlacementRevenue } from '@/components/dashboard/PlacementRevenue';
-import { Building2, Plus, Search, Globe, Loader2, TrendingUp, AlertTriangle, DollarSign, Users, Clock, ExternalLink, Activity, BarChart3 } from 'lucide-react';
+import { AddContactPrompt } from '@/components/clients/AddContactPrompt';
+import { Building2, Plus, Search, Globe, Loader2, TrendingUp, AlertTriangle, DollarSign, Users, Clock, Activity, BarChart3, Wrench } from 'lucide-react';
 
 interface ClientCompany {
   id: string;
@@ -54,6 +55,9 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [scraping, setScraping] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', description: '', industry: '', website: '', lead_status: 'lead' });
+  
+  // Auto-contact prompt state
+  const [newlyCreatedClient, setNewlyCreatedClient] = useState<{ id: string; name: string } | null>(null);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['my-clients', user?.id],
@@ -70,7 +74,6 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
     enabled: !!user?.id,
   });
 
-  // Active jobs per company
   const { data: jobCounts = {} } = useQuery({
     queryKey: ['client-job-counts', user?.id],
     queryFn: async () => {
@@ -116,16 +119,20 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
           industry: client.industry || null, website: client.website || null,
           created_by: user.id, lead_status: client.lead_status,
         })
-        .select('id')
+        .select('id, name')
         .single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['my-clients'] });
       setShowCreateDialog(false);
       setNewClient({ name: '', description: '', industry: '', website: '', lead_status: 'lead' });
       toast.success(isRTL ? 'הלקוח נוסף בהצלחה!' : 'Client added successfully!');
+      // Auto-show contact prompt
+      if (data) {
+        setNewlyCreatedClient({ id: data.id, name: data.name });
+      }
     },
     onError: () => toast.error(isRTL ? 'שגיאה ביצירת לקוח' : 'Error creating client'),
   });
@@ -165,7 +172,6 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
     totalRevenue: clients.reduce((sum, c) => sum + (c.historical_value || 0), 0),
   };
 
-  // Health Score: combination of response rate, hiring speed, recency
   const getHealthScore = (c: ClientCompany) => {
     let score = 50;
     if (c.avg_hiring_speed_days) {
@@ -249,11 +255,33 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
         </Dialog>
       </div>
 
-      {/* Tabs: Clients / B2B Tools */}
+      {/* Auto Contact Prompt after creating a client */}
+      {newlyCreatedClient && (
+        <AddContactPrompt
+          companyId={newlyCreatedClient.id}
+          companyName={newlyCreatedClient.name}
+          onDismiss={() => setNewlyCreatedClient(null)}
+        />
+      )}
+
+      {/* Tabs with clear visual distinction */}
       <Tabs defaultValue="clients" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="clients" className="gap-1.5"><Building2 className="w-3.5 h-3.5" />{isRTL ? 'לקוחות' : 'Clients'}</TabsTrigger>
-          <TabsTrigger value="b2b-tools" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" />{isRTL ? 'כלים עסקיים' : 'B2B Tools'}</TabsTrigger>
+        <TabsList className="w-full h-12 p-1 bg-muted/60 rounded-xl gap-1">
+          <TabsTrigger 
+            value="clients" 
+            className="flex-1 gap-2 h-10 rounded-lg text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+          >
+            <Building2 className="w-4 h-4" />
+            {isRTL ? 'לקוחות' : 'Clients'}
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 data-[state=active]:bg-primary-foreground/20 data-[state=active]:text-primary-foreground">{stats.total}</Badge>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="b2b-tools" 
+            className="flex-1 gap-2 h-10 rounded-lg text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all"
+          >
+            <Wrench className="w-4 h-4" />
+            {isRTL ? 'כלים עסקיים' : 'Business Tools'}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="clients" className="space-y-6 mt-4">
@@ -334,7 +362,6 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
             </Card>
           ) : (
             <div className="border border-border rounded-lg overflow-hidden">
-              {/* Table Header */}
               <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-2 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground">
                 <span>{isRTL ? 'חברה' : 'Company'}</span>
                 <span>{isRTL ? 'סטטוס' : 'Status'}</span>
@@ -343,17 +370,15 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
                 <span>{isRTL ? 'בריאות' : 'Health'}</span>
                 <span></span>
               </div>
-              {/* Table Rows */}
               {filteredClients.map((client) => {
                 const health = getHealthScore(client);
                 const activeJobs = jobCounts[client.id] || 0;
                 return (
-                  <div 
-                    key={client.id} 
+                  <div
+                    key={client.id}
                     className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-2 px-4 py-3 border-t border-border hover:bg-muted/30 cursor-pointer transition-colors items-center"
                     onClick={() => onViewClient(client.id)}
                   >
-                    {/* Company */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         {client.logo_url || client.logo_scraped_url ? (
@@ -367,23 +392,16 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
                         {client.industry && <p className="text-xs text-muted-foreground truncate">{client.industry}</p>}
                       </div>
                     </div>
-                    {/* Status */}
                     <div className="flex items-center">{getStatusBadge(client.lead_status)}</div>
-                    {/* Projects */}
                     <div className="flex items-center gap-1.5 text-sm">
                       <Activity className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>{activeJobs} {isRTL ? 'פעילים' : 'active'}</span>
                     </div>
-                    {/* Revenue */}
-                    <div className="text-sm font-medium">
-                      ₪{(client.historical_value || 0).toLocaleString()}
-                    </div>
-                    {/* Health Score */}
+                    <div className="text-sm font-medium">₪{(client.historical_value || 0).toLocaleString()}</div>
                     <div className="flex items-center gap-2">
                       <Progress value={health} className="h-1.5 flex-1 max-w-[60px]" />
                       <span className={`text-xs font-semibold ${getHealthColor(health)}`}>{health}</span>
                     </div>
-                    {/* Action */}
                     <div className="flex justify-end">
                       <Button variant="ghost" size="sm" className="text-xs">{isRTL ? 'צפה' : 'View'}</Button>
                     </div>
