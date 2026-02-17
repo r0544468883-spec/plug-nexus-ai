@@ -53,7 +53,7 @@ import { MyMissions } from '@/components/missions/MyMissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign, Sparkles, ArrowDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -493,9 +493,24 @@ export default function Dashboard() {
         return withBackButton(<PostJobForm onSuccess={() => setCurrentSection('overview')} />);
       case 'cv-builder':
         return withBackButton(
-          <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <span className="text-sm font-medium">{isRTL ? 'Plug ממש כאן בשבילך!' : 'Plug is right here for you!'}</span>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                const el = document.getElementById('cv-plug-chat');
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}>
+                <ArrowDown className="w-3 h-3" />
+                {isRTL ? 'דבר עם Plug' : 'Chat with Plug'}
+              </Button>
+            </div>
             <CVBuilder />
-            <PlugChat contextPage="cv-builder" />
+            <div id="cv-plug-chat">
+              <PlugChat contextPage="cv-builder" />
+            </div>
           </div>
         );
       case 'interview-prep':
