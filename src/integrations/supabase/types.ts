@@ -1941,6 +1941,7 @@ export type Database = {
           created_at: string
           hunter_id: string
           id: string
+          is_anonymous: boolean
           mission_id: string
           pitch: string
           status: string
@@ -1952,6 +1953,7 @@ export type Database = {
           created_at?: string
           hunter_id: string
           id?: string
+          is_anonymous?: boolean
           mission_id: string
           pitch: string
           status?: string
@@ -1963,6 +1965,7 @@ export type Database = {
           created_at?: string
           hunter_id?: string
           id?: string
+          is_anonymous?: boolean
           mission_id?: string
           pitch?: string
           status?: string

@@ -69,13 +69,17 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
           {isHebrew ? 'לוח פרויקטים' : 'Hunters Billboard'}
         </h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onMyMissions}>
-            {isHebrew ? 'הפרויקטים שלי' : 'My Projects'}
-          </Button>
-          <Button className="gap-2" onClick={onCreateMission}>
-            <Plus className="w-4 h-4" />
-            {isHebrew ? 'פרסם פרויקט' : 'Post Project'}
-          </Button>
+          {role === 'inhouse_hr' && (
+            <>
+              <Button variant="outline" onClick={onMyMissions}>
+                {isHebrew ? 'הפרויקטים שלי' : 'My Projects'}
+              </Button>
+              <Button className="gap-2" onClick={onCreateMission}>
+                <Plus className="w-4 h-4" />
+                {isHebrew ? 'פרסם פרויקט' : 'Post Project'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -133,6 +137,7 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
               onBid={handleBid}
               onView={(id) => setDetailMissionId(id)}
               isCreator={mission.created_by === user?.id}
+              showBidButton={role === 'freelance_hr'}
             />
           ))}
         </div>

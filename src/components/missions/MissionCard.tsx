@@ -24,9 +24,10 @@ interface MissionCardProps {
   onBid: (missionId: string) => void;
   onView: (missionId: string) => void;
   isCreator?: boolean;
+  showBidButton?: boolean;
 }
 
-export function MissionCard({ mission, onBid, onView, isCreator }: MissionCardProps) {
+export function MissionCard({ mission, onBid, onView, isCreator, showBidButton }: MissionCardProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
@@ -118,8 +119,8 @@ export function MissionCard({ mission, onBid, onView, isCreator }: MissionCardPr
           </div>
         </div>
 
-        {/* CTA */}
-        {!isCreator && (
+        {/* CTA - only hunters (freelance_hr) can bid */}
+        {!isCreator && showBidButton && (
           <Button 
             className="w-full gap-2"
             onClick={(e) => { e.stopPropagation(); onBid(mission.id); }}
