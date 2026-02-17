@@ -306,6 +306,73 @@ export type Database = {
           },
         ]
       }
+      client_reminders: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          description: string | null
+          id: string
+          recruiter_id: string
+          remind_at: string
+          reminder_type: string
+          sent_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contact_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          recruiter_id: string
+          remind_at: string
+          reminder_type?: string
+          sent_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          recruiter_id?: string
+          remind_at?: string
+          reminder_type?: string
+          sent_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reminders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tasks: {
         Row: {
           company_id: string
