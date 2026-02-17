@@ -30,8 +30,6 @@ import { WeeklyQuests } from '@/components/gamification/WeeklyQuests';
 import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
-import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
@@ -233,21 +231,8 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Today's Focus */}
-      <TodaysFocus onNavigate={setCurrentSection} />
-
-      {/* Contextual Plug Tips for job seekers */}
-      {role === 'job_seeker' && (
-        <PlugTipContainer context="dashboard" maxTips={1} />
-      )}
-
-      {/* Onboarding Checklist for job seekers */}
-      {role === 'job_seeker' && (
-        <OnboardingChecklist 
-          onNavigate={setCurrentSection}
-          onShowResumeDialog={() => setShowResumeDialog(true)}
-        />
-      )}
+      {/* Today's Focus (includes onboarding steps) */}
+      <TodaysFocus onNavigate={setCurrentSection} onShowResumeDialog={() => setShowResumeDialog(true)} />
 
       {/* PLUG Feed Entry Card - job seekers only */}
       {role === 'job_seeker' && (
