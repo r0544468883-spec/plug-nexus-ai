@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,7 @@ export const AIDesignPreview = ({
     try {
       // Create a temporary container with the HTML
       const container = document.createElement('div');
-      container.innerHTML = showHtmlEditor ? editableHtml : fullHtml;
+      container.innerHTML = DOMPurify.sanitize(showHtmlEditor ? editableHtml : fullHtml, { WHOLE_DOCUMENT: true, ADD_TAGS: ['html', 'head', 'body', 'style', 'meta', 'link', 'header', 'main', 'section', 'article', 'aside', 'footer', 'nav'], ADD_ATTR: ['dir', 'lang', 'charset'] });
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm';
@@ -103,7 +104,7 @@ export const AIDesignPreview = ({
     try {
       // Create PDF blob
       const container = document.createElement('div');
-      container.innerHTML = showHtmlEditor ? editableHtml : fullHtml;
+      container.innerHTML = DOMPurify.sanitize(showHtmlEditor ? editableHtml : fullHtml, { WHOLE_DOCUMENT: true, ADD_TAGS: ['html', 'head', 'body', 'style', 'meta', 'link', 'header', 'main', 'section', 'article', 'aside', 'footer', 'nav'], ADD_ATTR: ['dir', 'lang', 'charset'] });
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm';
