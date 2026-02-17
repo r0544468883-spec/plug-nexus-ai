@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Mail, Phone, Linkedin, Calendar, MessageSquare, Briefcase, Plus, Clock,
-  CheckCircle, Video, MapPin, FileText, Sparkles, ExternalLink, User
+  CheckCircle, Video, MapPin, User, Bell, Trash2, AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -46,7 +46,9 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
 
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [showLinkProject, setShowLinkProject] = useState(false);
+  const [showAddReminder, setShowAddReminder] = useState(false);
   const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '' });
+  const [newReminder, setNewReminder] = useState({ title: '', description: '', remind_at: '', reminder_type: 'both' });
 
   // Fetch contact's conversations & meetings from timeline
   const { data: contactTimeline = [] } = useQuery({
@@ -81,6 +83,22 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
     enabled: !!contact?.id,
   });
 
+  // Fetch contact's reminders
+  const { data: reminders = [] } = useQuery({
+    queryKey: ['contact-reminders', contact?.id],
+    queryFn: async () => {
+      if (!contact?.id) return [];
+      const { data, error } = await supabase
+        .from('client_reminders')
+        .select('*')
+        .eq('contact_id', contact.id)
+        .order('remind_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!contact?.id,
+  });
+
   // Available jobs for linking
   const { data: availableJobs = [] } = useQuery({
     queryKey: ['available-jobs-for-contact', companyId, contact?.id],
@@ -91,7 +109,6 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      // Filter out already linked
       const linkedIds = contactProjects.map((cp: any) => cp.job_id);
       return (data || []).filter(j => !linkedIds.includes(j.id));
     },
@@ -107,7 +124,6 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
       });
       if (error) throw error;
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
-      // Auto follow-up for meetings
       if (event.event_type === 'meeting') {
         await supabase.from('client_tasks').insert({
           title: isRTL ? `פולואפ: ${event.title}` : `Follow up: ${event.title}`,
@@ -144,6 +160,41 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
     },
   });
 
+  // Add reminder
+  const addReminderMutation = useMutation({
+    mutationFn: async (reminder: typeof newReminder) => {
+      if (!user?.id || !contact?.id) throw new Error('Missing data');
+      const { error } = await supabase.from('client_reminders').insert({
+        title: reminder.title,
+        description: reminder.description || null,
+        remind_at: reminder.remind_at,
+        reminder_type: reminder.reminder_type,
+        contact_id: contact.id,
+        company_id: companyId,
+        recruiter_id: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-reminders', contact?.id] });
+      setShowAddReminder(false);
+      setNewReminder({ title: '', description: '', remind_at: '', reminder_type: 'both' });
+      toast.success(isRTL ? 'תזכורת נוספה' : 'Reminder added');
+    },
+  });
+
+  // Dismiss reminder
+  const dismissReminderMutation = useMutation({
+    mutationFn: async (reminderId: string) => {
+      const { error } = await supabase.from('client_reminders').update({ status: 'dismissed' }).eq('id', reminderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contact-reminders', contact?.id] });
+      toast.success(isRTL ? 'תזכורת בוטלה' : 'Reminder dismissed');
+    },
+  });
+
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'email': return <Mail className="w-4 h-4 text-blue-500" />;
@@ -154,8 +205,17 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
     }
   };
 
+  const getReminderTypeLabel = (type: string) => {
+    if (isRTL) {
+      return type === 'email' ? '📧 מייל' : type === 'in_app' ? '🔔 מערכת' : '📧🔔 שניהם';
+    }
+    return type === 'email' ? '📧 Email' : type === 'in_app' ? '🔔 In-App' : '📧🔔 Both';
+  };
+
   const conversations = contactTimeline.filter(e => ['call', 'email', 'video_call', 'note'].includes(e.event_type));
   const meetings = contactTimeline.filter(e => e.event_type === 'meeting');
+  const pendingReminders = reminders.filter(r => r.status === 'pending');
+  const pastReminders = reminders.filter(r => r.status !== 'pending');
 
   if (!contact) return null;
 
@@ -172,7 +232,6 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
               <p className="text-sm text-muted-foreground">{contact.role_title || companyName}</p>
             </div>
           </div>
-          {/* Quick contact info */}
           <div className="flex flex-wrap gap-2 mt-3">
             {contact.email && (
               <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-xs text-primary hover:underline">
@@ -197,18 +256,23 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
           <TabsList className="w-full h-10 p-1 bg-muted/60 rounded-lg gap-0.5">
             <TabsTrigger value="conversations" className="flex-1 gap-1 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md">
               <MessageSquare className="w-3.5 h-3.5" />
-              {isRTL ? 'שיחות' : 'Conversations'}
+              {isRTL ? 'שיחות' : 'Chats'}
               {conversations.length > 0 && <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-1">{conversations.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="meetings" className="flex-1 gap-1 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md">
               <Calendar className="w-3.5 h-3.5" />
-              {isRTL ? 'פגישות' : 'Meetings'}
+              {isRTL ? 'פגישות' : 'Meets'}
               {meetings.length > 0 && <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-1">{meetings.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="projects" className="flex-1 gap-1 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md">
               <Briefcase className="w-3.5 h-3.5" />
               {isRTL ? 'פרויקטים' : 'Projects'}
               {contactProjects.length > 0 && <Badge variant="secondary" className="text-[9px] px-1 h-4 ml-1">{contactProjects.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="reminders" className="flex-1 gap-1 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md">
+              <Bell className="w-3.5 h-3.5" />
+              {isRTL ? 'תזכורות' : 'Remind'}
+              {pendingReminders.length > 0 && <Badge variant="destructive" className="text-[9px] px-1 h-4 ml-1">{pendingReminders.length}</Badge>}
             </TabsTrigger>
           </TabsList>
 
@@ -303,6 +367,76 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
               </Card>
             ))}
           </TabsContent>
+
+          {/* Reminders Tab */}
+          <TabsContent value="reminders" className="space-y-3 mt-3">
+            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => setShowAddReminder(true)}>
+              <Plus className="w-3.5 h-3.5" />{isRTL ? 'הוסף תזכורת' : 'Add Reminder'}
+            </Button>
+
+            {/* Pending Reminders */}
+            {pendingReminders.length === 0 && pastReminders.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">{isRTL ? 'אין תזכורות' : 'No reminders'}</p>
+            )}
+
+            {pendingReminders.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{isRTL ? 'תזכורות פעילות' : 'Active Reminders'}</p>
+                {pendingReminders.map(r => {
+                  const isOverdue = new Date(r.remind_at) < new Date();
+                  return (
+                    <div key={r.id} className={`flex gap-3 p-3 rounded-lg border ${isOverdue ? 'bg-destructive/5 border-destructive/30' : 'bg-card border-border'}`}>
+                      <div className="mt-0.5">
+                        {isOverdue ? <AlertCircle className="w-4 h-4 text-destructive" /> : <Bell className="w-4 h-4 text-primary" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{r.title}</p>
+                          {isOverdue && <Badge variant="destructive" className="text-[9px] h-4">{isRTL ? 'איחור' : 'Overdue'}</Badge>}
+                        </div>
+                        {r.description && <p className="text-xs text-muted-foreground mt-1">{r.description}</p>}
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-3 h-3" />{format(new Date(r.remind_at), 'dd/MM/yyyy HH:mm')}
+                          </p>
+                          <Badge variant="outline" className="text-[9px] h-4">{getReminderTypeLabel(r.reminder_type)}</Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => dismissReminderMutation.mutate(r.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Past/Dismissed Reminders */}
+            {pastReminders.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{isRTL ? 'היסטוריה' : 'History'}</p>
+                {pastReminders.slice(0, 5).map(r => (
+                  <div key={r.id} className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border opacity-60">
+                    <div className="mt-0.5">
+                      {r.status === 'sent' ? <CheckCircle className="w-4 h-4 text-primary" /> : <Bell className="w-4 h-4 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm line-through">{r.title}</p>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
+                        <Clock className="w-3 h-3" />{format(new Date(r.remind_at), 'dd/MM/yyyy HH:mm')}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] h-4 shrink-0">{r.status === 'sent' ? (isRTL ? 'נשלח' : 'Sent') : (isRTL ? 'בוטל' : 'Dismissed')}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
 
         {/* Add Activity Dialog */}
@@ -324,6 +458,54 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
               <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'סיכום / תיאור' : 'Summary / Description'} rows={3} />
               <Button onClick={() => addActivityMutation.mutate(newEvent)} disabled={!newEvent.title.trim()} className="w-full">
                 {isRTL ? 'הוסף' : 'Add'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Reminder Dialog */}
+        <Dialog open={showAddReminder} onOpenChange={setShowAddReminder}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{isRTL ? 'תזכורת חדשה' : 'New Reminder'}</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <Input
+                value={newReminder.title}
+                onChange={(e) => setNewReminder(p => ({ ...p, title: e.target.value }))}
+                placeholder={isRTL ? 'על מה להזכיר? *' : 'What to remind about? *'}
+              />
+              <Textarea
+                value={newReminder.description}
+                onChange={(e) => setNewReminder(p => ({ ...p, description: e.target.value }))}
+                placeholder={isRTL ? 'פרטים נוספים (אופציונלי)' : 'Additional details (optional)'}
+                rows={2}
+              />
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'תאריך ושעה' : 'Date & Time'}</label>
+                <Input
+                  type="datetime-local"
+                  value={newReminder.remind_at}
+                  onChange={(e) => setNewReminder(p => ({ ...p, remind_at: e.target.value }))}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'סוג התראה' : 'Notification Type'}</label>
+                <Select value={newReminder.reminder_type} onValueChange={(v) => setNewReminder(p => ({ ...p, reminder_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="both">{isRTL ? '📧🔔 מייל + מערכת' : '📧🔔 Email + In-App'}</SelectItem>
+                    <SelectItem value="email">{isRTL ? '📧 מייל בלבד' : '📧 Email Only'}</SelectItem>
+                    <SelectItem value="in_app">{isRTL ? '🔔 מערכת בלבד' : '🔔 In-App Only'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={() => addReminderMutation.mutate(newReminder)}
+                disabled={!newReminder.title.trim() || !newReminder.remind_at}
+                className="w-full gap-2"
+              >
+                <Bell className="w-4 h-4" />
+                {isRTL ? 'צור תזכורת' : 'Create Reminder'}
               </Button>
             </div>
           </DialogContent>
