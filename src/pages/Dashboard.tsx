@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
-import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
 import { TodaysFocus } from '@/components/dashboard/TodaysFocus';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
@@ -205,15 +204,6 @@ export default function Dashboard() {
 
   const stats = getStats();
 
-  const handleWelcomeMessage = (message: string) => {
-    setChatContextSection(currentSection);
-    setPendingMessage(message);
-    setPendingMessageKey((k) => k + 1);
-    // Scroll to chat after a brief delay
-    setTimeout(() => {
-      chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
 
   const handleMessageSent = () => {
     setPendingMessage(null);
@@ -255,9 +245,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
-
-      {/* Welcome Card with Plug CTA */}
-      <WelcomeCard onSendMessage={handleWelcomeMessage} />
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-tour="stats-row">
