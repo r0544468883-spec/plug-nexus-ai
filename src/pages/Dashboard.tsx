@@ -91,24 +91,7 @@ function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
   );
 }
 
-interface QuickActionProps {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-}
 
-function QuickAction({ title, icon: Icon, onClick }: QuickActionProps) {
-  return (
-    <Button
-      variant="outline"
-      className="w-full justify-start gap-3 h-12 bg-card/50 border-border hover:bg-primary/10 hover:border-primary/50 transition-all"
-      onClick={onClick}
-    >
-      <Icon className="w-5 h-5 text-primary" />
-      <span>{title}</span>
-    </Button>
-  );
-}
 
 export default function Dashboard() {
   const { profile, role, user } = useAuth();
@@ -222,67 +205,7 @@ export default function Dashboard() {
     }
   };
 
-  // Role-specific quick actions with handlers
-  const getQuickActions = () => {
-    // Vouch action available for all roles
-    const vouchAction = { 
-      title: isRTL ? 'ה-Vouches שלי' : 'My Vouches', 
-      icon: Heart,
-      onClick: () => window.location.href = '/profile',
-    };
-
-    switch (role) {
-      case 'job_seeker':
-        return [
-          { 
-            title: isRTL ? 'בניית קו״ח' : 'CV Builder', 
-            icon: FileEdit,
-            onClick: () => setCurrentSection('cv-builder'),
-          },
-          { 
-            title: isRTL ? 'הכנה לראיון' : 'Interview Prep', 
-            icon: Mic,
-            onClick: () => setCurrentSection('interview-prep'),
-          },
-          { 
-            title: t('actions.uploadCV') || 'Upload CV', 
-            icon: Upload,
-            onClick: () => setShowResumeDialog(true),
-          },
-          { 
-            title: isRTL ? 'חיפוש משרות' : 'Search Jobs', 
-            icon: Search,
-            onClick: () => setCurrentSection('job-search'),
-          },
-          { 
-            title: isRTL ? 'המשרות שלי' : 'My Applications', 
-            icon: FileText,
-            onClick: () => setCurrentSection('applications'),
-          },
-          vouchAction,
-        ];
-      case 'freelance_hr':
-      case 'inhouse_hr':
-        return [
-          { title: t('actions.postJob') || 'Post Job', icon: Plus, onClick: () => {} },
-          { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search, onClick: () => {} },
-          { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users, onClick: () => {} },
-          vouchAction,
-        ];
-      case 'company_employee':
-        return [
-          { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus, onClick: () => {} },
-          { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase, onClick: () => {} },
-          { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp, onClick: () => {} },
-          vouchAction,
-        ];
-      default:
-        return [];
-    }
-  };
-
   const stats = getStats();
-  const quickActions = getQuickActions();
 
   const handleWelcomeMessage = (message: string) => {
     setChatContextSection(currentSection);
@@ -358,27 +281,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Main Content - Chat Centered with Actions on Sides */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Quick Actions - Left Side - Sticky */}
-        <div className="lg:col-span-1 space-y-3" data-tour="quick-actions">
-          <div className="lg:sticky lg:top-4">
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  {t('dashboard.quickActions') || 'Quick Actions'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {quickActions.map((action, index) => (
-                  <QuickAction key={index} {...action} />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
+      {/* Main Content - Chat with Insights on Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* PLUG Chat - Center (Large) */}
         <div className="lg:col-span-2" ref={chatRef}>
           <PlugChat 
