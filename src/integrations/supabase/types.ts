@@ -1936,6 +1936,126 @@ export type Database = {
           },
         ]
       }
+      mission_bids: {
+        Row: {
+          created_at: string
+          hunter_id: string
+          id: string
+          mission_id: string
+          pitch: string
+          status: string
+          updated_at: string
+          verified_candidates_count: number | null
+          vouched_candidates_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          hunter_id: string
+          id?: string
+          mission_id: string
+          pitch: string
+          status?: string
+          updated_at?: string
+          verified_candidates_count?: number | null
+          vouched_candidates_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          hunter_id?: string
+          id?: string
+          mission_id?: string
+          pitch?: string
+          status?: string
+          updated_at?: string
+          verified_candidates_count?: number | null
+          vouched_candidates_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_bids_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      missions: {
+        Row: {
+          commission_model: string
+          commission_value: number
+          company_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          job_id: string | null
+          min_reliability_score: number | null
+          required_specializations: string[] | null
+          scope: string
+          status: string
+          title: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          commission_model?: string
+          commission_value?: number
+          company_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          job_id?: string | null
+          min_reliability_score?: number | null
+          required_specializations?: string[] | null
+          scope?: string
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          commission_model?: string
+          commission_value?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          job_id?: string | null
+          min_reliability_score?: number | null
+          required_specializations?: string[] | null
+          scope?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "missions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
