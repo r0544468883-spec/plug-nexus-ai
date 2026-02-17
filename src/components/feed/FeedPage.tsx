@@ -192,7 +192,7 @@ export function FeedPage() {
   };
 
   return (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'} data-tour="feed-content">
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <Newspaper className="w-6 h-6 text-primary" />
         PLUG Feed

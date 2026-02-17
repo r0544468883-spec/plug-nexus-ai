@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { MissionCard } from './MissionCard';
+import { BillboardStats } from './BillboardStats';
 import { BidDialog } from './BidDialog';
 import { MissionDetailSheet } from './MissionDetailSheet';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,9 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
           )}
         </div>
       </div>
+
+      {/* Billboard Stats */}
+      <BillboardStats />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">

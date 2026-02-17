@@ -471,7 +471,7 @@ export function InterviewPrepContent() {
   );
 
   return (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'} data-tour="interview-prep">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold flex items-center gap-3">

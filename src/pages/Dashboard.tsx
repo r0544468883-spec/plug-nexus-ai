@@ -19,6 +19,7 @@ import { MessageInbox } from '@/components/messaging/MessageInbox';
 import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
+import { RecruiterTour } from '@/components/onboarding/RecruiterTour';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
@@ -543,7 +544,7 @@ export default function Dashboard() {
 
   // Content Hub for recruiters
   const renderContentHub = () => (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'} data-tour="content-hub">
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <Newspaper className="w-6 h-6 text-primary" />
         {isRTL ? 'תוכן וקהילה' : 'Content & Community'}
@@ -661,14 +662,12 @@ export default function Dashboard() {
   };
 
   const startTour = () => {
-    // Always navigate to overview first so targets exist
     setCurrentSection('overview');
-
-    // Trigger the tour for all roles - the JobSeekerTour will handle job_seeker
-    // For other roles, show coming soon message for now
     setTimeout(() => {
       if (role === 'job_seeker') {
         window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
+      } else if (role === 'freelance_hr' || role === 'inhouse_hr') {
+        window.dispatchEvent(new CustomEvent('plug:start-recruiter-tour'));
       } else {
         toast.info(isRTL 
           ? 'סיור מודרך לתפקיד שלך יהיה זמין בקרוב!' 
@@ -705,8 +704,12 @@ export default function Dashboard() {
         setCurrentSection('chat');
       }}
     >
-      {/* Interactive tour for job seekers */}
+      {/* Interactive tours */}
       <JobSeekerTour 
+        currentSection={currentSection}
+        onNavigate={setCurrentSection}
+      />
+      <RecruiterTour 
         currentSection={currentSection}
         onNavigate={setCurrentSection}
       />
