@@ -124,7 +124,8 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
         onClick={() => setOpen(true)}
         className={cn(
           'fixed z-40 w-12 h-12 rounded-full bg-secondary border border-accent/30 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-accent',
-          isRTL ? 'bottom-6 start-6' : 'bottom-6 start-6',
+          'bottom-6 lg:bottom-6',
+          isRTL ? 'right-6 lg:right-[calc(256px+1.5rem)]' : 'left-6 lg:left-[calc(256px+1.5rem)]',
           isMobile && 'bottom-[88px]'
         )}
         aria-label={isRTL ? 'מדריך המערכת' : 'System Guide'}
