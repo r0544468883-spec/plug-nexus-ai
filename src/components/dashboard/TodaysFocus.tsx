@@ -31,7 +31,7 @@ export function TodaysFocus({ onNavigate, onShowResumeDialog }: TodaysFocusProps
   const navigate = useNavigate();
   const isRTL = language === 'he';
   const [completed, setCompleted] = useState<Set<string>>(new Set());
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Onboarding checks for job seekers
   const { data: hasCV } = useQuery({
