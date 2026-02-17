@@ -56,7 +56,7 @@ import { MyMissions } from '@/components/missions/MyMissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
   // Scroll to top on mount
   useEffect(() => {
     const scrollToTop = () => {
-      const el = document.getElementById('dashboard-scroll');
+      const el = document.getElementById('main-content');
       if (el) {
         el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
       }
@@ -157,7 +157,7 @@ export default function Dashboard() {
 
   // Scroll to top on section change
   useEffect(() => {
-    const el = document.getElementById('dashboard-scroll');
+    const el = document.getElementById('main-content');
     if (el) {
       el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     }
@@ -309,6 +309,9 @@ export default function Dashboard() {
           activeApplications={dashboardData?.activeApplications || 0}
         />
       )}
+
+      {/* Today's Focus */}
+      <TodaysFocus onNavigate={setCurrentSection} />
 
       {/* Contextual Plug Tips for job seekers */}
       {role === 'job_seeker' && (
@@ -684,13 +687,6 @@ export default function Dashboard() {
     }, 100);
   };
 
-  // Route with flag icon for guided tour
-  const TourGuideIcon = () => (
-    <div className="relative">
-      <Route className="w-6 h-6" />
-      <Flag className="w-3 h-3 absolute -top-1 -right-1 text-primary" />
-    </div>
-  );
 
   return (
     <DashboardLayout 
@@ -721,6 +717,12 @@ export default function Dashboard() {
         currentSection={currentSection}
         onNavigate={setCurrentSection}
       />
+
+      {/* Daily Welcome (first visit of the day) */}
+      <DailyWelcome />
+
+      {/* Smart Trigger Notifications */}
+      <SmartTriggers />
       
       {renderSectionContent()}
 
@@ -741,32 +743,14 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Buttons - Available for all roles */}
-      <>
-        {/* Onboarding Tour Button - Bottom Left */}
-        <button
-          onClick={startTour}
-          className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
-          title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
-        >
-          <TourGuideIcon />
-          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {isRTL ? 'סיור מודרך' : 'Guided Tour'}
-          </span>
-        </button>
+      {/* Tour Guide FAB */}
+      <TourGuideFAB onNavigate={setCurrentSection} onStartTour={startTour} />
 
-        {/* Plug Chat Button - Bottom Right */}
-        <button
-          onClick={scrollToChat}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group animate-pulse hover:animate-none"
-          title={isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-        >
-          <Sparkles className="w-6 h-6" />
-          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-          </span>
-        </button>
-      </>
+      {/* Mobile Bottom Bar */}
+      <MobileBottomBar currentSection={currentSection} onSectionChange={(next) => {
+        if (next !== 'chat') setChatContextSection(next);
+        setCurrentSection(next);
+      }} />
     </DashboardLayout>
   );
 }
