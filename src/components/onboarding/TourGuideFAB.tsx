@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { HelpCircle, X, ChevronRight, Check } from 'lucide-react';
+import { Route, X, ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -130,7 +130,7 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
         )}
         aria-label={isRTL ? 'מדריך המערכת' : 'System Guide'}
       >
-        <HelpCircle className="w-[22px] h-[22px] text-accent" />
+        <Route className="w-[22px] h-[22px] text-accent" />
       </button>
 
       {/* Panel */}
