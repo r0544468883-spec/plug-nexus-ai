@@ -47,7 +47,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [showLinkProject, setShowLinkProject] = useState(false);
   const [showAddReminder, setShowAddReminder] = useState(false);
-  const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '' });
+  const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '', event_date: '' });
   const [newReminder, setNewReminder] = useState({ title: '', description: '', remind_at: '', reminder_type: 'both' });
 
   // Fetch contact's conversations & meetings from timeline
@@ -119,8 +119,10 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
   const addActivityMutation = useMutation({
     mutationFn: async (event: typeof newEvent) => {
       if (!user?.id || !contact?.id) throw new Error('Missing data');
+      const eventDate = event.event_date || new Date().toISOString();
       const { error } = await supabase.from('client_timeline').insert({
-        ...event, company_id: companyId, recruiter_id: user.id, contact_id: contact.id,
+        event_type: event.event_type, title: event.title, description: event.description, event_date: eventDate,
+        company_id: companyId, recruiter_id: user.id, contact_id: contact.id,
       });
       if (error) throw error;
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
@@ -138,7 +140,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
       queryClient.invalidateQueries({ queryKey: ['client-timeline', companyId] });
       queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddActivity(false);
-      setNewEvent({ event_type: 'call', title: '', description: '' });
+      setNewEvent({ event_type: 'call', title: '', description: '', event_date: '' });
       toast.success(isRTL ? 'פעילות נוספה' : 'Activity added');
     },
   });
@@ -278,7 +280,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
 
           {/* Conversations Tab */}
           <TabsContent value="conversations" className="space-y-3 mt-3">
-            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'call', title: '', description: '' }); setShowAddActivity(true); }}>
+            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'call', title: '', description: '', event_date: '' }); setShowAddActivity(true); }}>
               <Plus className="w-3.5 h-3.5" />{isRTL ? 'הוסף שיחה' : 'Log Conversation'}
             </Button>
             {conversations.length === 0 ? (
@@ -302,7 +304,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
 
           {/* Meetings Tab */}
           <TabsContent value="meetings" className="space-y-3 mt-3">
-            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'meeting', title: '', description: '' }); setShowAddActivity(true); }}>
+            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'meeting', title: '', description: '', event_date: '' }); setShowAddActivity(true); }}>
               <Plus className="w-3.5 h-3.5" />{isRTL ? 'הוסף פגישה' : 'Log Meeting'}
             </Button>
             {meetings.length === 0 ? (
@@ -455,6 +457,10 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
                 </SelectContent>
               </Select>
               <Input value={newEvent.title} onChange={(e) => setNewEvent(p => ({ ...p, title: e.target.value }))} placeholder={isRTL ? 'כותרת' : 'Title'} />
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'תאריך ושעה' : 'Date & Time'}</label>
+                <Input type="datetime-local" value={newEvent.event_date} onChange={(e) => setNewEvent(p => ({ ...p, event_date: e.target.value }))} />
+              </div>
               <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'סיכום / תיאור' : 'Summary / Description'} rows={3} />
               <Button onClick={() => addActivityMutation.mutate(newEvent)} disabled={!newEvent.title.trim()} className="w-full">
                 {isRTL ? 'הוסף' : 'Add'}
