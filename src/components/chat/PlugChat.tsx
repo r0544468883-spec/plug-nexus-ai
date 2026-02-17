@@ -243,7 +243,6 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)
-      .is('context', null) // Only load general chat, not application-specific
       .order('created_at', { ascending: true })
       .limit(50);
 
