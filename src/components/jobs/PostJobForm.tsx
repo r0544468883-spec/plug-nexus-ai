@@ -184,7 +184,7 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" data-tour="post-job-form">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-primary" />

@@ -89,7 +89,7 @@ export function CommunityHubsList({ onViewHub, onCreateHub }: CommunityHubsListP
   const discoverHubs = filtered.filter(h => !memberHubIds.has(h.id));
 
   return (
-    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'} data-tour="communities-list">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold flex items-center gap-3">
           <Users className="w-6 h-6 text-primary" />
