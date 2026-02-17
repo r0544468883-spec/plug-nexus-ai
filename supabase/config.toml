@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.generate-candidate-summary]
 verify_jwt = false
+
+[functions.scrape-company]
+verify_jwt = false

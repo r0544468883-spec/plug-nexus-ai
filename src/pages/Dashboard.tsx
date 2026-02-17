@@ -39,6 +39,8 @@ import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
 import { VacancyCalculator } from '@/components/jobs/VacancyCalculator';
 import { PersonalizedFeedWidget } from '@/components/feed/PersonalizedFeedWidget';
 import { RecruiterProfileEditor } from '@/components/profile/RecruiterProfileEditor';
+import { ClientsPage } from '@/components/clients/ClientsPage';
+import { ClientProfilePage } from '@/components/clients/ClientProfilePage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -105,6 +107,7 @@ export default function Dashboard() {
   const [chatContextSection, setChatContextSection] = useState<DashboardSection>('overview');
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [viewingHubId, setViewingHubId] = useState<string | null>(null);
+  const [viewingClientId, setViewingClientId] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === 'he';
@@ -613,6 +616,13 @@ export default function Dashboard() {
         return withBackButton(<RecruiterProfileEditor />);
       case 'negotiation-sandbox':
         return withBackButton(<NegotiationSandbox />);
+      case 'clients':
+        return withBackButton(<ClientsPage onViewClient={(id) => { setViewingClientId(id); setCurrentSection('client-profile' as DashboardSection); }} />);
+      case 'client-profile':
+        return viewingClientId ? withBackButton(
+          <ClientProfilePage companyId={viewingClientId} onBack={() => setCurrentSection('clients')} />,
+          'clients'
+        ) : null;
       case 'communities':
         return withBackButton(<CommunityHubsList 
           onViewHub={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
