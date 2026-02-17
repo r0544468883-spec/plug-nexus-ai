@@ -12,7 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Plus, Search, Globe, Loader2, TrendingUp, AlertTriangle, DollarSign, Users, Clock, ExternalLink } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
+import { VacancyCalculator } from '@/components/jobs/VacancyCalculator';
+import { PlacementRevenue } from '@/components/dashboard/PlacementRevenue';
+import { Building2, Plus, Search, Globe, Loader2, TrendingUp, AlertTriangle, DollarSign, Users, Clock, ExternalLink, Activity, BarChart3 } from 'lucide-react';
 
 interface ClientCompany {
   id: string;
@@ -50,7 +55,6 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
   const [scraping, setScraping] = useState(false);
   const [newClient, setNewClient] = useState({ name: '', description: '', industry: '', website: '', lead_status: 'lead' });
 
-  // Fetch companies created by this recruiter
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['my-clients', user?.id],
     queryFn: async () => {
@@ -66,7 +70,24 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
     enabled: !!user?.id,
   });
 
-  // Fetch high-priority tasks
+  // Active jobs per company
+  const { data: jobCounts = {} } = useQuery({
+    queryKey: ['client-job-counts', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return {};
+      const { data } = await supabase
+        .from('jobs')
+        .select('company_id, status')
+        .eq('created_by', user.id)
+        .eq('status', 'active');
+      if (!data) return {};
+      const counts: Record<string, number> = {};
+      data.forEach(j => { if (j.company_id) counts[j.company_id] = (counts[j.company_id] || 0) + 1; });
+      return counts;
+    },
+    enabled: !!user?.id,
+  });
+
   const { data: urgentTasks = [] } = useQuery({
     queryKey: ['urgent-client-tasks', user?.id],
     queryFn: async () => {
@@ -91,12 +112,9 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
       const { data, error } = await supabase
         .from('companies')
         .insert({
-          name: client.name,
-          description: client.description || null,
-          industry: client.industry || null,
-          website: client.website || null,
-          created_by: user.id,
-          lead_status: client.lead_status,
+          name: client.name, description: client.description || null,
+          industry: client.industry || null, website: client.website || null,
+          created_by: user.id, lead_status: client.lead_status,
         })
         .select('id')
         .single();
@@ -116,26 +134,19 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
     if (!scrapeUrl.trim() || !user?.id) return;
     setScraping(true);
     try {
-      const { data, error } = await supabase.functions.invoke('scrape-company', {
-        body: { url: scrapeUrl },
-      });
+      const { data, error } = await supabase.functions.invoke('scrape-company', { body: { url: scrapeUrl } });
       if (error) throw error;
       if (data?.company) {
         setNewClient({
-          name: data.company.name || '',
-          description: data.company.description || '',
-          industry: data.company.industry || '',
-          website: scrapeUrl,
+          name: data.company.name || '', description: data.company.description || '',
+          industry: data.company.industry || '', website: scrapeUrl,
           lead_status: data.company.lead_status || 'lead',
         });
-        toast.success(isRTL ? 'המידע נשלף בהצלחה! בדקי ואשרי' : 'Data scraped successfully! Review and confirm');
+        toast.success(isRTL ? 'המידע נשלף בהצלחה!' : 'Data scraped successfully!');
       }
-    } catch (err) {
-      console.error('Scrape error:', err);
-      toast.error(isRTL ? 'לא הצלחתי לשלוף מידע מה-URL' : 'Could not scrape data from URL');
-    } finally {
-      setScraping(false);
-    }
+    } catch {
+      toast.error(isRTL ? 'לא הצלחתי לשלוף מידע' : 'Could not scrape data');
+    } finally { setScraping(false); }
   };
 
   const filteredClients = clients.filter(c => {
@@ -152,6 +163,30 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
     active: clients.filter(c => c.lead_status === 'active').length,
     leads: clients.filter(c => c.lead_status === 'lead').length,
     totalRevenue: clients.reduce((sum, c) => sum + (c.historical_value || 0), 0),
+  };
+
+  // Health Score: combination of response rate, hiring speed, recency
+  const getHealthScore = (c: ClientCompany) => {
+    let score = 50;
+    if (c.avg_hiring_speed_days) {
+      if (c.avg_hiring_speed_days <= 7) score += 25;
+      else if (c.avg_hiring_speed_days <= 21) score += 10;
+      else score -= 10;
+    }
+    if (c.last_contact_at) {
+      const daysSince = (Date.now() - new Date(c.last_contact_at).getTime()) / 86400000;
+      if (daysSince <= 7) score += 20;
+      else if (daysSince <= 30) score += 5;
+      else score -= 15;
+    }
+    if (c.total_hires && c.total_hires > 0) score += 5;
+    return Math.min(100, Math.max(0, score));
+  };
+
+  const getHealthColor = (score: number) => {
+    if (score >= 70) return 'text-green-500';
+    if (score >= 40) return 'text-amber-500';
+    return 'text-destructive';
   };
 
   const getStatusBadge = (status: string | null) => {
@@ -175,11 +210,8 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
             <Button className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'לקוח חדש' : 'New Client'}</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{isRTL ? 'הוסף לקוח חדש' : 'Add New Client'}</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>{isRTL ? 'הוסף לקוח חדש' : 'Add New Client'}</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              {/* URL Scrape */}
               <div className="space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Globe className="w-4 h-4 text-primary" />
@@ -191,24 +223,12 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
                     {scraping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'AI ישלוף אוטומטית שם, תיאור, תעשייה וטכנולוגיות' : 'AI will auto-populate name, description, industry & tech stack'}</p>
               </div>
-
-              <div className="space-y-2">
-                <Label>{isRTL ? 'שם החברה' : 'Company Name'} *</Label>
-                <Input value={newClient.name} onChange={(e) => setNewClient(p => ({ ...p, name: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>{isRTL ? 'תיאור' : 'Description'}</Label>
-                <Textarea value={newClient.description} onChange={(e) => setNewClient(p => ({ ...p, description: e.target.value }))} rows={3} />
-              </div>
+              <div className="space-y-2"><Label>{isRTL ? 'שם החברה' : 'Company Name'} *</Label><Input value={newClient.name} onChange={(e) => setNewClient(p => ({ ...p, name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{isRTL ? 'תיאור' : 'Description'}</Label><Textarea value={newClient.description} onChange={(e) => setNewClient(p => ({ ...p, description: e.target.value }))} rows={3} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'תעשייה' : 'Industry'}</Label>
-                  <Input value={newClient.industry} onChange={(e) => setNewClient(p => ({ ...p, industry: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'סטטוס' : 'Status'}</Label>
+                <div className="space-y-2"><Label>{isRTL ? 'תעשייה' : 'Industry'}</Label><Input value={newClient.industry} onChange={(e) => setNewClient(p => ({ ...p, industry: e.target.value }))} /></div>
+                <div className="space-y-2"><Label>{isRTL ? 'סטטוס' : 'Status'}</Label>
                   <Select value={newClient.lead_status} onValueChange={(v) => setNewClient(p => ({ ...p, lead_status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -219,10 +239,7 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>{isRTL ? 'אתר' : 'Website'}</Label>
-                <Input value={newClient.website} onChange={(e) => setNewClient(p => ({ ...p, website: e.target.value }))} />
-              </div>
+              <div className="space-y-2"><Label>{isRTL ? 'אתר' : 'Website'}</Label><Input value={newClient.website} onChange={(e) => setNewClient(p => ({ ...p, website: e.target.value }))} /></div>
               <Button onClick={() => createClientMutation.mutate(newClient)} disabled={!newClient.name.trim() || createClientMutation.isPending} className="w-full">
                 {createClientMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {isRTL ? 'צור לקוח' : 'Create Client'}
@@ -232,132 +249,160 @@ export function ClientsPage({ onViewClient }: ClientsPageProps) {
         </Dialog>
       </div>
 
-      {/* High Priority Alerts */}
-      {urgentTasks.length > 0 && (
-        <Card className="bg-destructive/5 border-destructive/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-4 h-4" />
-              {isRTL ? 'התראות בעדיפות גבוהה' : 'High Priority Alerts'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {urgentTasks.map((task: any) => (
-              <div key={task.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{task.title}</p>
-                  <p className="text-xs text-muted-foreground">{(task.companies as any)?.name}</p>
-                </div>
-                <Badge variant={task.priority === 'urgent' ? 'destructive' : 'default'} className="shrink-0">
-                  {task.priority === 'urgent' ? (isRTL ? 'דחוף' : 'Urgent') : (isRTL ? 'גבוה' : 'High')}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Tabs: Clients / B2B Tools */}
+      <Tabs defaultValue="clients" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="clients" className="gap-1.5"><Building2 className="w-3.5 h-3.5" />{isRTL ? 'לקוחות' : 'Clients'}</TabsTrigger>
+          <TabsTrigger value="b2b-tools" className="gap-1.5"><BarChart3 className="w-3.5 h-3.5" />{isRTL ? 'כלים עסקיים' : 'B2B Tools'}</TabsTrigger>
+        </TabsList>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: isRTL ? 'סה"כ לקוחות' : 'Total Clients', value: stats.total, icon: Building2, color: 'text-foreground' },
-          { label: isRTL ? 'פעילים' : 'Active', value: stats.active, icon: TrendingUp, color: 'text-primary' },
-          { label: isRTL ? 'לידים' : 'Leads', value: stats.leads, icon: Users, color: 'text-amber-500' },
-          { label: isRTL ? 'הכנסות כוללות' : 'Total Revenue', value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
-        ].map((stat) => (
-          <Card key={stat.label} className="bg-card border-border">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10"><stat.icon className="w-4 h-4 text-primary" /></div>
-              <div>
-                <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isRTL ? 'חיפוש לקוח...' : 'Search client...'} className="ps-10" />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{isRTL ? 'הכל' : 'All'}</SelectItem>
-            <SelectItem value="active">{isRTL ? 'פעילים' : 'Active'}</SelectItem>
-            <SelectItem value="lead">{isRTL ? 'לידים' : 'Leads'}</SelectItem>
-            <SelectItem value="cold">{isRTL ? 'קרים' : 'Cold'}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Client List */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <Card key={i} className="h-40 animate-pulse bg-muted" />)}
-        </div>
-      ) : filteredClients.length === 0 ? (
-        <Card className="bg-card border-border">
-          <CardContent className="p-12 text-center">
-            <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">{isRTL ? 'אין לקוחות עדיין' : 'No clients yet'}</p>
-            <Button variant="outline" onClick={() => setShowCreateDialog(true)} className="gap-2">
-              <Plus className="w-4 h-4" />{isRTL ? 'הוסף לקוח ראשון' : 'Add your first client'}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="bg-card border-border plug-card-hover cursor-pointer" onClick={() => onViewClient(client.id)}>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      {client.logo_url || client.logo_scraped_url ? (
-                        <img src={client.logo_url || client.logo_scraped_url || ''} alt="" className="w-8 h-8 rounded object-contain" />
-                      ) : (
-                        <Building2 className="w-5 h-5 text-primary" />
-                      )}
+        <TabsContent value="clients" className="space-y-6 mt-4">
+          {/* High Priority Alerts */}
+          {urgentTasks.length > 0 && (
+            <Card className="bg-destructive/5 border-destructive/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  {isRTL ? 'התראות בעדיפות גבוהה' : 'High Priority Alerts'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {urgentTasks.map((task: any) => (
+                  <div key={task.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">{(task.companies as any)?.name}</p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">{client.name}</p>
-                      {client.industry && <p className="text-xs text-muted-foreground truncate">{client.industry}</p>}
-                    </div>
+                    <Badge variant={task.priority === 'urgent' ? 'destructive' : 'default'} className="shrink-0">
+                      {task.priority === 'urgent' ? (isRTL ? 'דחוף' : 'Urgent') : (isRTL ? 'גבוה' : 'High')}
+                    </Badge>
                   </div>
-                  {getStatusBadge(client.lead_status)}
-                </div>
-                {client.description && <p className="text-sm text-muted-foreground line-clamp-2">{client.description}</p>}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {client.total_hires != null && client.total_hires > 0 && (
-                    <span className="flex items-center gap-1"><Users className="w-3 h-3" />{client.total_hires} {isRTL ? 'גיוסים' : 'hires'}</span>
-                  )}
-                  {client.historical_value != null && client.historical_value > 0 && (
-                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />₪{client.historical_value.toLocaleString()}</span>
-                  )}
-                  {client.last_contact_at && (
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(client.last_contact_at).toLocaleDateString()}</span>
-                  )}
-                </div>
-                {client.tech_stack && client.tech_stack.length > 0 && (
-                  <div className="flex gap-1 flex-wrap">
-                    {client.tech_stack.slice(0, 4).map((t, i) => <Badge key={i} variant="outline" className="text-xs">{t}</Badge>)}
-                    {client.tech_stack.length > 4 && <Badge variant="outline" className="text-xs">+{client.tech_stack.length - 4}</Badge>}
-                  </div>
-                )}
-                {client.website && (
-                  <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline" onClick={(e) => e.stopPropagation()}>
-                    <ExternalLink className="w-3 h-3" />{new URL(client.website).hostname}
-                  </a>
-                )}
+                ))}
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          )}
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: isRTL ? 'סה"כ' : 'Total', value: stats.total, icon: Building2, color: 'text-foreground' },
+              { label: isRTL ? 'פעילים' : 'Active', value: stats.active, icon: TrendingUp, color: 'text-primary' },
+              { label: isRTL ? 'לידים' : 'Leads', value: stats.leads, icon: Users, color: 'text-amber-500' },
+              { label: isRTL ? 'הכנסות' : 'Revenue', value: `₪${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-primary' },
+            ].map((stat) => (
+              <Card key={stat.label} className="bg-card border-border">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10"><stat.icon className="w-4 h-4 text-primary" /></div>
+                  <div>
+                    <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Filters */}
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isRTL ? 'חיפוש לקוח...' : 'Search client...'} className="ps-10" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRTL ? 'הכל' : 'All'}</SelectItem>
+                <SelectItem value="active">{isRTL ? 'פעילים' : 'Active'}</SelectItem>
+                <SelectItem value="lead">{isRTL ? 'לידים' : 'Leads'}</SelectItem>
+                <SelectItem value="cold">{isRTL ? 'קרים' : 'Cold'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Smart Table */}
+          {isLoading ? (
+            <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 animate-pulse bg-muted rounded-lg" />)}</div>
+          ) : filteredClients.length === 0 ? (
+            <Card className="bg-card border-border">
+              <CardContent className="p-12 text-center">
+                <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">{isRTL ? 'אין לקוחות עדיין' : 'No clients yet'}</p>
+                <Button variant="outline" onClick={() => setShowCreateDialog(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />{isRTL ? 'הוסף לקוח ראשון' : 'Add your first client'}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden">
+              {/* Table Header */}
+              <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-2 px-4 py-2.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+                <span>{isRTL ? 'חברה' : 'Company'}</span>
+                <span>{isRTL ? 'סטטוס' : 'Status'}</span>
+                <span>{isRTL ? 'פרויקטים' : 'Projects'}</span>
+                <span>{isRTL ? 'הכנסה' : 'Revenue'}</span>
+                <span>{isRTL ? 'בריאות' : 'Health'}</span>
+                <span></span>
+              </div>
+              {/* Table Rows */}
+              {filteredClients.map((client) => {
+                const health = getHealthScore(client);
+                const activeJobs = jobCounts[client.id] || 0;
+                return (
+                  <div 
+                    key={client.id} 
+                    className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_1fr_80px] gap-2 px-4 py-3 border-t border-border hover:bg-muted/30 cursor-pointer transition-colors items-center"
+                    onClick={() => onViewClient(client.id)}
+                  >
+                    {/* Company */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        {client.logo_url || client.logo_scraped_url ? (
+                          <img src={client.logo_url || client.logo_scraped_url || ''} alt="" className="w-7 h-7 rounded object-contain" />
+                        ) : (
+                          <Building2 className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{client.name}</p>
+                        {client.industry && <p className="text-xs text-muted-foreground truncate">{client.industry}</p>}
+                      </div>
+                    </div>
+                    {/* Status */}
+                    <div className="flex items-center">{getStatusBadge(client.lead_status)}</div>
+                    {/* Projects */}
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{activeJobs} {isRTL ? 'פעילים' : 'active'}</span>
+                    </div>
+                    {/* Revenue */}
+                    <div className="text-sm font-medium">
+                      ₪{(client.historical_value || 0).toLocaleString()}
+                    </div>
+                    {/* Health Score */}
+                    <div className="flex items-center gap-2">
+                      <Progress value={health} className="h-1.5 flex-1 max-w-[60px]" />
+                      <span className={`text-xs font-semibold ${getHealthColor(health)}`}>{health}</span>
+                    </div>
+                    {/* Action */}
+                    <div className="flex justify-end">
+                      <Button variant="ghost" size="sm" className="text-xs">{isRTL ? 'צפה' : 'View'}</Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* B2B Tools Tab */}
+        <TabsContent value="b2b-tools" className="space-y-6 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SLAMonitor />
+            <PlacementRevenue />
+          </div>
+          <VacancyCalculator />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

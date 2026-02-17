@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from '@/components/ui/progress';
 import {
   Building2, Clock, Users, DollarSign, TrendingUp, FileText, Upload, Plus, Loader2, CheckCircle, Mail, Phone, Linkedin,
-  Calendar, MessageSquare, Briefcase, FolderOpen, Trash2, AlertTriangle, Sparkles, ExternalLink, BarChart3
+  Calendar, MessageSquare, Briefcase, FolderOpen, Sparkles, ExternalLink, BarChart3, Target, Presentation
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -34,6 +34,9 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddTimeline, setShowAddTimeline] = useState(false);
+  const [showMeetingPrep, setShowMeetingPrep] = useState(false);
+  const [meetingBrief, setMeetingBrief] = useState<string | null>(null);
+  const [generatingBrief, setGeneratingBrief] = useState(false);
   const [newContact, setNewContact] = useState({ full_name: '', role_title: '', email: '', phone: '', linkedin_url: '' });
   const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', due_date: '' });
   const [newEvent, setNewEvent] = useState({ event_type: 'note', title: '', description: '' });
@@ -88,7 +91,42 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
-  // Fetch placements (hired applications for this company's jobs)
+  // Fetch active jobs for this company
+  const { data: activeJobs = [] } = useQuery({
+    queryKey: ['client-active-jobs', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('id, title, status, created_at, location, job_type')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch applications per job for kanban-style view
+  const { data: jobApplications = {} } = useQuery({
+    queryKey: ['client-job-applications', companyId, activeJobs],
+    queryFn: async () => {
+      if (activeJobs.length === 0) return {};
+      const jobIds = activeJobs.map(j => j.id);
+      const { data, error } = await supabase
+        .from('applications')
+        .select('id, job_id, current_stage, candidate_id, created_at')
+        .in('job_id', jobIds);
+      if (error) throw error;
+      const grouped: Record<string, any[]> = {};
+      (data || []).forEach(a => {
+        if (!grouped[a.job_id]) grouped[a.job_id] = [];
+        grouped[a.job_id].push(a);
+      });
+      return grouped;
+    },
+    enabled: activeJobs.length > 0,
+  });
+
+  // Placements
   const { data: placements = [] } = useQuery({
     queryKey: ['client-placements', companyId],
     queryFn: async () => {
@@ -102,7 +140,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     enabled: !!user?.id,
   });
 
-  // Add contact
+  // Mutations
   const addContactMutation = useMutation({
     mutationFn: async (contact: typeof newContact) => {
       if (!user?.id) throw new Error('Not authenticated');
@@ -117,13 +155,11 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
-  // Add task
   const addTaskMutation = useMutation({
     mutationFn: async (task: typeof newTask) => {
       if (!user?.id) throw new Error('Not authenticated');
       const { error } = await supabase.from('client_tasks').insert({
-        ...task, company_id: companyId, recruiter_id: user.id,
-        due_date: task.due_date || null,
+        ...task, company_id: companyId, recruiter_id: user.id, due_date: task.due_date || null,
       });
       if (error) throw error;
     },
@@ -135,7 +171,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
-  // Complete task
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
       const { error } = await supabase.from('client_tasks').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', taskId);
@@ -144,13 +179,11 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] }),
   });
 
-  // Add timeline event
   const addTimelineMutation = useMutation({
     mutationFn: async (event: typeof newEvent) => {
       if (!user?.id) throw new Error('Not authenticated');
       const { error } = await supabase.from('client_timeline').insert({ ...event, company_id: companyId, recruiter_id: user.id });
       if (error) throw error;
-      // Update last_contact_at
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
     },
     onSuccess: () => {
@@ -162,7 +195,6 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
-  // Upload vault file
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
@@ -182,6 +214,38 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     }
   };
 
+  // AI Meeting Prep
+  const handleMeetingPrep = async () => {
+    setGeneratingBrief(true);
+    setMeetingBrief(null);
+    setShowMeetingPrep(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-meeting-prep', {
+        body: {
+          companyId,
+          companyName: company?.name,
+          timeline: timeline.slice(0, 10).map(e => ({ type: e.event_type, title: e.title, date: e.event_date })),
+          activeJobs: activeJobs.map(j => ({
+            title: j.title, status: j.status,
+            candidates: (jobApplications[j.id] || []).length,
+            stages: Object.entries((jobApplications[j.id] || []).reduce((acc: any, a: any) => {
+              acc[a.current_stage || 'applied'] = (acc[a.current_stage || 'applied'] || 0) + 1;
+              return acc;
+            }, {})),
+          })),
+          placements: placements.length,
+          pendingTasks: tasks.filter(t => t.status === 'pending').map(t => t.title),
+        },
+      });
+      if (error) throw error;
+      setMeetingBrief(data?.brief || (isRTL ? 'לא הצלחתי ליצור סיכום' : 'Could not generate brief'));
+    } catch {
+      setMeetingBrief(isRTL ? 'שגיאה ביצירת הסיכום. נסי שוב.' : 'Error generating brief. Please try again.');
+    } finally {
+      setGeneratingBrief(false);
+    }
+  };
+
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'email': return <Mail className="w-4 h-4 text-blue-500" />;
@@ -193,34 +257,47 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     }
   };
 
-  const slaScore = company?.avg_hiring_speed_days ? Math.min(100, Math.max(0, 100 - (company.avg_hiring_speed_days - 14) * 5)) : null;
+  const slaScore = company?.avg_hiring_speed_days ? Math.min(100, Math.max(0, 100 - (Number(company.avg_hiring_speed_days) - 14) * 5)) : null;
+
+  const stages = ['applied', 'screening', 'interview', 'technical', 'offer', 'hired'];
+  const stageLabels: Record<string, string> = isRTL 
+    ? { applied: 'הגשה', screening: 'סינון', interview: 'ראיון', technical: 'טכני', offer: 'הצעה', hired: 'נשכר' }
+    : { applied: 'Applied', screening: 'Screen', interview: 'Interview', technical: 'Technical', offer: 'Offer', hired: 'Hired' };
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-          {company?.logo_url ? (
-            <img src={company.logo_url} alt="" className="w-10 h-10 rounded-lg object-contain" />
-          ) : (
-            <Building2 className="w-7 h-7 text-primary" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold truncate">{company?.name || '...'}</h2>
-          <div className="flex items-center gap-3 mt-1">
-            {company?.industry && <span className="text-sm text-muted-foreground">{company.industry}</span>}
-            {company?.lead_status && (
-              <Badge className={company.lead_status === 'active' ? 'bg-primary/20 text-primary' : company.lead_status === 'cold' ? 'bg-muted text-muted-foreground' : ''}>
-                {company.lead_status === 'active' ? (isRTL ? 'פעיל' : 'Active') : company.lead_status === 'cold' ? (isRTL ? 'קר' : 'Cold') : (isRTL ? 'ליד' : 'Lead')}
-              </Badge>
-            )}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            {company?.logo_url ? <img src={company.logo_url} alt="" className="w-10 h-10 rounded-lg object-contain" /> : <Building2 className="w-7 h-7 text-primary" />}
           </div>
-          {company?.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{company.description}</p>}
+          <div className="min-w-0">
+            <h2 className="text-2xl font-bold truncate">{company?.name || '...'}</h2>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {company?.industry && <span className="text-sm text-muted-foreground">{company.industry}</span>}
+              {company?.lead_status && (
+                <Badge className={company.lead_status === 'active' ? 'bg-primary/20 text-primary' : company.lead_status === 'cold' ? 'bg-muted text-muted-foreground' : ''}>
+                  {company.lead_status === 'active' ? (isRTL ? 'פעיל' : 'Active') : company.lead_status === 'cold' ? (isRTL ? 'קר' : 'Cold') : (isRTL ? 'ליד' : 'Lead')}
+                </Badge>
+              )}
+              {company?.website && (
+                <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline" onClick={e => e.stopPropagation()}>
+                  <ExternalLink className="w-3 h-3" />{(() => { try { return new URL(company.website).hostname; } catch { return company.website; } })()}
+                </a>
+              )}
+            </div>
+            {company?.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{company.description}</p>}
+          </div>
         </div>
+        {/* Meeting Prep Button */}
+        <Button onClick={handleMeetingPrep} className="gap-2 shrink-0 bg-accent text-accent-foreground hover:bg-accent/90">
+          <Presentation className="w-4 h-4" />
+          {isRTL ? 'הכנה לפגישה' : 'Prep Meeting'}
+        </Button>
       </div>
 
-      {/* AI Summary Widget */}
+      {/* AI Summary */}
       {company?.ai_summary && (
         <Card className="plug-ai-highlight">
           <CardContent className="p-4 flex items-start gap-3">
@@ -234,17 +311,21 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
       )}
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="bg-card"><CardContent className="p-3 text-center">
           <p className="text-2xl font-bold text-primary">{placements.length}</p>
           <p className="text-xs text-muted-foreground">{isRTL ? 'גיוסים' : 'Placements'}</p>
         </CardContent></Card>
         <Card className="bg-card"><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold">₪{(company?.historical_value || 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold">{activeJobs.filter(j => j.status === 'active').length}</p>
+          <p className="text-xs text-muted-foreground">{isRTL ? 'משרות פעילות' : 'Active Jobs'}</p>
+        </CardContent></Card>
+        <Card className="bg-card"><CardContent className="p-3 text-center">
+          <p className="text-2xl font-bold">₪{(Number(company?.historical_value) || 0).toLocaleString()}</p>
           <p className="text-xs text-muted-foreground">{isRTL ? 'ערך היסטורי' : 'Historical Value'}</p>
         </CardContent></Card>
         <Card className="bg-card"><CardContent className="p-3 text-center">
-          <p className="text-2xl font-bold">₪{(company?.estimated_revenue || 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold">₪{(Number(company?.estimated_revenue) || 0).toLocaleString()}</p>
           <p className="text-xs text-muted-foreground">{isRTL ? 'הכנסה צפויה' : 'Est. Revenue'}</p>
         </CardContent></Card>
         <Card className="bg-card"><CardContent className="p-3 text-center">
@@ -269,44 +350,34 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
         </Card>
       )}
 
-      {/* Integration placeholders */}
+      {/* Integration Placeholders */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Mail className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{isRTL ? 'סנכרון Gmail / Outlook' : 'Gmail / Outlook Sync'}</p>
-              <p className="text-xs text-muted-foreground">{isRTL ? 'בקרוב — סנכרון אוטומטי של מיילים' : 'Coming soon — auto-sync emails'}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/30 border-dashed">
-          <CardContent className="p-4 flex items-center gap-3">
-            <MessageSquare className="w-5 h-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{isRTL ? 'תמלול פגישות' : 'Meeting Transcription'}</p>
-              <p className="text-xs text-muted-foreground">{isRTL ? 'בקרוב — AI יתמלל ויסכם פגישות' : 'Coming soon — AI transcription & summary'}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Card className="bg-muted/30 border-dashed"><CardContent className="p-4 flex items-center gap-3">
+          <Mail className="w-5 h-5 text-muted-foreground" />
+          <div><p className="text-sm font-medium">{isRTL ? 'סנכרון Gmail / Outlook' : 'Gmail / Outlook Sync'}</p><p className="text-xs text-muted-foreground">{isRTL ? 'בקרוב' : 'Coming soon'}</p></div>
+        </CardContent></Card>
+        <Card className="bg-muted/30 border-dashed"><CardContent className="p-4 flex items-center gap-3">
+          <MessageSquare className="w-5 h-5 text-muted-foreground" />
+          <div><p className="text-sm font-medium">{isRTL ? 'תמלול פגישות' : 'Meeting Transcription'}</p><p className="text-xs text-muted-foreground">{isRTL ? 'בקרוב' : 'Coming soon'}</p></div>
+        </CardContent></Card>
       </div>
 
-      {/* Tabs */}
+      {/* Main Tabs */}
       <Tabs defaultValue="timeline" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="timeline" className="gap-1"><Clock className="w-3.5 h-3.5" />{isRTL ? 'ציר זמן' : 'Timeline'}</TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1"><Users className="w-3.5 h-3.5" />{isRTL ? 'אנשי קשר' : 'Contacts'}</TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-1"><CheckCircle className="w-3.5 h-3.5" />{isRTL ? 'משימות' : 'Tasks'}</TabsTrigger>
-          <TabsTrigger value="vault" className="gap-1"><FolderOpen className="w-3.5 h-3.5" />{isRTL ? 'כספת' : 'Vault'}</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="timeline" className="gap-1 text-xs"><Clock className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'ציר זמן' : 'Timeline'}</span></TabsTrigger>
+          <TabsTrigger value="projects" className="gap-1 text-xs"><Briefcase className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'פרויקטים' : 'Projects'}</span></TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-1 text-xs"><BarChart3 className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'אנליטיקס' : 'Analytics'}</span></TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-1 text-xs"><Users className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'אנשי קשר' : 'Contacts'}</span></TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1 text-xs"><CheckCircle className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'משימות' : 'Tasks'}</span></TabsTrigger>
+          <TabsTrigger value="vault" className="gap-1 text-xs"><FolderOpen className="w-3.5 h-3.5" /><span className="hidden sm:inline">{isRTL ? 'כספת' : 'Vault'}</span></TabsTrigger>
         </TabsList>
 
         {/* Timeline Tab */}
         <TabsContent value="timeline" className="space-y-4">
           <div className="flex justify-end">
             <Dialog open={showAddTimeline} onOpenChange={setShowAddTimeline}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'הוסף פעילות' : 'Add Activity'}</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'הוסף פעילות' : 'Add Activity'}</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{isRTL ? 'פעילות חדשה' : 'New Activity'}</DialogTitle></DialogHeader>
                 <div className="space-y-3">
@@ -321,7 +392,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                     </SelectContent>
                   </Select>
                   <Input value={newEvent.title} onChange={(e) => setNewEvent(p => ({ ...p, title: e.target.value }))} placeholder={isRTL ? 'כותרת' : 'Title'} />
-                  <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'תיאור (אופציונלי)' : 'Description (optional)'} rows={3} />
+                  <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'תיאור' : 'Description'} rows={3} />
                   <Button onClick={() => addTimelineMutation.mutate(newEvent)} disabled={!newEvent.title.trim()} className="w-full">{isRTL ? 'הוסף' : 'Add'}</Button>
                 </div>
               </DialogContent>
@@ -345,18 +416,98 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
           )}
         </TabsContent>
 
+        {/* Active Projects Tab */}
+        <TabsContent value="projects" className="space-y-4">
+          {activeJobs.length === 0 ? (
+            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין משרות פעילות' : 'No active jobs'}</CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              {activeJobs.map(job => {
+                const apps = jobApplications[job.id] || [];
+                const stageCounts: Record<string, number> = {};
+                apps.forEach((a: any) => { stageCounts[a.current_stage || 'applied'] = (stageCounts[a.current_stage || 'applied'] || 0) + 1; });
+                return (
+                  <Card key={job.id} className="bg-card border-border">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Briefcase className="w-4 h-4 text-primary" />{job.title}
+                        </CardTitle>
+                        <Badge variant={job.status === 'active' ? 'default' : 'secondary'}>{job.status}</Badge>
+                      </div>
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        {job.location && <span>{job.location}</span>}
+                        {job.job_type && <span>{job.job_type}</span>}
+                        <span>{apps.length} {isRTL ? 'מועמדים' : 'candidates'}</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Mini Kanban */}
+                      <div className="grid grid-cols-6 gap-1">
+                        {stages.map(stage => (
+                          <div key={stage} className="text-center">
+                            <div className={`h-8 rounded flex items-center justify-center text-sm font-bold ${
+                              (stageCounts[stage] || 0) > 0 ? 'bg-primary/15 text-primary' : 'bg-muted/50 text-muted-foreground'
+                            }`}>
+                              {stageCounts[stage] || 0}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1 truncate">{stageLabels[stage]}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Revenue Pipeline */}
+            <Card className="bg-card">
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" />{isRTL ? 'צינור הכנסות' : 'Revenue Pipeline'}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">{isRTL ? 'ערך היסטורי' : 'Historical'}</span><span className="font-bold text-primary">₪{(Number(company?.historical_value) || 0).toLocaleString()}</span></div>
+                <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">{isRTL ? 'הכנסה צפויה' : 'Pipeline'}</span><span className="font-bold">₪{(Number(company?.estimated_revenue) || 0).toLocaleString()}</span></div>
+                <Progress value={Number(company?.historical_value) && Number(company?.estimated_revenue) ? Math.min(100, (Number(company.historical_value) / (Number(company.historical_value) + Number(company.estimated_revenue))) * 100) : 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">{isRTL ? 'יחס מומש מול צפוי' : 'Realized vs Pipeline ratio'}</p>
+              </CardContent>
+            </Card>
+
+            {/* Hiring Velocity */}
+            <Card className="bg-card">
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" />{isRTL ? 'מהירות גיוס' : 'Hiring Velocity'}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">{isRTL ? 'זמן ממוצע' : 'Avg. Time'}</span><span className="font-bold">{company?.avg_hiring_speed_days || '—'} {isRTL ? 'ימים' : 'days'}</span></div>
+                <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">{isRTL ? 'שיעור תגובה' : 'Response Rate'}</span><span className="font-bold">{company?.response_rate ? `${Number(company.response_rate)}%` : '—'}</span></div>
+                <div className="flex justify-between items-center"><span className="text-sm text-muted-foreground">{isRTL ? 'סה"כ גיוסים' : 'Total Hires'}</span><span className="font-bold text-primary">{company?.total_hires || 0}</span></div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Market Benchmark placeholder */}
+          <Card className="bg-muted/30 border-dashed">
+            <CardContent className="p-6 text-center">
+              <Target className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="font-medium">{isRTL ? 'השוואת שוק' : 'Market Benchmark'}</p>
+              <p className="text-sm text-muted-foreground mt-1">{isRTL ? 'השוואת הצעות השכר מול ממוצע השוק — בקרוב' : 'Compare salary offers vs market average — coming soon'}</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Contacts Tab */}
         <TabsContent value="contacts" className="space-y-4">
           <div className="flex justify-end">
             <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'הוסף איש קשר' : 'Add Contact'}</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'הוסף' : 'Add Contact'}</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{isRTL ? 'איש קשר חדש' : 'New Contact'}</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <Input value={newContact.full_name} onChange={(e) => setNewContact(p => ({ ...p, full_name: e.target.value }))} placeholder={isRTL ? 'שם מלא *' : 'Full Name *'} />
-                  <Input value={newContact.role_title} onChange={(e) => setNewContact(p => ({ ...p, role_title: e.target.value }))} placeholder={isRTL ? 'תפקיד' : 'Role/Title'} />
+                  <Input value={newContact.role_title} onChange={(e) => setNewContact(p => ({ ...p, role_title: e.target.value }))} placeholder={isRTL ? 'תפקיד' : 'Role'} />
                   <Input value={newContact.email} onChange={(e) => setNewContact(p => ({ ...p, email: e.target.value }))} placeholder="Email" type="email" />
                   <Input value={newContact.phone} onChange={(e) => setNewContact(p => ({ ...p, phone: e.target.value }))} placeholder={isRTL ? 'טלפון' : 'Phone'} />
                   <Input value={newContact.linkedin_url} onChange={(e) => setNewContact(p => ({ ...p, linkedin_url: e.target.value }))} placeholder="LinkedIn URL" />
@@ -366,7 +517,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
             </Dialog>
           </div>
           {contacts.length === 0 ? (
-            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין אנשי קשר' : 'No contacts yet'}</CardContent></Card>
+            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין אנשי קשר' : 'No contacts'}</CardContent></Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {contacts.map((c) => (
@@ -393,9 +544,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
         <TabsContent value="tasks" className="space-y-4">
           <div className="flex justify-end">
             <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'משימה חדשה' : 'New Task'}</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'משימה חדשה' : 'New Task'}</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{isRTL ? 'משימה חדשה' : 'New Task'}</DialogTitle></DialogHeader>
                 <div className="space-y-3">
@@ -419,7 +568,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
             </Dialog>
           </div>
           {tasks.length === 0 ? (
-            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין משימות' : 'No tasks yet'}</CardContent></Card>
+            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין משימות' : 'No tasks'}</CardContent></Card>
           ) : (
             <div className="space-y-2">
               {tasks.map((task) => (
@@ -431,9 +580,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                     <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p>
                     {task.due_date && <p className="text-xs text-muted-foreground">{format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
                   </div>
-                  <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'default' : 'secondary'} className="text-xs shrink-0">
-                    {task.priority}
-                  </Badge>
+                  <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'default' : 'secondary'} className="text-xs shrink-0">{task.priority}</Badge>
                   {task.source === 'ai_suggested' && <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />}
                 </div>
               ))}
@@ -450,7 +597,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
             </label>
           </div>
           {vaultFiles.length === 0 ? (
-            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין קבצים' : 'No files yet'}</CardContent></Card>
+            <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין קבצים' : 'No files'}</CardContent></Card>
           ) : (
             <div className="space-y-2">
               {vaultFiles.map((file) => (
@@ -467,6 +614,28 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Meeting Prep Dialog */}
+      <Dialog open={showMeetingPrep} onOpenChange={setShowMeetingPrep}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Presentation className="w-5 h-5 text-accent" />
+              {isRTL ? 'תדריך הכנה לפגישה' : 'Meeting Prep Brief'}
+            </DialogTitle>
+          </DialogHeader>
+          {generatingBrief ? (
+            <div className="p-8 text-center space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="text-sm text-muted-foreground">{isRTL ? 'Plug AI מכין תדריך...' : 'Plug AI generating brief...'}</p>
+            </div>
+          ) : meetingBrief ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{meetingBrief}</div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

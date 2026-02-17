@@ -563,18 +563,7 @@ export default function Dashboard() {
     </div>
   );
 
-  // B2B Suite
-  const renderB2BSuite = () => (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
-      <h2 className="text-2xl font-bold flex items-center gap-3">
-        <DollarSign className="w-6 h-6 text-primary" />
-        {isRTL ? 'כלים עסקיים' : 'B2B Suite'}
-      </h2>
-      <SLAMonitor />
-      <VacancyCalculator />
-      <PlacementRevenue />
-    </div>
-  );
+  
 
   const renderSectionContent = () => {
     switch (currentSection) {
@@ -610,8 +599,7 @@ export default function Dashboard() {
         return withBackButton(<ContentDashboard onNavigate={(s) => setCurrentSection(s as DashboardSection)} />, 'content-hub' as DashboardSection);
       case 'content-hub' as DashboardSection:
         return withBackButton(renderContentHub());
-      case 'b2b-suite' as DashboardSection:
-        return withBackButton(renderB2BSuite());
+      
       case 'recruiter-profile' as DashboardSection:
         return withBackButton(<RecruiterProfileEditor />);
       case 'negotiation-sandbox':
