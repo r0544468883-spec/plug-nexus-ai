@@ -41,6 +41,9 @@ import { PersonalizedFeedWidget } from '@/components/feed/PersonalizedFeedWidget
 import { RecruiterProfileEditor } from '@/components/profile/RecruiterProfileEditor';
 import { ClientsPage } from '@/components/clients/ClientsPage';
 import { ClientProfilePage } from '@/components/clients/ClientProfilePage';
+import { MissionBoard } from '@/components/missions/MissionBoard';
+import { CreateMissionForm } from '@/components/missions/CreateMissionForm';
+import { MyMissions } from '@/components/missions/MyMissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -626,6 +629,26 @@ export default function Dashboard() {
           <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />,
           'communities'
         ) : null;
+      case 'missions':
+        return withBackButton(
+          <MissionBoard 
+            onCreateMission={() => setCurrentSection('create-mission' as DashboardSection)} 
+            onMyMissions={() => setCurrentSection('my-missions' as DashboardSection)} 
+          />
+        );
+      case 'create-mission':
+        return withBackButton(
+          <CreateMissionForm 
+            onSuccess={() => setCurrentSection('missions' as DashboardSection)} 
+            onCancel={() => setCurrentSection('missions' as DashboardSection)} 
+          />,
+          'missions' as DashboardSection
+        );
+      case 'my-missions':
+        return withBackButton(
+          <MyMissions onBack={() => setCurrentSection('missions' as DashboardSection)} />,
+          'missions' as DashboardSection
+        );
         return renderOverviewContent();
     }
   };

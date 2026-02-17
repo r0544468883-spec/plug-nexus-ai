@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Mail, Phone, Camera, Loader2, Save } from 'lucide-react';
+import { PhotoUpload } from '@/components/profile/PhotoUpload';
+import { User, Mail, Phone, Loader2, Save } from 'lucide-react';
 
 export function ProfileSettings() {
   const { user, profile, updateProfile } = useAuth();
@@ -19,6 +19,7 @@ export function ProfileSettings() {
 
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url || null);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -55,19 +56,19 @@ export function ProfileSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Avatar Section */}
-        <div className="flex items-center gap-4">
-          <Avatar className="w-20 h-20">
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary text-xl">
-              {fullName?.charAt(0)?.toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Camera className="w-4 h-4" />
-            {isHebrew ? 'שנה תמונה' : 'Change Photo'}
-          </Button>
-        </div>
+        {/* Avatar Section with PhotoUpload */}
+        {user && (
+          <PhotoUpload
+            userId={user.id}
+            currentAvatarUrl={avatarUrl}
+            userName={fullName || 'User'}
+            onUpload={(url) => {
+              setAvatarUrl(url);
+              queryClient.invalidateQueries({ queryKey: ['profile'] });
+            }}
+            size="md"
+          />
+        )}
 
         {/* Form Fields */}
         <div className="grid gap-4">

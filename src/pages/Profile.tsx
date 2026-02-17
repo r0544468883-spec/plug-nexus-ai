@@ -6,6 +6,7 @@ import { ResumeUpload } from '@/components/documents/ResumeUpload';
 import { ResumeEnhancer } from '@/components/documents/ResumeEnhancer';
 import { JobPreferencesSettings } from '@/components/settings/JobPreferencesSettings';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
+import { PhotoUpload } from '@/components/profile/PhotoUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ export default function Profile() {
   const { user, profile, role, isLoading } = useAuth();
   const { language } = useLanguage();
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url || null);
   const isHebrew = language === 'he';
 
   if (isLoading) {
@@ -56,14 +58,27 @@ export default function Profile() {
         {/* Personal Card Editor - First for job seekers */}
         {role === 'job_seeker' && <PersonalCardEditor />}
 
-        {/* Role Badge for non-job seekers */}
+        {/* Photo Upload + Role Badge for non-job seekers */}
         {role !== 'job_seeker' && (
-          <div className="flex items-center gap-2">
-            <Badge variant={getRoleBadgeVariant()}>
-              <Briefcase className="w-3 h-3 me-1" />
-              {getRoleLabel()}
-            </Badge>
-          </div>
+          <Card className="bg-card border-border">
+            <CardContent className="p-6 flex flex-col items-center gap-4">
+              <PhotoUpload
+                userId={user.id}
+                currentAvatarUrl={avatarUrl}
+                userName={profile?.full_name || 'User'}
+                onUpload={(url) => setAvatarUrl(url)}
+                size="lg"
+              />
+              <div className="text-center">
+                <h2 className="text-xl font-semibold">{profile?.full_name || 'User'}</h2>
+                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                <Badge variant={getRoleBadgeVariant()} className="mt-2">
+                  <Briefcase className="w-3 h-3 me-1" />
+                  {getRoleLabel()}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Resume Section - Only for job seekers */}
