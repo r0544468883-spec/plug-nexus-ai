@@ -86,7 +86,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
         { icon: Newspaper, label: isRTL ? 'תוכן וקהילה' : 'Content & Community', section: 'content-hub' as DashboardSection, tooltipHe: 'דאשבורד תוכן, יצירת פוסטים, וובינרים וקהילות', tooltipEn: 'Content dashboard, posts, webinars & communities' },
-        { icon: Target, label: isRTL ? 'לוח משימות' : 'Mission Board', section: 'missions' as DashboardSection, tooltipHe: 'שוק תחרותי למשימות גיוס', tooltipEn: 'Competitive recruitment mission marketplace' },
+        { icon: Target, label: isRTL ? 'לוח פרויקטים' : 'Hunters Billboard', section: 'missions' as DashboardSection, tooltipHe: 'שוק תחרותי לפרויקטי גיוס', tooltipEn: 'Competitive recruitment project marketplace' },
         
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
         { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'recruiter-profile' as DashboardSection, tooltipHe: 'עריכת הפרופיל המקצועי שלך', tooltipEn: 'Edit your professional profile' },

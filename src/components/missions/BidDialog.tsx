@@ -39,7 +39,7 @@ export function BidDialog({ missionId, missionTitle, open, onOpenChange, onSucce
       } as any);
 
       if (error) throw error;
-      toast.success(isHebrew ? 'ההצעה נשלחה!' : 'Bid submitted!');
+      toast.success(isHebrew ? 'ההצעה נשלחה!' : 'Bid submitted on project!');
       setPitch('');
       onSuccess();
       onOpenChange(false);

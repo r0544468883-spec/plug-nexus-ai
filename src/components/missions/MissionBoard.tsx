@@ -66,15 +66,15 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Target className="w-6 h-6 text-primary" />
-          {isHebrew ? 'לוח משימות' : 'Mission Board'}
+          {isHebrew ? 'לוח פרויקטים' : 'Hunters Billboard'}
         </h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onMyMissions}>
-            {isHebrew ? 'המשימות שלי' : 'My Missions'}
+            {isHebrew ? 'הפרויקטים שלי' : 'My Projects'}
           </Button>
           <Button className="gap-2" onClick={onCreateMission}>
             <Plus className="w-4 h-4" />
-            {isHebrew ? 'פרסם משימה' : 'Post Mission'}
+            {isHebrew ? 'פרסם פרויקט' : 'Post Project'}
           </Button>
         </div>
       </div>
@@ -86,7 +86,7 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isHebrew ? 'חיפוש משימות...' : 'Search missions...'}
+            placeholder={isHebrew ? 'חיפוש פרויקטים...' : 'Search projects...'}
             className="ps-10"
           />
         </div>
@@ -118,10 +118,10 @@ export function MissionBoard({ onCreateMission, onMyMissions }: MissionBoardProp
         <div className="text-center py-16">
           <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground text-lg">
-            {isHebrew ? 'אין משימות זמינות כרגע' : 'No missions available right now'}
+            {isHebrew ? 'אין פרויקטים זמינים כרגע' : 'No projects available right now'}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            {isHebrew ? 'בדוק שוב בקרוב או פרסם משימה חדשה' : 'Check back soon or post a new mission'}
+            {isHebrew ? 'בדוק שוב בקרוב או פרסם פרויקט חדש' : 'Check back soon or post a new project'}
           </p>
         </div>
       ) : (
