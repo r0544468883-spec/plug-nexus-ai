@@ -1,219 +1,137 @@
 
-# תוכנית: 11 שיפורים ותיקונים למערכת PLUG
+# Plan: Photo Upload in Profile + Mission Board Marketplace
 
-## סקירה
-11 נושאים שצריכים טיפול -- מהוספת סטטיסטיקות חסרות ועד שינוי מבנה הניווט ויצירת פרופיל מגייסת.
+## Part A: Photo Upload in My Profile
 
----
+Currently, only job seekers see the `PersonalCardEditor` (which includes `PhotoUpload`) on the Profile page. For HR/recruiter roles, there's no photo upload option.
 
-## 1. סטטיסטיקות בדף מועמדים (CandidatesPage)
+### Changes:
+1. **`src/pages/Profile.tsx`** - Add `PhotoUpload` component for all roles (not just job seekers). Place it at the top of the profile page for non-job-seeker roles inside a Card with the user's name, email, and role badge.
 
-כרגע דף המועמדים מציג רק רשימה, בלי סיכום כמותי.
+2. **`src/components/settings/ProfileSettings.tsx`** - Replace the non-functional "Change Photo" button with the actual `PhotoUpload` component that uploads to the existing `avatars` bucket.
 
-**שינוי:** הוספת שורת סטטיסטיקות בראש `CandidatesPage.tsx`:
-- סה"כ מועמדים
-- ממתינים לסינון (applied)
-- בתהליך ראיון (interview)
-- הצעות (offer)
-- נשכרו (hired)
-- סטגנטיים (7+ ימים)
-
-4 כרטיסי סטטיסטיקה בגריד, מחושבים מתוך ה-candidates array הקיים.
+No database changes needed -- the `avatars` bucket already exists and is public, and `profiles.avatar_url` column already exists.
 
 ---
 
-## 2. הגעה למועמדים גם מטאב Applications
+## Part B: Mission Board (Tender Marketplace)
 
-כרגע חיפוש גלובלי נמצא רק בטאב "Search All". 
+A competitive marketplace where Companies post recruitment "Missions" and Hunters (freelance/in-house HR) bid to execute them.
 
-**שינוי:** ב-`CandidatesPage.tsx`, כשאין שום סינון פעיל (searchQuery ריק, stageFilter='all', jobFilter='all') ואין מועמדים -- להציג כפתור "חפש מועמדים במערכת" שמעביר לטאב Search All, או להוסיף שדה חיפוש גלובלי גם בטאב Applications שמציג תוצאות מ-profiles_secure כשלא נמצאו תוצאות מקומיות.
+### Database Tables (new migration):
 
----
+**`missions`** - The tender/mission postings
+- `id`, `company_id` (uuid, FK companies), `created_by` (uuid), `job_id` (uuid, FK jobs, nullable)
+- `title`, `description` (text)
+- `commission_model` (text: 'percentage' | 'flat_fee')
+- `commission_value` (numeric)
+- `scope` (text: 'exclusive' | 'open')
+- `urgency` (text: 'standard' | 'high' | 'critical')
+- `min_reliability_score` (integer, nullable)
+- `required_specializations` (text[], nullable)
+- `status` (text: 'open' | 'in_progress' | 'completed' | 'cancelled', default 'open')
+- `created_at`, `updated_at`
+- RLS: Authenticated users can view open missions; creators can manage their own
 
-## 3. כפתורי חזרה בכל המסכים
+**`mission_bids`** - Hunter bids on missions
+- `id`, `mission_id` (uuid, FK missions), `hunter_id` (uuid)
+- `pitch` (text) - why the hunter is best fit
+- `verified_candidates_count` (integer)
+- `vouched_candidates_count` (integer)
+- `status` (text: 'pending' | 'reviewing' | 'accepted' | 'declined', default 'pending')
+- `created_at`, `updated_at`
+- RLS: Hunters manage own bids; mission creators can view/update bids on their missions
 
-כרגע יש כפתור back רק ב-header כשיש `canGoBack` (מבוסס router history). 
+### Frontend Components:
 
-**שינוי:** הוספת כפתור "חזרה" פנימי בראש כל מסך שאינו overview:
-- בכל section ב-`Dashboard.tsx` שאינו `overview`, להוסיף כפתור חזרה ל-overview או לסקשן הקודם
-- יתווסף ב-`renderSectionContent()` wrapper עם כפתור Back בראש
+1. **`src/components/missions/MissionBoard.tsx`** - Main marketplace view
+   - Card-based feed of all open missions
+   - Filters: Commission, Industry, Urgency, Company SLA
+   - "Best Match" AI badge (based on hunter's existing candidate pool)
+   - Stock-exchange-inspired clean UI with urgency color coding
 
----
+2. **`src/components/missions/MissionCard.tsx`** - Individual mission card
+   - Company logo + name, title, commission info
+   - Urgency badge (Standard=blue, High=orange, Critical=red)
+   - Scope badge (Exclusive/Open), bid count
+   - "Bid on Mission" CTA button
 
-## 4. העברת Negotiation Sandbox למועמד
+3. **`src/components/missions/CreateMissionForm.tsx`** - For companies to post missions
+   - Form with all fields: title, description, link to job, commission model, scope, urgency, targeting
+   - Preview before posting
 
-כרגע `negotiation-sandbox` נמצא בניווט של מגייסות. זה אמור להיות אצל מחפשי עבודה.
+4. **`src/components/missions/BidDialog.tsx`** - Hunter bid submission
+   - Pitch textarea
+   - Auto-calculated "Talent Snapshot" showing verified/vouched candidates from hunter's pool
+   - Status tracking after submission
 
-**שינוי:**
-- הסרת `negotiation-sandbox` מ-nav items של `freelance_hr` / `inhouse_hr`
-- הוספת `negotiation-sandbox` כטאב חדש בתוך `InterviewPrepContent.tsx` (אצל Job Seeker), כי זה הגיוני שזה יהיה חלק מההכנה לראיון
-- הסרת הפריט מה-sidebar של מגייסות
+5. **`src/components/missions/MissionDetailSheet.tsx`** - Expanded mission view
+   - Full description, company info, all bids (for creator), bid status (for hunter)
 
----
+6. **`src/components/missions/MyMissions.tsx`** - Dashboard for mission creators
+   - List of posted missions with bid counts and statuses
 
-## 5. הוספת כפתור B2B Suite
+### Post-Award Automation (when a bid is accepted):
 
-כרגע אין כפתור ניווט ל-B2B Suite (SLA Monitor, Vacancy Calculator, Placement Revenue).
+- **CRM Integration**: Auto-create company profile in hunter's "My Clients" hub (insert into `companies` + link)
+- **Success Lounge**: Create a private conversation between hunter and company contact (insert into `conversations`)
+- **Contract Vault**: Generate a placeholder document in the company's vault (insert into `documents` with doc_type='contract')
+- **Timeline Entry**: Log "Mission Awarded" in the client timeline
 
-**שינוי:** הוספת סקשן חדש `'b2b-suite'` ל-`DashboardSection` עבור מגייסות, שמציג:
-- SLA Monitor
-- Vacancy Calculator  
-- Placement Revenue
+### Navigation:
+- Add "Mission Board" to the sidebar for HR roles in `DashboardLayout.tsx` (with a Target/Crosshair icon)
+- Add `'missions' | 'create-mission' | 'my-missions'` to `DashboardSection` type
+- Route handling in `Dashboard.tsx`
 
-הכל במסך אחד עם כותרת "B2B Suite" / "כלים עסקיים"
-
----
-
-## 6. צמצום הסייד-בר -- איחוד ל-"Content & Community"
-
-הסייד-בר ארוך מדי. נאחד 4 כפתורים לתוך כפתור אחד.
-
-**שינוי:** הסרת הפריטים הבאים מה-sidebar:
-- Content Dashboard
-- Create Feed Content
-- Webinars
-- Communities
-
-ויצירת פריט אחד: **"Content & Community"** / **"תוכן וקהילה"** (icon: `Newspaper`)
-
-בלחיצה עליו -- מסך חדש `'content-hub'` שמציג 4 כפתורים/כרטיסים:
-1. Content Dashboard (אנליטיקס)
-2. Create Content (יצירת תוכן)
-3. Webinars (יצירה וניהול)
-4. Communities (קהילות)
-
-כל כפתור מנווט ל-section המתאים.
-
----
-
-## 7. שדרוג Content Dashboard
-
-כרגע ה-dashboard מינימלי מאוד -- רק סטטיסטיקות בסיסיות ותרשים.
-
-**שינוי:**
-- הוספת "Benchmark" השוואתי: מציג ממוצע engagement של כל הפוסטים במערכת מול הפוסטים של המגייסת
-- הוספת "Top Performing Posts" מכל המערכת כדוגמה (anonymous -- ללא שם המגייסת)
-- הוספת טיפים: "פוסטים עם תמונה מקבלים 2x יותר engagement", "פוסטים עם סקר מגייעים ל-3x תגובות"
-- הוספת call-to-action: "צרי תוכן חדש" עם כפתור שמנווט ל-create-feed-post
-
----
-
-## 8. פרסום תוכן ממוקד לקהילה / תת-קהילה
-
-כרגע אפשר לפרסם רק לפיד הכללי.
-
-**שינוי:** ב-`CreateFeedPost.tsx`:
-- הוספת Dropdown "פרסום ל...": General (כל המשתמשים) / קהילה ספציפית / ערוץ ספציפי
-- שליפת הקהילות שהמגייסת היא admin שלהן
-- שמירת `target_hub_id` ו-`target_channel_id` (nullable) בטבלת `feed_posts` (migration)
+### Notifications (preparation):
+- When a new mission matches a hunter's specialization, trigger a push notification
+- When a hunter bids on a mission, notify the company
+- Uses existing `push-notifications` edge function infrastructure
 
 ---
 
-## 9. ביטול ההפרדה בין תוכן עברית/אנגלית
+## Technical Details
 
-כרגע יש 2 שדות טקסט נפרדים: contentEn ו-contentHe. זה מבלבל.
-
-**שינוי:** ב-`CreateFeedPost.tsx`:
-- הסרת השדות הנפרדים
-- שדה תוכן אחד בלבד
-- הוספת כפתור שפה (Toggle: עברית / English) שמציין באיזו שפה התוכן כתוב
-- שמירה ב-`content_en` או `content_he` לפי הבחירה
-
----
-
-## 10. שדרוג סוגי פוסטים + הגדרות תגובות
-
-כרגע יש רק: tip, culture, poll.
-
-**שינוי:** ב-`CreateFeedPost.tsx`:
-- הוספת סוגי פוסט חדשים:
-  - `visual` -- תוכן ויזואלי (תמונה)
-  - `video` -- תוכן וידאו
-  - `question` -- שאלה לקהילה
-  - `event` -- הזמנה לאירוע/וובינר (עם תאריך, שעה, לינק)
-- כל סוג פוסט יכול לכלול תמונה או וידאו
-- הוספת סקשן "Comment Settings":
-  - Toggle: "Allow comments" / "אפשר תגובות"
-  - Select: "Who can comment" -- All / Members only / No one
-- שמירת `allow_comments` ו-`comment_permission` ב-`feed_posts`
-
----
-
-## 11. הסרת Documents, הוספת מסך פרופיל מגייסת
-
-כרגע יש לינק "Documents" בסייד-בר של מגייסות שהוא לא רלוונטי.
-
-**שינוי:**
-- הסרת הפריט "Documents" מה-nav של מגייסות
-- החלפתו בפריט **"My Profile"** / **"הפרופיל שלי"** (icon: `User`)
-- יצירת מסך פרופיל מגייסת חדש: `RecruiterProfileEditor.tsx`
-
-**תוכן הפרופיל:**
-- תמונה + סרטון קצר (60 שניות)
-- תעשיות שהיא עובדת בהן (tags)
-- חברות שעבדה איתן
-- פילוסופיית גיוס -- "מה אני מאמינה לגבי תהליך הגיוס"
-- רקע מקצועי
-- רקע אקדמאי
-- טיפ למועמדים (שדה חופשי)
-- **תצוגה כפולה:** Toggle לראות "כך חברות רואות אותך" / "כך מועמדים רואים אותך"
-  - תצוגת חברות: דגש על חוויה, תעשיות, הצלחות
-  - תצוגת מועמדים: דגש על טיפים, פילוסופיה, סרטון
-
-**שמירה:** עמודות חדשות ב-`profiles`:
-- `recruiter_industries` (text[])
-- `recruiter_companies` (text[])
-- `recruiter_philosophy` (text)
-- `recruiter_background` (text)
-- `recruiter_education` (text)
-- `recruiter_tip` (text)
-- `recruiter_video_url` (text)
-
----
-
-## סיכום טכני
-
-### Migration SQL
+### Migration SQL highlights:
 ```text
-ALTER TABLE feed_posts:
-  + target_hub_id UUID (nullable, FK community_hubs)
-  + target_channel_id UUID (nullable, FK community_channels)
-  + allow_comments BOOLEAN DEFAULT true
-  + comment_permission TEXT DEFAULT 'all'
-  + content_language TEXT DEFAULT 'en'
+CREATE TABLE missions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid REFERENCES companies(id),
+  created_by uuid NOT NULL,
+  job_id uuid REFERENCES jobs(id),
+  title text NOT NULL,
+  description text,
+  commission_model text NOT NULL DEFAULT 'percentage',
+  commission_value numeric NOT NULL DEFAULT 0,
+  scope text NOT NULL DEFAULT 'open',
+  urgency text NOT NULL DEFAULT 'standard',
+  min_reliability_score integer,
+  required_specializations text[],
+  status text NOT NULL DEFAULT 'open',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 
-ALTER TABLE profiles:
-  + recruiter_industries TEXT[]
-  + recruiter_companies TEXT[]
-  + recruiter_philosophy TEXT
-  + recruiter_background TEXT
-  + recruiter_education TEXT
-  + recruiter_tip TEXT
-  + recruiter_video_url TEXT
+CREATE TABLE mission_bids (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  mission_id uuid REFERENCES missions(id) ON DELETE CASCADE,
+  hunter_id uuid NOT NULL,
+  pitch text NOT NULL,
+  verified_candidates_count integer DEFAULT 0,
+  vouched_candidates_count integer DEFAULT 0,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
 ```
 
-### קבצים חדשים
-| קובץ | תיאור |
-|-------|--------|
-| `src/components/profile/RecruiterProfileEditor.tsx` | מסך עריכת פרופיל מגייסת |
-| `src/components/profile/RecruiterProfilePreview.tsx` | תצוגות "כך רואים אותך" |
+RLS policies will ensure:
+- All authenticated users can view open missions
+- Only company roles / mission creators can create/edit missions
+- Hunters can create/view their own bids
+- Mission creators can view and update bid statuses on their missions
 
-### קבצים מעודכנים
-| קובץ | שינוי |
-|-------|--------|
-| `src/components/candidates/CandidatesPage.tsx` | שורת סטטיסטיקות + גישה לחיפוש מטאב Applications |
-| `src/components/dashboard/DashboardLayout.tsx` | צמצום sidebar, הסרת Documents, הוספת Content & Community + B2B Suite + My Profile |
-| `src/pages/Dashboard.tsx` | הוספת sections חדשים (content-hub, b2b-suite, recruiter-profile), wrapper עם כפתור חזרה, העברת negotiation-sandbox לתוך interview-prep |
-| `src/components/interview/InterviewPrepContent.tsx` | הוספת טאב NegotiationSandbox |
-| `src/components/feed/CreateFeedPost.tsx` | שדה תוכן יחיד, סוגי פוסט חדשים, הגדרות תגובות, פרסום לקהילה |
-| `src/components/feed/ContentDashboard.tsx` | benchmarks, טיפים, CTA |
-
-### סדר ביצוע
-1. Migration SQL
-2. סטטיסטיקות מועמדים (#1) + חיפוש מ-Applications (#2)
-3. כפתורי חזרה (#3)
-4. העברת Negotiation Sandbox (#4)
-5. צמצום sidebar + B2B Suite + Content Hub (#5, #6)
-6. שדרוג Content Dashboard (#7)
-7. פרסום ממוקד + שדה תוכן יחיד + סוגי פוסט (#8, #9, #10)
-8. פרופיל מגייסת (#11)
+### File summary:
+- **Modified**: `Profile.tsx`, `ProfileSettings.tsx`, `DashboardLayout.tsx`, `Dashboard.tsx`
+- **New**: `MissionBoard.tsx`, `MissionCard.tsx`, `CreateMissionForm.tsx`, `BidDialog.tsx`, `MissionDetailSheet.tsx`, `MyMissions.tsx`
+- **New migration**: missions + mission_bids tables with RLS
