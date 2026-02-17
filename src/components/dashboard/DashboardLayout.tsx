@@ -286,7 +286,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         </header>
 
         {/* Page content */}
-        <main id="dashboard-scroll" className="flex-1 p-4 md:p-6 overflow-auto">
+        <main id="main-content" className="flex-1 p-4 md:p-6 overflow-auto pb-24 lg:pb-6" data-dashboard-scroll>
           {children}
         </main>
 

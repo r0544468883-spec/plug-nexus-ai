@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
+import { MatchBreakdown } from '@/components/jobs/MatchBreakdown';
 
 interface MatchScoreCircleProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
+  jobTitle?: string;
+  job?: any;
 }
 
-const MatchScoreCircle = ({ score, size = 'md' }: MatchScoreCircleProps) => {
+const MatchScoreCircle = ({ score, size = 'md', job }: MatchScoreCircleProps) => {
   const [animatedScore, setAnimatedScore] = useState(0);
   
   const sizeConfig = {
@@ -26,59 +29,43 @@ const MatchScoreCircle = ({ score, size = 'md' }: MatchScoreCircleProps) => {
     return () => clearTimeout(timer);
   }, [score]);
 
-  // Color based on score
   const getScoreColor = () => {
-    if (score >= 80) return 'hsl(var(--primary))'; // Mint for high
-    if (score >= 60) return 'hsl(var(--accent))'; // Purple for medium
-    return 'hsl(var(--muted-foreground))'; // Muted for low
+    if (score >= 80) return 'hsl(var(--primary))';
+    if (score >= 60) return 'hsl(var(--accent))';
+    return 'hsl(var(--muted-foreground))';
   };
 
-  return (
-    <div className={`relative ${config.wrapper} flex items-center justify-center`}>
-      {/* Glow effect */}
+  const circle = (
+    <div className={`relative ${config.wrapper} flex items-center justify-center cursor-pointer`}>
       <div 
         className="absolute inset-0 rounded-full blur-md opacity-40 animate-pulse"
         style={{ backgroundColor: getScoreColor() }}
       />
-      
-      {/* SVG Circle */}
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 80 80">
-        {/* Background circle */}
+        <circle cx="40" cy="40" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth={config.stroke} />
         <circle
-          cx="40"
-          cy="40"
-          r={radius}
-          fill="none"
-          stroke="hsl(var(--border))"
-          strokeWidth={config.stroke}
-        />
-        {/* Progress circle */}
-        <circle
-          cx="40"
-          cy="40"
-          r={radius}
-          fill="none"
-          stroke={getScoreColor()}
-          strokeWidth={config.stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
+          cx="40" cy="40" r={radius} fill="none"
+          stroke={getScoreColor()} strokeWidth={config.stroke} strokeLinecap="round"
+          strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
           className="transition-all duration-1000 ease-out"
-          style={{
-            filter: `drop-shadow(0 0 6px ${getScoreColor()})`,
-          }}
+          style={{ filter: `drop-shadow(0 0 6px ${getScoreColor()})` }}
         />
       </svg>
-
-      {/* Score text */}
-      <span 
-        className={`relative z-10 font-bold ${config.text}`}
-        style={{ color: getScoreColor() }}
-      >
+      <span className={`relative z-10 font-bold ${config.text}`} style={{ color: getScoreColor() }}>
         {animatedScore}%
       </span>
     </div>
   );
+
+  if (job) {
+    return (
+      <MatchBreakdown score={score} job={job}>
+        {circle}
+      </MatchBreakdown>
+    );
+  }
+
+  return circle;
 };
 
 export default MatchScoreCircle;

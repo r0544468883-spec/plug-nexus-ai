@@ -30,6 +30,13 @@ const App = () => (
           <BrowserRouter>
             <CreditsProvider>
               <ScrollToTop />
+              {/* Skip to content – accessibility */}
+              <a
+                href="#main-content"
+                className="skip-to-content"
+              >
+                דלג לתוכן הראשי
+              </a>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/profile" element={<Profile />} />
