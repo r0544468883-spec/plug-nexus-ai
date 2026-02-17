@@ -25,6 +25,7 @@ interface ToolItem {
   icon: string;
   label: string;
   desc: string;
+  section?: DashboardSection;
 }
 
 export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
@@ -67,31 +68,31 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
   const getTools = (): ToolItem[] => {
     if (role === 'job_seeker') {
       return [
-        { icon: '🔍', label: isRTL ? 'חיפוש משרות' : 'Job Search', desc: isRTL ? 'מצא משרות עם AI Match' : 'Find jobs with AI Match' },
-        { icon: '📄', label: isRTL ? 'בונה קורות חיים' : 'CV Builder', desc: isRTL ? '10 תבניות מקצועיות' : '10 professional templates' },
-        { icon: '🎤', label: isRTL ? 'סימולציית ראיונות' : 'Interview Prep', desc: isRTL ? 'תרגול לפי חברה ותפקיד' : 'Practice by company & role' },
-        { icon: '💬', label: 'Plug Chat', desc: isRTL ? 'קואצ\'ר קריירה AI' : 'AI career coach' },
-        { icon: '⭐', label: 'Vouches', desc: isRTL ? 'המלצות ממנהלים' : 'Manager recommendations' },
-        { icon: '👥', label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'נטוורקינג מקצועי' : 'Professional networking' },
-        { icon: '🎯', label: 'Missions', desc: isRTL ? 'פרויקטים קצרים' : 'Short projects' },
+        { icon: '🔍', label: isRTL ? 'חיפוש משרות' : 'Job Search', desc: isRTL ? 'מצא משרות עם AI Match' : 'Find jobs with AI Match', section: 'job-search' as DashboardSection },
+        { icon: '📄', label: isRTL ? 'בונה קורות חיים' : 'CV Builder', desc: isRTL ? '10 תבניות מקצועיות' : '10 professional templates', section: 'cv-builder' as DashboardSection },
+        { icon: '🎤', label: isRTL ? 'סימולציית ראיונות' : 'Interview Prep', desc: isRTL ? 'תרגול לפי חברה ותפקיד' : 'Practice by company & role', section: 'interview-prep' as DashboardSection },
+        { icon: '💬', label: 'Plug Chat', desc: isRTL ? 'קואצ\'ר קריירה AI' : 'AI career coach', section: 'chat' as DashboardSection },
+        { icon: '⭐', label: 'Vouches', desc: isRTL ? 'המלצות ממנהלים' : 'Manager recommendations', section: 'profile-docs' as DashboardSection },
+        { icon: '👥', label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'נטוורקינג מקצועי' : 'Professional networking', section: 'communities' as DashboardSection },
+        { icon: '🎯', label: 'Missions', desc: isRTL ? 'פרויקטים קצרים' : 'Short projects', section: 'missions' as DashboardSection },
         { icon: '🔥', label: isRTL ? 'קרדיטים' : 'Credits', desc: isRTL ? '20 יומיים חינם' : '20 free daily' },
       ];
     }
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
       return [
-        { icon: '🔍', label: isRTL ? 'חיפוש מועמדים' : 'Candidate Search', desc: isRTL ? 'AI Match חכם' : 'Smart AI Match' },
-        { icon: '💼', label: 'CRM', desc: isRTL ? 'ניהול לקוחות ותהליכים' : 'Client & process management' },
-        { icon: '🎯', label: 'Missions', desc: isRTL ? 'פרסום משימות גיוס' : 'Post recruitment missions' },
+        { icon: '🔍', label: isRTL ? 'חיפוש מועמדים' : 'Candidate Search', desc: isRTL ? 'AI Match חכם' : 'Smart AI Match', section: 'candidates' as DashboardSection },
+        { icon: '💼', label: 'CRM', desc: isRTL ? 'ניהול לקוחות ותהליכים' : 'Client & process management', section: 'clients' as DashboardSection },
+        { icon: '🎯', label: 'Missions', desc: isRTL ? 'פרסום משימות גיוס' : 'Post recruitment missions', section: 'missions' as DashboardSection },
         { icon: '📊', label: isRTL ? 'אנליטיקס' : 'Analytics', desc: isRTL ? 'סטטיסטיקות ביצועים' : 'Performance stats' },
-        { icon: '👥', label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'בניית רשת מועמדים' : 'Build candidate network' },
-        { icon: '⭐', label: 'Vouches', desc: isRTL ? 'המלצות על מועמדים' : 'Candidate recommendations' },
-        { icon: '💬', label: isRTL ? 'הודעות' : 'Messages', desc: isRTL ? 'תקשורת ישירה' : 'Direct communication' },
+        { icon: '👥', label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'בניית רשת מועמדים' : 'Build candidate network', section: 'communities' as DashboardSection },
+        { icon: '⭐', label: 'Vouches', desc: isRTL ? 'המלצות על מועמדים' : 'Candidate recommendations', section: 'recruiter-profile' as DashboardSection },
+        { icon: '💬', label: isRTL ? 'הודעות' : 'Messages', desc: isRTL ? 'תקשורת ישירה' : 'Direct communication', section: 'messages' as DashboardSection },
       ];
     }
     return [
-      { icon: '📝', label: isRTL ? 'פרסום משרות' : 'Post Jobs', desc: isRTL ? 'הגדרה מפורטת עם AI' : 'Detailed setup with AI' },
-      { icon: '👤', label: isRTL ? 'צפייה במועמדים' : 'View Candidates', desc: isRTL ? 'ציוני התאמה חכמים' : 'Smart match scores' },
-      { icon: '⭐', label: 'Vouches', desc: isRTL ? 'בנו מותג מעסיק' : 'Build employer brand' },
+      { icon: '📝', label: isRTL ? 'פרסום משרות' : 'Post Jobs', desc: isRTL ? 'הגדרה מפורטת עם AI' : 'Detailed setup with AI', section: 'post-job' as DashboardSection },
+      { icon: '👤', label: isRTL ? 'צפייה במועמדים' : 'View Candidates', desc: isRTL ? 'ציוני התאמה חכמים' : 'Smart match scores', section: 'candidates' as DashboardSection },
+      { icon: '⭐', label: 'Vouches', desc: isRTL ? 'בנו מותג מעסיק' : 'Build employer brand', section: 'profile-docs' as DashboardSection },
       { icon: '📊', label: isRTL ? 'סטטיסטיקות' : 'Statistics', desc: isRTL ? 'מעקב אחר תהליכי גיוס' : 'Track hiring processes' },
     ];
   };
@@ -125,7 +126,7 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
         className={cn(
           'fixed z-40 w-12 h-12 rounded-full bg-secondary border border-accent/30 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-accent',
           'bottom-6 lg:bottom-6',
-          isRTL ? 'right-6 lg:right-[calc(256px+1.5rem)]' : 'left-6 lg:left-[calc(256px+1.5rem)]',
+          isRTL ? 'right-4 lg:right-[calc(256px-60px)]' : 'left-4 lg:left-[calc(256px-60px)]',
           isMobile && 'bottom-[88px]'
         )}
         aria-label={isRTL ? 'מדריך המערכת' : 'System Guide'}
@@ -217,15 +218,28 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
                   {/* Tools */}
                   <div>
                     <h3 className="font-semibold mb-3">{isRTL ? 'כלים שלך:' : 'Your tools:'}</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       {tools.map((tool, i) => (
-                        <div key={i} className="flex items-start gap-3 p-2">
+                        <button
+                          key={i}
+                          onClick={() => {
+                            if (tool.section && onNavigate) {
+                              onNavigate(tool.section);
+                              setOpen(false);
+                            }
+                          }}
+                          className={cn(
+                            'w-full flex items-start gap-3 p-2.5 rounded-lg transition-colors text-start',
+                            tool.section ? 'hover:bg-secondary/50 cursor-pointer' : 'opacity-70'
+                          )}
+                        >
                           <span className="text-lg">{tool.icon}</span>
                           <div>
                             <p className="font-medium text-sm">{tool.label}</p>
                             <p className="text-xs text-muted-foreground">{tool.desc}</p>
                           </div>
-                        </div>
+                          {tool.section && <ChevronRight className="w-4 h-4 ms-auto mt-1 text-muted-foreground" />}
+                        </button>
                       ))}
                     </div>
                   </div>
