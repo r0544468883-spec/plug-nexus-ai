@@ -472,9 +472,19 @@ export default function Dashboard() {
       case 'settings':
         return withBackButton(renderSettingsContent());
       case 'applications':
-        return withBackButton(<ApplicationsPage />);
+        return withBackButton(
+          <div className="space-y-6">
+            <ApplicationsPage />
+            <PlugChat contextPage="applications" />
+          </div>
+        );
       case 'job-search':
-        return withBackButton(<JobSearchPage />);
+        return withBackButton(
+          <div className="space-y-6">
+            <JobSearchPage />
+            <PlugChat contextPage="jobs" />
+          </div>
+        );
       case 'messages':
         return withBackButton(<MessageInbox />);
       case 'candidates':
@@ -482,7 +492,12 @@ export default function Dashboard() {
       case 'post-job':
         return withBackButton(<PostJobForm onSuccess={() => setCurrentSection('overview')} />);
       case 'cv-builder':
-        return withBackButton(<CVBuilder />);
+        return withBackButton(
+          <div className="space-y-6">
+            <CVBuilder />
+            <PlugChat contextPage="cv-builder" />
+          </div>
+        );
       case 'interview-prep':
         return withBackButton(<InterviewPrepContent />);
       case 'feed':
