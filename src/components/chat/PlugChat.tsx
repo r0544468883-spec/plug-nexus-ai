@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
+import { ChatHistorySidebar } from './ChatHistorySidebar';
 
 interface Message {
   id: string;
@@ -26,7 +27,8 @@ interface PlugChatProps {
 }
 
 export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, contextPage = 'default' }: PlugChatProps) {
-  const { t, direction } = useLanguage();
+  const { t, direction, language } = useLanguage();
+  const isRTL = language === 'he';
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -39,6 +41,11 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
   const abortControllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastContextPageRef = useRef<PlugChatProps['contextPage']>(contextPage);
+
+  // Session management for chat history sidebar
+  const [currentSessionId, setCurrentSessionId] = useState<string>(() => crypto.randomUUID());
+  const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
+  const sidebarRefreshRef = useRef(0);
 
   // Fetch user's resume for context
   const { data: existingResume } = useQuery({
@@ -118,10 +125,10 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
     enabled: !!user?.id,
   });
 
-  // Load chat history on mount
+  // Load latest session on mount
   useEffect(() => {
     if (user) {
-      loadChatHistory();
+      loadLatestSession();
     }
   }, [user]);
 
@@ -236,27 +243,49 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
     });
   }, [contextPage, user, direction, t]);
 
-  const loadChatHistory = async () => {
+  const loadChatHistory = async (sessionId?: string) => {
     if (!user) return;
+
+    const targetSession = sessionId || currentSessionId;
 
     const { data, error } = await supabase
       .from('chat_history')
       .select('*')
       .eq('user_id', user.id)
+      .eq('session_id', targetSession)
       .order('created_at', { ascending: true })
-      .limit(50);
+      .limit(100);
 
-    if (!error && data) {
+    if (!error && data && data.length > 0) {
       setMessages(data.map(msg => ({
         id: msg.id,
         content: msg.message,
         sender: msg.sender as 'user' | 'ai',
         timestamp: new Date(msg.created_at),
       })));
+    } else if (!sessionId) {
+      // New session, no history - keep empty
+      setMessages([]);
     }
   };
 
-  const saveMessage = async (content: string, sender: 'user' | 'ai') => {
+  const loadLatestSession = async () => {
+    if (!user) return;
+    // Load the most recent session
+    const { data } = await supabase
+      .from('chat_history')
+      .select('session_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0 && data[0].session_id) {
+      setCurrentSessionId(data[0].session_id);
+      await loadChatHistory(data[0].session_id);
+    }
+  };
+
+  const saveMessage = async (content: string, sender: 'user' | 'ai', isFirstInSession?: boolean) => {
     if (!user) return;
 
     await supabase
@@ -265,6 +294,9 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
         user_id: user.id,
         message: content,
         sender,
+        session_id: currentSessionId,
+        // Set title on first user message of session
+        ...(isFirstInSession && sender === 'user' ? { session_title: content.slice(0, 60) } : {}),
       });
   };
 
@@ -524,7 +556,8 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
     onMessageSent?.();
 
     try {
-      await saveMessage(userMessage.content, 'user');
+      const isFirstMessage = messages.length === 0;
+      await saveMessage(userMessage.content, 'user', isFirstMessage);
 
       // Build message history for context
       const recentMessages = messages.slice(-10).map(m => ({
@@ -535,6 +568,8 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
 
       const aiResponse = await streamAIResponse(recentMessages);
       await saveMessage(aiResponse, 'ai');
+      // Bump sidebar refresh
+      sidebarRefreshRef.current++;
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
@@ -579,8 +614,38 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
 
   const greeting = getContextualGreeting();
 
+  const handleSessionSelect = useCallback(async (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    setMessages([]);
+    // Load that session's messages
+    const { data } = await supabase
+      .from('chat_history')
+      .select('*')
+      .eq('user_id', user!.id)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (data && data.length > 0) {
+      setMessages(data.map(msg => ({
+        id: msg.id,
+        content: msg.message,
+        sender: msg.sender as 'user' | 'ai',
+        timestamp: new Date(msg.created_at),
+      })));
+    }
+  }, [user]);
+
+  const handleNewChat = useCallback(() => {
+    const newId = crypto.randomUUID();
+    setCurrentSessionId(newId);
+    setMessages([]);
+  }, []);
+
   return (
-    <div ref={chatContainerRef} data-tour="plug-chat" className="flex flex-col h-[600px] rounded-2xl border border-border bg-card overflow-hidden">
+    <div data-tour="plug-chat" className="flex h-[600px] rounded-2xl border border-border bg-card overflow-hidden relative">
+      {/* Main Chat Area */}
+      <div ref={chatContainerRef} className="flex flex-col flex-1 min-w-0">
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -761,6 +826,16 @@ export function PlugChat({ initialMessage, initialMessageKey, onMessageSent, con
           </Button>
         </form>
       </div>
+      </div>
+
+      {/* Chat History Sidebar */}
+      <ChatHistorySidebar
+        activeSessionId={currentSessionId}
+        onSessionSelect={handleSessionSelect}
+        onNewChat={handleNewChat}
+        isOpen={historySidebarOpen}
+        onToggle={() => setHistorySidebarOpen(prev => !prev)}
+      />
     </div>
   );
 }
