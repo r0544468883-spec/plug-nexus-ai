@@ -2264,6 +2264,42 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_codes: {
+        Row: {
+          amount: number | null
+          code_hash: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          type: string
+          uses_count: number
+        }
+        Insert: {
+          amount?: number | null
+          code_hash: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          type?: string
+          uses_count?: number
+        }
+        Update: {
+          amount?: number | null
+          code_hash?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          type?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth_key: string
