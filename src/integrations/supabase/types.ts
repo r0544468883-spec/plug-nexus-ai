@@ -184,6 +184,68 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contact_projects: {
+        Row: {
+          company_id: string
+          contact_id: string
+          created_at: string
+          id: string
+          job_id: string
+          notes: string | null
+          recruiter_id: string
+          role_in_project: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_id: string
+          created_at?: string
+          id?: string
+          job_id: string
+          notes?: string | null
+          recruiter_id: string
+          role_in_project?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          notes?: string | null
+          recruiter_id?: string
+          role_in_project?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contact_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contact_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contact_projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contact_projects_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           company_id: string
@@ -307,6 +369,7 @@ export type Database = {
       client_timeline: {
         Row: {
           company_id: string
+          contact_id: string | null
           created_at: string
           description: string | null
           event_date: string
@@ -318,6 +381,7 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          contact_id?: string | null
           created_at?: string
           description?: string | null
           event_date?: string
@@ -329,6 +393,7 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          contact_id?: string | null
           created_at?: string
           description?: string | null
           event_date?: string
@@ -351,6 +416,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_timeline_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
         ]
