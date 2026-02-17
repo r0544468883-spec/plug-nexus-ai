@@ -13,10 +13,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown, Target, BarChart3 } from 'lucide-react';
+import { Search, Briefcase, Users, Share2, Sparkles, MapPin, Building2, ChevronDown, Target, BarChart3, ChevronLeft, ChevronRight, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 const defaultFilters: JobFiltersState = {
   search: '',
   location: '',
@@ -65,8 +65,15 @@ export function JobSearchPage() {
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [matchMeActive, setMatchMeActive] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const JOBS_PER_PAGE = 6;
 
   const recommendationsRef = useRef<HTMLDivElement | null>(null);
+  const plugChatRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToPlugChat = () => {
+    plugChatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const toggleRecommendations = () => {
     setShowRecommendations((v) => {
@@ -255,7 +262,14 @@ export function JobSearchPage() {
     });
   }, [jobs, matchMeActive, userProfile, isHebrew]);
 
-  const displayedJobs = matchMeActive ? matchedJobs : jobs;
+  const allDisplayedJobs = matchMeActive ? matchedJobs : jobs;
+  const totalPages = Math.ceil(allDisplayedJobs.length / JOBS_PER_PAGE);
+  const displayedJobs = allDisplayedJobs.slice((currentPage - 1) * JOBS_PER_PAGE, currentPage * JOBS_PER_PAGE);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, matchMeActive]);
 
   // Apply mutation
   const applyMutation = useMutation({
@@ -304,8 +318,21 @@ export function JobSearchPage() {
 
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
-      {/* Contextual tips for job search */}
-      <PlugTipContainer context="job_search" maxTips={1} />
+      {/* Plug reminder banner */}
+      <Card className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent/20">
+        <CardContent className="p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent" />
+            <span className="text-sm font-medium text-foreground">
+              {isHebrew ? 'Plug ממש כאן בשבילך!' : 'Plug is right here for you!'}
+            </span>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={scrollToPlugChat}>
+            <ArrowDown className="w-3 h-3" />
+            {isHebrew ? 'דבר עם Plug' : 'Chat with Plug'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Community Sharing Banner */}
       <Card className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-primary/20">
@@ -387,8 +414,8 @@ export function JobSearchPage() {
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             {isHebrew 
-              ? `${displayedJobs.length} משרות נמצאו` 
-              : `${displayedJobs.length} jobs found`}
+              ? `${allDisplayedJobs.length} משרות נמצאו` 
+              : `${allDisplayedJobs.length} jobs found`}
             {matchMeActive && (
               <Badge variant="default" className="gap-1 bg-primary/20 text-primary border-primary/20">
                 <Target className="w-3 h-3" />
@@ -422,7 +449,7 @@ export function JobSearchPage() {
 
       {/* Job List */}
       {isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="bg-card border-border">
               <CardContent className="p-4">
@@ -439,7 +466,7 @@ export function JobSearchPage() {
             </Card>
           ))}
         </div>
-      ) : displayedJobs.length === 0 ? (
+      ) : allDisplayedJobs.length === 0 ? (
         <Card className="bg-card border-border">
           <CardContent className="p-12 text-center">
             <Briefcase className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -461,20 +488,53 @@ export function JobSearchPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {displayedJobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              onViewDetails={handleViewDetails}
-              onApply={handleApply}
-              isCommunityShared={job.is_community_shared}
-              sharerName={(job as any).sharer?.full_name}
-              distance={(job as any).distance}
-              category={(job as any).category}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4">
+            {displayedJobs.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onViewDetails={handleViewDetails}
+                onApply={handleApply}
+                isCommunityShared={job.is_community_shared}
+                sharerName={(job as any).sharer?.full_name}
+                distance={(job as any).distance}
+                category={(job as any).category}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className={cn(currentPage === 1 && "pointer-events-none opacity-50", "cursor-pointer")}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      isActive={page === currentPage}
+                      onClick={() => setCurrentPage(page)}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className={cn(currentPage === totalPages && "pointer-events-none opacity-50", "cursor-pointer")}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
 
       {/* Company Recommendations (at bottom) */}
@@ -483,6 +543,9 @@ export function JobSearchPage() {
           <CompanyRecommendations />
         </div>
       )}
+
+      {/* Plug Chat scroll target */}
+      <div ref={plugChatRef} />
 
       {/* Job Details Sheet */}
       <JobDetailsSheet
