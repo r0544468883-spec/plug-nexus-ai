@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_key: string
+          id: string
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          id?: string
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       application_timeline: {
         Row: {
           application_id: string
@@ -2103,6 +2124,7 @@ export type Database = {
           avatar_url: string | null
           avg_response_time_hours: number | null
           bio: string | null
+          completed_actions: number | null
           created_at: string
           cv_data: Json | null
           email: string
@@ -2113,6 +2135,7 @@ export type Database = {
           id: string
           intro_video_url: string | null
           linkedin_url: string | null
+          onboarding_stage: string | null
           personal_tagline: string | null
           phone: string | null
           portfolio_summary: Json | null
@@ -2143,6 +2166,7 @@ export type Database = {
           avatar_url?: string | null
           avg_response_time_hours?: number | null
           bio?: string | null
+          completed_actions?: number | null
           created_at?: string
           cv_data?: Json | null
           email: string
@@ -2153,6 +2177,7 @@ export type Database = {
           id?: string
           intro_video_url?: string | null
           linkedin_url?: string | null
+          onboarding_stage?: string | null
           personal_tagline?: string | null
           phone?: string | null
           portfolio_summary?: Json | null
@@ -2183,6 +2208,7 @@ export type Database = {
           avatar_url?: string | null
           avg_response_time_hours?: number | null
           bio?: string | null
+          completed_actions?: number | null
           created_at?: string
           cv_data?: Json | null
           email?: string
@@ -2193,6 +2219,7 @@ export type Database = {
           id?: string
           intro_video_url?: string | null
           linkedin_url?: string | null
+          onboarding_stage?: string | null
           personal_tagline?: string | null
           phone?: string | null
           portfolio_summary?: Json | null
@@ -2412,6 +2439,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      smart_notifications: {
+        Row: {
+          created_at: string | null
+          cta_link: string | null
+          cta_text: string | null
+          id: string
+          message: string
+          seen: boolean | null
+          trigger_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          id?: string
+          message: string
+          seen?: boolean | null
+          trigger_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          id?: string
+          message?: string
+          seen?: boolean | null
+          trigger_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       social_task_completions: {
         Row: {
@@ -2645,6 +2705,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      weekly_quests: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          fuel_reward: number
+          id: string
+          progress: number | null
+          quest_key: string
+          target: number
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          fuel_reward: number
+          id?: string
+          progress?: number | null
+          quest_key: string
+          target: number
+          user_id: string
+          week_start: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          fuel_reward?: number
+          id?: string
+          progress?: number | null
+          quest_key?: string
+          target?: number
+          user_id?: string
+          week_start?: string
+        }
+        Relationships: []
       }
     }
     Views: {
