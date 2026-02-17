@@ -22,7 +22,7 @@ import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
 import { RecruiterTour } from '@/components/onboarding/RecruiterTour';
 import { DailyWelcome } from '@/components/onboarding/DailyWelcome';
 import { TourGuideFAB } from '@/components/onboarding/TourGuideFAB';
-import { SmartTriggers } from '@/components/notifications/SmartTriggers';
+// SmartTriggers removed - notifications now handled by NotificationBell
 import { MobileBottomBar } from '@/components/navigation/MobileBottomBar';
 import { AchievementsPanel } from '@/components/gamification/AchievementsPanel';
 import { WeeklyQuests } from '@/components/gamification/WeeklyQuests';
@@ -634,8 +634,6 @@ export default function Dashboard() {
       {/* Daily Welcome (first visit of the day) */}
       <DailyWelcome />
 
-      {/* Smart Trigger Notifications */}
-      <SmartTriggers />
       
       {renderSectionContent()}
 
