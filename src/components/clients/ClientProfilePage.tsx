@@ -42,8 +42,13 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [showContactDetail, setShowContactDetail] = useState(false);
   const [newContact, setNewContact] = useState({ full_name: '', role_title: '', email: '', phone: '', linkedin_url: '' });
-  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', due_date: '' });
-  const [newEvent, setNewEvent] = useState({ event_type: 'note', title: '', description: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', due_date: '', due_time: '' });
+  const [newEvent, setNewEvent] = useState({ event_type: 'note', title: '', description: '', event_date: '' });
+  const [showAddJob, setShowAddJob] = useState(false);
+  const [newJob, setNewJob] = useState({ title: '', location: '', job_type: 'full_time', description: '' });
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [showForwardJob, setShowForwardJob] = useState(false);
+  const [forwardJobId, setForwardJobId] = useState<string | null>(null);
 
   // Fetch company
   const { data: company } = useQuery({
@@ -133,6 +138,27 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
     },
   });
 
+  // Fetch candidate profiles for selected job
+  const { data: jobCandidates = [] } = useQuery({
+    queryKey: ['client-job-candidates', selectedJobId],
+    queryFn: async () => {
+      if (!selectedJobId) return [];
+      const { data, error } = await supabase
+        .from('applications')
+        .select('id, current_stage, created_at, candidate_id, match_score, status')
+        .eq('job_id', selectedJobId);
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+      const candidateIds = data.map(a => a.candidate_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email, avatar_url, phone, bio, linkedin_url, experience_years')
+        .in('user_id', candidateIds);
+      return data.map(a => ({ ...a, profile: (profiles || []).find(p => p.user_id === a.candidate_id) }));
+    },
+    enabled: !!selectedJobId,
+  });
+
   // Placements
   const { data: placements = [] } = useQuery({
     queryKey: ['client-placements', companyId],
@@ -165,13 +191,17 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
   const addTaskMutation = useMutation({
     mutationFn: async (task: typeof newTask) => {
       if (!user?.id) throw new Error('Not authenticated');
-      const { error } = await supabase.from('client_tasks').insert({ ...task, company_id: companyId, recruiter_id: user.id, due_date: task.due_date || null });
+      let dueDateTime: string | null = null;
+      if (task.due_date) {
+        dueDateTime = task.due_time ? `${task.due_date}T${task.due_time}:00` : `${task.due_date}T09:00:00`;
+      }
+      const { error } = await supabase.from('client_tasks').insert({ title: task.title, description: task.description, priority: task.priority, company_id: companyId, recruiter_id: user.id, due_date: dueDateTime });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddTask(false);
-      setNewTask({ title: '', description: '', priority: 'medium', due_date: '' });
+      setNewTask({ title: '', description: '', priority: 'medium', due_date: '', due_time: '' });
       toast.success(isRTL ? 'משימה נוספה' : 'Task added');
     },
   });
@@ -187,7 +217,8 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
   const addTimelineMutation = useMutation({
     mutationFn: async (event: typeof newEvent) => {
       if (!user?.id) throw new Error('Not authenticated');
-      const { error } = await supabase.from('client_timeline').insert({ ...event, company_id: companyId, recruiter_id: user.id });
+      const eventDate = event.event_date || new Date().toISOString();
+      const { error } = await supabase.from('client_timeline').insert({ event_type: event.event_type, title: event.title, description: event.description, event_date: eventDate, company_id: companyId, recruiter_id: user.id });
       if (error) throw error;
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
       if (event.event_type === 'meeting') {
@@ -204,10 +235,53 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
       queryClient.invalidateQueries({ queryKey: ['client-company', companyId] });
       queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddTimeline(false);
-      setNewEvent({ event_type: 'note', title: '', description: '' });
+      setNewEvent({ event_type: 'note', title: '', description: '', event_date: '' });
       toast.success(isRTL ? 'פעילות נוספה' : 'Activity added');
     },
   });
+
+  // Add job for this company
+  const addJobMutation = useMutation({
+    mutationFn: async (job: typeof newJob) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const { error } = await supabase.from('jobs').insert({
+        title: job.title, location: job.location, job_type: job.job_type, description: job.description,
+        company_id: companyId, created_by: user.id, status: 'active',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-active-jobs', companyId] });
+      setShowAddJob(false);
+      setNewJob({ title: '', location: '', job_type: 'full_time', description: '' });
+      toast.success(isRTL ? 'משרה נוספה' : 'Job added');
+    },
+  });
+
+  // Forward job to client (add timeline entry + reminder)
+  const forwardJobToClient = async (jobId: string) => {
+    if (!user?.id) return;
+    const job = activeJobs.find(j => j.id === jobId);
+    if (!job) return;
+    // Add timeline entry
+    await supabase.from('client_timeline').insert({
+      event_type: 'note', title: isRTL ? `משרה הועברה ללקוח: ${job.title}` : `Job forwarded to client: ${job.title}`,
+      description: isRTL ? 'המשרה הועברה ללקוח לבדיקה' : 'Job forwarded to client for review',
+      company_id: companyId, recruiter_id: user.id,
+    });
+    // Create reminder for follow-up
+    const primaryContact = contacts.find(c => c.is_primary) || contacts[0];
+    if (primaryContact) {
+      await supabase.from('client_reminders').insert({
+        title: isRTL ? `פולואפ: האם ${company?.name} בדקו את המשרה "${job.title}"?` : `Follow-up: Did ${company?.name} review "${job.title}"?`,
+        remind_at: new Date(Date.now() + 2 * 86400000).toISOString(),
+        reminder_type: 'both', contact_id: primaryContact.id, company_id: companyId, recruiter_id: user.id,
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ['client-timeline', companyId] });
+    toast.success(isRTL ? 'המשרה הועברה ונוצרה תזכורת' : 'Job forwarded & reminder created');
+    setShowForwardJob(false);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -428,6 +502,10 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                     </SelectContent>
                   </Select>
                   <Input value={newEvent.title} onChange={(e) => setNewEvent(p => ({ ...p, title: e.target.value }))} placeholder={isRTL ? 'כותרת' : 'Title'} />
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'תאריך ושעה' : 'Date & Time'}</label>
+                    <Input type="datetime-local" value={newEvent.event_date} onChange={(e) => setNewEvent(p => ({ ...p, event_date: e.target.value }))} />
+                  </div>
                   <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'תיאור' : 'Description'} rows={3} />
                   <Button onClick={() => addTimelineMutation.mutate(newEvent)} disabled={!newEvent.title.trim()} className="w-full">{isRTL ? 'הוסף' : 'Add'}</Button>
                 </div>
@@ -455,6 +533,32 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
 
         {/* Projects Tab - shows all company projects + stakeholders */}
         <TabsContent value="projects" className="space-y-4 mt-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">{isRTL ? 'לחצו על משרה לצפייה במועמדים' : 'Click a job to view candidates'}</p>
+            <Dialog open={showAddJob} onOpenChange={setShowAddJob}>
+              <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="w-4 h-4" />{isRTL ? 'הוסף משרה' : 'Add Job'}</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{isRTL ? 'משרה חדשה' : 'New Job'}</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <Input value={newJob.title} onChange={(e) => setNewJob(p => ({ ...p, title: e.target.value }))} placeholder={isRTL ? 'שם המשרה *' : 'Job Title *'} />
+                  <Input value={newJob.location} onChange={(e) => setNewJob(p => ({ ...p, location: e.target.value }))} placeholder={isRTL ? 'מיקום' : 'Location'} />
+                  <Select value={newJob.job_type} onValueChange={(v) => setNewJob(p => ({ ...p, job_type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_time">{isRTL ? 'משרה מלאה' : 'Full Time'}</SelectItem>
+                      <SelectItem value="part_time">{isRTL ? 'חצי משרה' : 'Part Time'}</SelectItem>
+                      <SelectItem value="freelance">{isRTL ? 'פרילנס' : 'Freelance'}</SelectItem>
+                      <SelectItem value="hybrid">{isRTL ? 'היברידי' : 'Hybrid'}</SelectItem>
+                      <SelectItem value="remote">{isRTL ? 'מרחוק' : 'Remote'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Textarea value={newJob.description} onChange={(e) => setNewJob(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'תיאור המשרה' : 'Job Description'} rows={3} />
+                  <Button onClick={() => addJobMutation.mutate(newJob)} disabled={!newJob.title.trim()} className="w-full">{isRTL ? 'הוסף משרה' : 'Add Job'}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
           {activeJobs.length === 0 ? (
             <Card className="bg-card"><CardContent className="p-8 text-center text-muted-foreground">{isRTL ? 'אין משרות' : 'No jobs'}</CardContent></Card>
           ) : (
@@ -464,12 +568,18 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                 const stageCounts: Record<string, number> = {};
                 apps.forEach((a: any) => { stageCounts[a.current_stage || 'applied'] = (stageCounts[a.current_stage || 'applied'] || 0) + 1; });
                 const stakeholders = projectStakeholders[job.id] || [];
+                const isExpanded = selectedJobId === job.id;
                 return (
-                  <Card key={job.id} className="bg-card border-border">
-                    <CardHeader className="pb-2">
+                  <Card key={job.id} className={`bg-card border-border cursor-pointer transition-all ${isExpanded ? 'ring-2 ring-primary/30' : 'hover:border-primary/30'}`}>
+                    <CardHeader className="pb-2" onClick={() => setSelectedJobId(isExpanded ? null : job.id)}>
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" />{job.title}</CardTitle>
-                        <Badge variant={job.status === 'active' ? 'default' : 'secondary'}>{job.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={(e) => { e.stopPropagation(); forwardJobToClient(job.id); }}>
+                            <Mail className="w-3 h-3" />{isRTL ? 'העבר ללקוח' : 'Forward'}
+                          </Button>
+                          <Badge variant={job.status === 'active' ? 'default' : 'secondary'}>{job.status}</Badge>
+                        </div>
                       </div>
                       <div className="flex gap-3 text-xs text-muted-foreground">
                         {job.location && <span>{job.location}</span>}
@@ -495,7 +605,8 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                           <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">{isRTL ? 'בעלי עניין' : 'Stakeholders'}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {stakeholders.map((s: any) => (
-                              <Badge key={s.id} variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-muted/50" onClick={() => {
+                              <Badge key={s.id} variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-muted/50" onClick={(e) => {
+                                e.stopPropagation();
                                 const c = contacts.find(ct => ct.id === s.contact_id);
                                 if (c) { setSelectedContact(c); setShowContactDetail(true); }
                               }}>
@@ -505,6 +616,38 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                               </Badge>
                             ))}
                           </div>
+                        </div>
+                      )}
+                      {/* Candidate drill-down */}
+                      {isExpanded && (
+                        <div className="pt-3 border-t border-border space-y-2">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{isRTL ? 'מועמדים' : 'Candidates'}</p>
+                          {jobCandidates.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-3">{isRTL ? 'אין מועמדים למשרה זו' : 'No candidates for this job'}</p>
+                          ) : jobCandidates.map((candidate: any) => (
+                            <div key={candidate.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                                {candidate.profile?.avatar_url ? <img src={candidate.profile.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-primary" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold">{candidate.profile?.full_name || (isRTL ? 'אנונימי' : 'Anonymous')}</p>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                  {candidate.profile?.email && <span className="flex items-center gap-0.5"><Mail className="w-3 h-3" />{candidate.profile.email}</span>}
+                                  {candidate.profile?.experience_years && <span>{candidate.profile.experience_years} {isRTL ? 'שנות ניסיון' : 'yrs exp'}</span>}
+                                </div>
+                                {candidate.profile?.bio && <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{candidate.profile.bio}</p>}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <Badge variant={candidate.current_stage === 'hired' ? 'default' : 'outline'} className="text-[10px]">{stageLabels[candidate.current_stage || 'applied']}</Badge>
+                                {candidate.match_score && <span className="text-[10px] text-primary font-bold">{candidate.match_score}%</span>}
+                              </div>
+                              {candidate.profile?.linkedin_url && (
+                                <a href={candidate.profile.linkedin_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                                  <Linkedin className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                                </a>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </CardContent>
@@ -552,17 +695,24 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                 <div className="space-y-3">
                   <Input value={newTask.title} onChange={(e) => setNewTask(p => ({ ...p, title: e.target.value }))} placeholder={isRTL ? 'כותרת *' : 'Title *'} />
                   <Textarea value={newTask.description} onChange={(e) => setNewTask(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'תיאור' : 'Description'} rows={2} />
+                  <Select value={newTask.priority} onValueChange={(v) => setNewTask(p => ({ ...p, priority: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">{isRTL ? 'נמוך' : 'Low'}</SelectItem>
+                      <SelectItem value="medium">{isRTL ? 'בינוני' : 'Medium'}</SelectItem>
+                      <SelectItem value="high">{isRTL ? 'גבוה' : 'High'}</SelectItem>
+                      <SelectItem value="urgent">{isRTL ? 'דחוף' : 'Urgent'}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <div className="grid grid-cols-2 gap-3">
-                    <Select value={newTask.priority} onValueChange={(v) => setNewTask(p => ({ ...p, priority: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">{isRTL ? 'נמוך' : 'Low'}</SelectItem>
-                        <SelectItem value="medium">{isRTL ? 'בינוני' : 'Medium'}</SelectItem>
-                        <SelectItem value="high">{isRTL ? 'גבוה' : 'High'}</SelectItem>
-                        <SelectItem value="urgent">{isRTL ? 'דחוף' : 'Urgent'}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input type="date" value={newTask.due_date} onChange={(e) => setNewTask(p => ({ ...p, due_date: e.target.value }))} />
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{isRTL ? 'תאריך' : 'Date'}</label>
+                      <Input type="date" value={newTask.due_date} onChange={(e) => setNewTask(p => ({ ...p, due_date: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{isRTL ? 'שעה' : 'Time'}</label>
+                      <Input type="time" value={newTask.due_time} onChange={(e) => setNewTask(p => ({ ...p, due_time: e.target.value }))} />
+                    </div>
                   </div>
                   <Button onClick={() => addTaskMutation.mutate(newTask)} disabled={!newTask.title.trim()} className="w-full">{isRTL ? 'הוסף' : 'Add'}</Button>
                 </div>
@@ -580,7 +730,7 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                   </Button>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through' : ''}`}>{task.title}</p>
-                    {task.due_date && <p className="text-xs text-muted-foreground">{format(new Date(task.due_date), 'dd/MM/yyyy')}</p>}
+                    {task.due_date && <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{format(new Date(task.due_date), 'dd/MM/yyyy HH:mm')}</p>}
                   </div>
                   <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'default' : 'secondary'} className="text-xs shrink-0">{task.priority}</Badge>
                   {(task.source === 'ai_suggested' || task.source === 'automation') && <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />}
