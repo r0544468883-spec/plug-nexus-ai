@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronRight, PartyPopper, Upload, User, FileText } from 'lucide-react';
+import { Check, ChevronRight, ChevronUp, ChevronDown, PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { DashboardSection } from '@/components/dashboard/DashboardLayout';
@@ -20,7 +20,6 @@ interface FocusItem {
   id: string;
   label: string;
   section: DashboardSection;
-  /** If true, this is a one-time onboarding step tracked via DB */
   isOnboarding?: boolean;
   completed?: boolean;
   action?: () => void;
@@ -32,6 +31,7 @@ export function TodaysFocus({ onNavigate, onShowResumeDialog }: TodaysFocusProps
   const navigate = useNavigate();
   const isRTL = language === 'he';
   const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Onboarding checks for job seekers
   const { data: hasCV } = useQuery({
@@ -123,7 +123,6 @@ export function TodaysFocus({ onNavigate, onShowResumeDialog }: TodaysFocusProps
         { id: 'interview', label: isRTL ? 'תרגל ראיון' : 'Practice an interview', section: 'interview-prep' },
       ];
 
-      // Show onboarding items first, then daily items (limit total to keep it clean)
       return [...onboardingItems, ...dailyItems].slice(0, 4);
     }
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
@@ -154,6 +153,14 @@ export function TodaysFocus({ onNavigate, onShowResumeDialog }: TodaysFocusProps
     });
   };
 
+  const handleItemClick = (item: FocusItem) => {
+    if (item.action) {
+      item.action();
+    } else {
+      onNavigate(item.section);
+    }
+  };
+
   return (
     <Card className="bg-gradient-to-r from-background to-secondary/30 border-border overflow-hidden">
       <CardContent className="p-5" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -161,74 +168,99 @@ export function TodaysFocus({ onNavigate, onShowResumeDialog }: TodaysFocusProps
           <h3 className="font-bold text-lg">
             🎯 {isRTL ? 'הפוקוס של היום' : "Today's Focus"}
           </h3>
-          <span className="text-sm text-muted-foreground">
-            {completedCount}/{items.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {completedCount}/{items.length}
+            </span>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1 rounded-md hover:bg-secondary/50 transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Progress bar */}
         <Progress value={progressPercent} className="h-2 mb-4" />
 
-        <div className="space-y-2">
-          {items.map((item) => {
-            const isDone = item.completed || completed.has(item.id);
-            return (
-              <div
-                key={item.id}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer',
-                  isDone ? 'bg-primary/5' : 'hover:bg-secondary/50',
-                  item.isOnboarding && !isDone && 'border border-primary/20 bg-primary/5'
-                )}
-              >
-                <button
-                  onClick={() => !item.isOnboarding && toggleComplete(item.id)}
-                  className={cn(
-                    'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                    isDone ? 'bg-primary border-primary' : 'border-muted-foreground/30 hover:border-primary/50'
-                  )}
-                >
-                  <AnimatePresence>
-                    {isDone && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </button>
-                <span
-                  className={cn(
-                    'flex-1 text-sm transition-all',
-                    isDone && 'line-through text-muted-foreground'
-                  )}
-                >
-                  {item.label}
-                </span>
-                {!isDone && (
-                  <button onClick={() => item.action ? item.action() : onNavigate(item.section)}>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
         <AnimatePresence>
-          {allDone && (
+          {isExpanded && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mt-4 p-3 rounded-lg bg-primary/10 text-center"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
             >
-              <PartyPopper className="w-6 h-6 text-primary mx-auto mb-1" />
-              <p className="text-sm font-medium text-primary">
-                {isRTL ? 'כל הכבוד! סיימת את הפוקוס של היום 🎉' : 'Great job! You finished today\'s focus 🎉'}
-              </p>
+              <div className="space-y-2">
+                {items.map((item) => {
+                  const isDone = item.completed || completed.has(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        'flex items-center gap-3 p-3 rounded-lg transition-all',
+                        isDone ? 'bg-primary/5' : 'hover:bg-secondary/50',
+                        item.isOnboarding && !isDone && 'border border-primary/20 bg-primary/5'
+                      )}
+                    >
+                      <button
+                        onClick={() => !item.isOnboarding && toggleComplete(item.id)}
+                        className={cn(
+                          'w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                          isDone ? 'bg-primary border-primary' : 'border-muted-foreground/30 hover:border-primary/50'
+                        )}
+                      >
+                        <AnimatePresence>
+                          {isDone && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              exit={{ scale: 0 }}
+                            >
+                              <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                      <button
+                        onClick={() => !isDone && handleItemClick(item)}
+                        disabled={isDone}
+                        className={cn(
+                          'flex-1 text-sm transition-all text-start',
+                          isDone ? 'line-through text-muted-foreground' : 'hover:text-primary cursor-pointer'
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                      {!isDone && (
+                        <button onClick={() => handleItemClick(item)}>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <AnimatePresence>
+                {allDone && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 p-3 rounded-lg bg-primary/10 text-center"
+                  >
+                    <PartyPopper className="w-6 h-6 text-primary mx-auto mb-1" />
+                    <p className="text-sm font-medium text-primary">
+                      {isRTL ? 'כל הכבוד! סיימת את הפוקוס של היום 🎉' : 'Great job! You finished today\'s focus 🎉'}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
