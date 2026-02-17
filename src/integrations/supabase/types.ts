@@ -185,6 +185,8 @@ export type Database = {
           id: string
           message: string
           sender: string
+          session_id: string | null
+          session_title: string | null
           user_id: string
         }
         Insert: {
@@ -193,6 +195,8 @@ export type Database = {
           id?: string
           message: string
           sender: string
+          session_id?: string | null
+          session_title?: string | null
           user_id: string
         }
         Update: {
@@ -201,6 +205,8 @@ export type Database = {
           id?: string
           message?: string
           sender?: string
+          session_id?: string | null
+          session_title?: string | null
           user_id?: string
         }
         Relationships: []
