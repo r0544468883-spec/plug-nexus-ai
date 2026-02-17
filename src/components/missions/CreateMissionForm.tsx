@@ -33,6 +33,7 @@ export function CreateMissionForm({ onSuccess, onCancel }: CreateMissionFormProp
     urgency: 'standard',
     job_id: '',
     min_reliability_score: '',
+    company_website: '',
   });
 
   // Fetch user's companies
@@ -72,14 +73,15 @@ export function CreateMissionForm({ onSuccess, onCancel }: CreateMissionFormProp
         company_id: selectedCompanyId || null,
         job_id: form.job_id || null,
         min_reliability_score: form.min_reliability_score ? parseInt(form.min_reliability_score) : null,
+        company_website: form.company_website || null,
       } as any);
 
       if (error) throw error;
-      toast.success(isHebrew ? 'המשימה פורסמה!' : 'Mission posted!');
+      toast.success(isHebrew ? 'הפרויקט פורסם!' : 'Project posted!');
       onSuccess();
     } catch (err) {
       console.error(err);
-      toast.error(isHebrew ? 'שגיאה בפרסום המשימה' : 'Failed to post mission');
+      toast.error(isHebrew ? 'שגיאה בפרסום הפרויקט' : 'Failed to post project');
     } finally {
       setIsSubmitting(false);
     }
@@ -93,14 +95,14 @@ export function CreateMissionForm({ onSuccess, onCancel }: CreateMissionFormProp
         </Button>
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Target className="w-6 h-6 text-primary" />
-          {isHebrew ? 'פרסום משימה חדשה' : 'Post New Mission'}
+          {isHebrew ? 'פרסום פרויקט חדש' : 'Post New Project'}
         </h2>
       </div>
 
       <Card className="bg-card border-border">
         <CardContent className="p-6 space-y-5">
           <div className="space-y-2">
-            <Label>{isHebrew ? 'כותרת המשימה' : 'Mission Title'} *</Label>
+            <Label>{isHebrew ? 'כותרת הפרויקט' : 'Project Title'} *</Label>
             <Input
               value={form.title}
               onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
@@ -113,7 +115,7 @@ export function CreateMissionForm({ onSuccess, onCancel }: CreateMissionFormProp
             <Textarea
               value={form.description}
               onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder={isHebrew ? 'פרטי המשימה...' : 'Mission details...'}
+              placeholder={isHebrew ? 'פרטי הפרויקט...' : 'Project details...'}
               rows={4}
             />
           </div>
@@ -204,9 +206,19 @@ export function CreateMissionForm({ onSuccess, onCancel }: CreateMissionFormProp
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>{isHebrew ? 'אתר החברה (אופציונלי)' : 'Company Website (optional)'}</Label>
+            <Input
+              value={form.company_website}
+              onChange={(e) => setForm(f => ({ ...f, company_website: e.target.value }))}
+              placeholder="https://example.com"
+              type="url"
+            />
+          </div>
+
           <Button onClick={handleSubmit} disabled={isSubmitting || !form.title} className="w-full gap-2">
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
-            {isHebrew ? 'פרסם משימה' : 'Post Mission'}
+            {isHebrew ? 'פרסם פרויקט' : 'Post Project'}
           </Button>
         </CardContent>
       </Card>

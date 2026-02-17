@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Building2, Zap, Lock, Globe, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Zap, Lock, Globe, Users, Clock, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -92,6 +92,18 @@ export function MissionDetailSheet({ missionId, open, onOpenChange, onBid }: Mis
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{mission.description}</p>
           )}
 
+          {(mission as any).company_website && (
+            <a
+              href={(mission as any).company_website.startsWith('http') ? (mission as any).company_website : `https://${(mission as any).company_website}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="w-4 h-4" />
+              {isHebrew ? 'אתר החברה' : 'Company Website'}
+            </a>
+          )}
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
             {new Date(mission.created_at).toLocaleDateString()}
@@ -100,7 +112,7 @@ export function MissionDetailSheet({ missionId, open, onOpenChange, onBid }: Mis
           {!isCreator && mission.status === 'open' && (
             <Button className="w-full gap-2" onClick={() => { onBid(mission.id); onOpenChange(false); }}>
               <Zap className="w-4 h-4" />
-              {isHebrew ? 'הגש הצעה' : 'Bid on Mission'}
+              {isHebrew ? 'הגש הצעה' : 'Bid on Project'}
             </Button>
           )}
 

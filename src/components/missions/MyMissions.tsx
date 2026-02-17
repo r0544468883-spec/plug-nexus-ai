@@ -58,14 +58,14 @@ export function MyMissions({ onBack }: MyMissionsProps) {
         </Button>
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Target className="w-6 h-6 text-primary" />
-          {isHebrew ? 'המשימות שלי' : 'My Missions'}
+          {isHebrew ? 'הפרויקטים שלי' : 'My Projects'}
         </h2>
       </div>
 
       {(!missions || missions.length === 0) ? (
         <div className="text-center py-16">
           <Target className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">{isHebrew ? 'עדיין לא פרסמת משימות' : "You haven't posted any missions yet"}</p>
+          <p className="text-muted-foreground">{isHebrew ? 'עדיין לא פרסמת פרויקטים' : "You haven't posted any projects yet"}</p>
         </div>
       ) : (
         <div className="space-y-3">

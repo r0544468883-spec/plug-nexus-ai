@@ -2,7 +2,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Clock, Zap, Lock, Globe } from 'lucide-react';
+import { Building2, Users, Clock, Zap, Lock, Globe, ExternalLink } from 'lucide-react';
 
 interface Mission {
   id: string;
@@ -14,6 +14,7 @@ interface Mission {
   urgency: string;
   status: string;
   created_at: string;
+  company_website?: string | null;
   company?: { name: string; logo_url: string | null; industry: string | null } | null;
   bid_count?: number;
 }
@@ -91,6 +92,18 @@ export function MissionCard({ mission, onBid, onView, isCreator }: MissionCardPr
               {mission.company.industry}
             </Badge>
           )}
+          {mission.company_website && (
+            <a
+              href={mission.company_website.startsWith('http') ? mission.company_website : `https://${mission.company_website}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="w-3 h-3" />
+              {isHebrew ? 'אתר' : 'Website'}
+            </a>
+          )}
         </div>
 
         {/* Footer */}
@@ -112,7 +125,7 @@ export function MissionCard({ mission, onBid, onView, isCreator }: MissionCardPr
             onClick={(e) => { e.stopPropagation(); onBid(mission.id); }}
           >
             <Zap className="w-4 h-4" />
-            {isHebrew ? 'הגש הצעה' : 'Bid on Mission'}
+            {isHebrew ? 'הגש הצעה' : 'Bid on Project'}
           </Button>
         )}
       </CardContent>

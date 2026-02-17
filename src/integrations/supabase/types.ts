@@ -1985,6 +1985,7 @@ export type Database = {
           commission_model: string
           commission_value: number
           company_id: string | null
+          company_website: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -2002,6 +2003,7 @@ export type Database = {
           commission_model?: string
           commission_value?: number
           company_id?: string | null
+          company_website?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -2019,6 +2021,7 @@ export type Database = {
           commission_model?: string
           commission_value?: number
           company_id?: string | null
+          company_website?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
