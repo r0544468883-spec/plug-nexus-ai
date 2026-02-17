@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, Users, CheckCircle } from 'lucide-react';
+import { Loader2, Send, Users, CheckCircle, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface BidDialogProps {
   missionId: string | null;
@@ -24,6 +25,7 @@ export function BidDialog({ missionId, missionTitle, open, onOpenChange, onSucce
   const isHebrew = language === 'he';
 
   const [pitch, setPitch] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -36,6 +38,7 @@ export function BidDialog({ missionId, missionTitle, open, onOpenChange, onSucce
         pitch: pitch.trim(),
         verified_candidates_count: 0,
         vouched_candidates_count: 0,
+        is_anonymous: isAnonymous,
       } as any);
 
       if (error) throw error;
@@ -92,6 +95,19 @@ export function BidDialog({ missionId, missionTitle, open, onOpenChange, onSucce
               placeholder={isHebrew ? 'תאר/י את הניסיון והיתרונות שלך...' : 'Describe your experience and advantages...'}
               rows={5}
             />
+          </div>
+
+          {/* Anonymous option */}
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/50">
+            <Checkbox
+              id="anonymous"
+              checked={isAnonymous}
+              onCheckedChange={(checked) => setIsAnonymous(checked === true)}
+            />
+            <label htmlFor="anonymous" className="flex items-center gap-2 text-sm cursor-pointer">
+              <EyeOff className="w-4 h-4 text-muted-foreground" />
+              {isHebrew ? 'הגשה אנונימית (שמך לא יוצג למפרסם)' : 'Submit anonymously (your name won\'t be shown)'}
+            </label>
           </div>
 
           <Button onClick={handleSubmit} disabled={isSubmitting || !pitch.trim()} className="w-full gap-2">
