@@ -437,7 +437,7 @@ export default function Dashboard() {
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <User className="w-6 h-6 text-primary" />
-        {isRTL ? 'פרופיל ומסמכים' : 'Profile & documents'}
+        {isRTL ? 'הפרופיל שלי' : 'My Profile'}
       </h2>
 
       {/* Personal Card Editor - First for job seekers */}
@@ -480,6 +480,11 @@ export default function Dashboard() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Vouches Section */}
+      {user && profile && (
+        <VouchWidget />
+      )}
     </div>
   );
 

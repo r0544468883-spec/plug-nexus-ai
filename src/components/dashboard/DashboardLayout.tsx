@@ -15,7 +15,7 @@ import {
   LayoutDashboard, Users, Briefcase, FileText, MessageSquare, Settings, LogOut, Menu, X, User, Search, ArrowLeft, ArrowRight, Heart, FileEdit, Route, Sparkles, Mic, Newspaper, Video, Globe, BarChart3, DollarSign, Building2, Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view' | 'content-dashboard' | 'negotiation-sandbox' | 'content-hub' | 'b2b-suite' | 'recruiter-profile' | 'clients' | 'client-profile' | 'missions' | 'create-mission' | 'my-missions';
 
@@ -67,7 +67,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     if (role === 'job_seeker') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על החשבון, סטטיסטיקות והודעות מ-Plug', tooltipEn: 'Overview of your account, stats, and Plug messages' },
-        { icon: User, label: 'Profile & documents', section: 'profile-docs', tooltipHe: 'כרטיס אישי, קו"ח ולינקים מקצועיים', tooltipEn: 'Personal card, resume, and professional links' },
+        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'profile-docs', tooltipHe: 'כרטיס אישי, קו"ח, Vouches ולינקים מקצועיים', tooltipEn: 'Personal card, resume, Vouches & professional links' },
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
         { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
         { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
@@ -82,6 +82,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על הפעילות שלך', tooltipEn: 'Overview of your activity' },
+        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'recruiter-profile' as DashboardSection, tooltipHe: 'עריכת הפרופיל המקצועי, Vouches והמלצות', tooltipEn: 'Edit your professional profile, Vouches & recommendations' },
         { icon: Building2, label: isRTL ? 'הלקוחות שלי' : 'My Clients', section: 'clients' as DashboardSection, tooltipHe: 'ניהול לקוחות (חברות מגייסות) עם CRM חכם', tooltipEn: 'Manage hiring companies with smart CRM' },
         { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
@@ -89,7 +90,6 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         { icon: Target, label: isRTL ? 'לוח פרויקטים' : 'Hunters Billboard', section: 'missions' as DashboardSection, tooltipHe: 'שוק תחרותי לפרויקטי גיוס', tooltipEn: 'Competitive recruitment project marketplace' },
         
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
-        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'recruiter-profile' as DashboardSection, tooltipHe: 'עריכת הפרופיל המקצועי שלך', tooltipEn: 'Edit your professional profile' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },
       ];
     }
@@ -97,8 +97,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     // Default for company_employee and others
     return [
       { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי', tooltipEn: 'Overview' },
-      { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים', tooltipEn: 'Documents' },
-      { icon: MessageSquare, label: 'Chat with Plug', section: 'chat', tooltipHe: 'צ\'אט עם העוזר האישי Plug', tooltipEn: 'Chat with Plug AI assistant' },
+      { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'profile-docs', tooltipHe: 'פרופיל, מסמכים ו-Vouches', tooltipEn: 'Profile, documents & Vouches' },
       { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות', tooltipEn: 'Settings' },
     ];
   };
@@ -167,21 +166,8 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
         {/* Visible to HR Banner for job seekers */}
         <VisibleToHRBanner />
-        {/* User info */}
+        {/* Sign out */}
         <div className="p-4 border-t border-sidebar-border">
-          <Link 
-            to="/profile"
-            className="flex items-center gap-3 mb-3 p-2 -m-2 rounded-lg hover:bg-sidebar-accent/10 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
-              {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
-              <p className="text-xs text-muted-foreground truncate">{getRoleLabel()}</p>
-            </div>
-            <User className="w-4 h-4 text-muted-foreground" />
-          </Link>
           <Button 
             variant="ghost" 
             size="sm" 
