@@ -32,9 +32,10 @@ interface DashboardLayoutProps {
   currentSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
   onChatOpen?: (initialMessage?: string, sourceSection?: DashboardSection) => void;
+  onStartTour?: () => void;
 }
 
-export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
+export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen, onStartTour }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
   const { t, direction, language } = useLanguage();
   const isRTL = language === 'he';
@@ -125,7 +126,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
       {/* Sidebar - Added bg-background to fix transparency issue on mobile */}
       <aside className={cn(
-        'fixed lg:static inset-y-0 z-50 w-64 bg-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
+        'fixed lg:sticky lg:top-0 inset-y-0 z-50 w-64 h-screen bg-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
         direction === 'rtl' ? 'right-0' : 'left-0',
         sidebarOpen ? 'translate-x-0' : direction === 'rtl' ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
@@ -166,8 +167,19 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
         {/* Visible to HR Banner for job seekers */}
         <VisibleToHRBanner />
-        {/* Sign out */}
-        <div className="p-4 border-t border-sidebar-border">
+        {/* Tour Guide + Sign out */}
+        <div className="p-4 border-t border-sidebar-border space-y-1">
+          {onStartTour && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-accent"
+              onClick={onStartTour}
+            >
+              <Route className="w-4 h-4" />
+              {isRTL ? 'מדריך המערכת' : 'System Guide'}
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="sm" 

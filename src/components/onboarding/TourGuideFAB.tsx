@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Route, X, ChevronRight, Check } from 'lucide-react';
@@ -34,6 +34,13 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
   const isRTL = language === 'he';
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+
+  // Listen for sidebar button opening the panel
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('plug:open-tour-guide', handler);
+    return () => window.removeEventListener('plug:open-tour-guide', handler);
+  }, []);
 
   // Determine checklist completion based on profile data
   const hasCV = !!(profile as any)?.cv_data && Object.keys((profile as any)?.cv_data || {}).length > 0;
@@ -120,19 +127,20 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
 
   return (
     <>
-      {/* FAB Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className={cn(
-          'fixed z-40 w-12 h-12 rounded-full bg-secondary border border-accent/30 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-accent',
-          'bottom-6 lg:bottom-6',
-          isRTL ? 'right-4 lg:right-[calc(256px-60px)]' : 'left-4 lg:left-[calc(256px-60px)]',
-          isMobile && 'bottom-[88px]'
-        )}
-        aria-label={isRTL ? 'מדריך המערכת' : 'System Guide'}
-      >
-        <Route className="w-[22px] h-[22px] text-accent" />
-      </button>
+      {/* FAB Button - mobile only (desktop uses sidebar button) */}
+      {isMobile && (
+        <button
+          onClick={() => setOpen(true)}
+          className={cn(
+            'fixed z-40 w-12 h-12 rounded-full bg-secondary border border-accent/30 shadow-lg flex items-center justify-center transition-all hover:scale-105 hover:border-accent',
+            'bottom-[88px]',
+            isRTL ? 'right-4' : 'left-4'
+          )}
+          aria-label={isRTL ? 'מדריך המערכת' : 'System Guide'}
+        >
+          <Route className="w-[22px] h-[22px] text-accent" />
+        </button>
+      )}
 
       {/* Panel */}
       <AnimatePresence>
