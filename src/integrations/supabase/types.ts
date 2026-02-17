@@ -184,6 +184,228 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_primary: boolean | null
+          linkedin_url: string | null
+          notes: string | null
+          phone: string | null
+          recruiter_id: string
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_primary?: boolean | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          recruiter_id: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_primary?: boolean | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          recruiter_id?: string
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_tasks: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          recruiter_id: string
+          source: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          recruiter_id: string
+          source?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          recruiter_id?: string
+          source?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_timeline: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          event_date: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          recruiter_id: string
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          recruiter_id: string
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          recruiter_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_timeline_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_timeline_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_vault: {
+        Row: {
+          category: string | null
+          company_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          recruiter_id: string
+        }
+        Insert: {
+          category?: string | null
+          company_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          recruiter_id: string
+        }
+        Update: {
+          category?: string | null
+          company_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          recruiter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_vault_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_vault_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_secure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_channels: {
         Row: {
           access_mode: string
@@ -426,52 +648,73 @@ export type Database = {
       }
       companies: {
         Row: {
+          ai_summary: string | null
           avg_hiring_speed_days: number | null
           created_at: string
           created_by: string | null
           description: string | null
+          estimated_revenue: number | null
+          historical_value: number | null
           id: string
           industry: string | null
+          last_contact_at: string | null
           last_metrics_update: string | null
+          lead_status: string | null
+          logo_scraped_url: string | null
           logo_url: string | null
           metadata: Json | null
           name: string
           response_rate: number | null
           size: string | null
+          tech_stack: string[] | null
           total_hires: number | null
           updated_at: string
           website: string | null
         }
         Insert: {
+          ai_summary?: string | null
           avg_hiring_speed_days?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          estimated_revenue?: number | null
+          historical_value?: number | null
           id?: string
           industry?: string | null
+          last_contact_at?: string | null
           last_metrics_update?: string | null
+          lead_status?: string | null
+          logo_scraped_url?: string | null
           logo_url?: string | null
           metadata?: Json | null
           name: string
           response_rate?: number | null
           size?: string | null
+          tech_stack?: string[] | null
           total_hires?: number | null
           updated_at?: string
           website?: string | null
         }
         Update: {
+          ai_summary?: string | null
           avg_hiring_speed_days?: number | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          estimated_revenue?: number | null
+          historical_value?: number | null
           id?: string
           industry?: string | null
+          last_contact_at?: string | null
           last_metrics_update?: string | null
+          lead_status?: string | null
+          logo_scraped_url?: string | null
           logo_url?: string | null
           metadata?: Json | null
           name?: string
           response_rate?: number | null
           size?: string | null
+          tech_stack?: string[] | null
           total_hires?: number | null
           updated_at?: string
           website?: string | null
