@@ -697,7 +697,6 @@ export default function Dashboard() {
     <DashboardLayout 
       currentSection={currentSection} 
       onSectionChange={(next) => {
-        // Track last non-chat section so Plug can greet per page
         if (next !== 'chat') setChatContextSection(next);
         setCurrentSection(next);
       }}
@@ -709,8 +708,11 @@ export default function Dashboard() {
           setPendingMessage(initialMessage);
           setPendingMessageKey((k) => k + 1);
         }
-        // Navigate to chat section when opened via Quick Actions
         setCurrentSection('chat');
+      }}
+      onStartTour={() => {
+        // Open the TourGuideFAB panel
+        window.dispatchEvent(new CustomEvent('plug:open-tour-guide'));
       }}
     >
       {/* Interactive tours */}
