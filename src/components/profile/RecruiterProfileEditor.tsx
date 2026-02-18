@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Building2, GraduationCap, Lightbulb, Video, Save, Loader2, Eye, Briefcase, X } from 'lucide-react';
+import { PhotoUpload } from '@/components/profile/PhotoUpload';
 
 export function RecruiterProfileEditor() {
   const { language } = useLanguage();
@@ -164,6 +165,19 @@ export function RecruiterProfileEditor() {
         <User className="w-6 h-6 text-primary" />
         {isRTL ? 'הפרופיל שלי' : 'My Profile'}
       </h2>
+
+      {/* Photo Upload */}
+      {user && (
+        <div className="flex justify-center">
+          <PhotoUpload
+            userId={user.id}
+            currentAvatarUrl={profile?.avatar_url || null}
+            userName={profile?.full_name || 'User'}
+            onUpload={() => {}}
+            size="lg"
+          />
+        </div>
+      )}
 
       {/* Preview Toggles */}
       <div className="flex gap-2">

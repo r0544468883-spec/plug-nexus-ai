@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ScheduleCalendar } from '@/components/dashboard/ScheduleCalendar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
@@ -30,6 +31,7 @@ import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
+import { PhotoUpload } from '@/components/profile/PhotoUpload';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
 import { FeedPage } from '@/components/feed/FeedPage';
@@ -316,8 +318,26 @@ export default function Dashboard() {
         {isRTL ? 'הפרופיל שלי' : 'My Profile'}
       </h2>
 
-      {/* Personal Card Editor - First for job seekers */}
+      {/* Personal Card Editor - First for job seekers (includes photo) */}
       {role === 'job_seeker' && <PersonalCardEditor />}
+
+      {/* Photo for non-job-seeker roles */}
+      {role !== 'job_seeker' && user && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-6 flex flex-col items-center gap-3">
+            <PhotoUpload
+              userId={user.id}
+              currentAvatarUrl={profile?.avatar_url || null}
+              userName={profile?.full_name || 'User'}
+              onUpload={() => {}}
+              size="lg"
+            />
+            <p className="font-semibold text-lg">{profile?.full_name}</p>
+            <p className="text-sm text-muted-foreground">{profile?.email}</p>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Portfolio Links Section */}
       <PortfolioLinks />
@@ -572,6 +592,8 @@ export default function Dashboard() {
           <MyMissions onBack={() => setCurrentSection('missions' as DashboardSection)} />,
           'missions' as DashboardSection
         );
+      case 'schedule':
+        return withBackButton(<ScheduleCalendar />);
         return renderOverviewContent();
     }
   };
