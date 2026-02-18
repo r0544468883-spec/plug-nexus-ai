@@ -83,6 +83,7 @@ export type Database = {
       applications: {
         Row: {
           ai_candidate_summary: Json | null
+          apply_method: string | null
           candidate_id: string
           created_at: string
           current_stage: string | null
@@ -97,9 +98,11 @@ export type Database = {
           stagnation_snoozed_until: string | null
           status: string | null
           updated_at: string
+          viewed_at: string | null
         }
         Insert: {
           ai_candidate_summary?: Json | null
+          apply_method?: string | null
           candidate_id: string
           created_at?: string
           current_stage?: string | null
@@ -114,9 +117,11 @@ export type Database = {
           stagnation_snoozed_until?: string | null
           status?: string | null
           updated_at?: string
+          viewed_at?: string | null
         }
         Update: {
           ai_candidate_summary?: Json | null
+          apply_method?: string | null
           candidate_id?: string
           created_at?: string
           current_stage?: string | null
@@ -131,6 +136,7 @@ export type Database = {
           stagnation_snoozed_until?: string | null
           status?: string | null
           updated_at?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -175,6 +181,104 @@ export type Database = {
           new_values?: Json | null
           old_values?: Json | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      career_site_stats: {
+        Row: {
+          applications: number | null
+          career_site_id: string | null
+          date: string
+          id: string
+          page_views: number | null
+          source: string | null
+          unique_visitors: number | null
+        }
+        Insert: {
+          applications?: number | null
+          career_site_id?: string | null
+          date?: string
+          id?: string
+          page_views?: number | null
+          source?: string | null
+          unique_visitors?: number | null
+        }
+        Update: {
+          applications?: number | null
+          career_site_id?: string | null
+          date?: string
+          id?: string
+          page_views?: number | null
+          source?: string | null
+          unique_visitors?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_site_stats_career_site_id_fkey"
+            columns: ["career_site_id"]
+            isOneToOne: false
+            referencedRelation: "career_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_sites: {
+        Row: {
+          benefits: Json | null
+          company_id: string
+          company_name: string
+          cover_image_url: string | null
+          created_at: string | null
+          culture_text: string | null
+          description: string | null
+          id: string
+          is_published: boolean | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          social_links: Json | null
+          tagline: string | null
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          benefits?: Json | null
+          company_id: string
+          company_name: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          culture_text?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug: string
+          social_links?: Json | null
+          tagline?: string | null
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          benefits?: Json | null
+          company_id?: string
+          company_name?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          culture_text?: string | null
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string
+          social_links?: Json | null
+          tagline?: string | null
+          updated_at?: string | null
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -1314,6 +1418,74 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          candidate_id: string | null
+          id: string
+          sent_at: string | null
+          status: string | null
+          template_id: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          id?: string
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          created_by: string
+          delay_hours: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          trigger_stage: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          created_by: string
+          delay_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          trigger_stage?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          created_by?: string
+          delay_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          trigger_stage?: string | null
+        }
+        Relationships: []
+      }
       experience_levels: {
         Row: {
           created_at: string
@@ -2122,6 +2294,71 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          additional_terms: string | null
+          benefits: Json | null
+          candidate_id: string
+          candidate_response: string | null
+          created_at: string | null
+          created_by: string
+          expiry_date: string | null
+          id: string
+          job_id: string | null
+          salary_currency: string | null
+          salary_gross: number
+          sent_at: string | null
+          signature_url: string | null
+          signed_at: string | null
+          start_date: string | null
+          status: string | null
+        }
+        Insert: {
+          additional_terms?: string | null
+          benefits?: Json | null
+          candidate_id: string
+          candidate_response?: string | null
+          created_at?: string | null
+          created_by: string
+          expiry_date?: string | null
+          id?: string
+          job_id?: string | null
+          salary_currency?: string | null
+          salary_gross: number
+          sent_at?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          start_date?: string | null
+          status?: string | null
+        }
+        Update: {
+          additional_terms?: string | null
+          benefits?: Json | null
+          candidate_id?: string
+          candidate_response?: string | null
+          created_at?: string | null
+          created_by?: string
+          expiry_date?: string | null
+          id?: string
+          job_id?: string | null
+          salary_currency?: string | null
+          salary_gross?: number
+          sent_at?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
+          start_date?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           about_me: string | null
@@ -2417,6 +2654,45 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_data: {
+        Row: {
+          currency: string | null
+          experience_years: number | null
+          id: string
+          job_role: string
+          location: string | null
+          salary_max: number | null
+          salary_median: number | null
+          salary_min: number | null
+          sample_size: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          currency?: string | null
+          experience_years?: number | null
+          id?: string
+          job_role: string
+          location?: string | null
+          salary_max?: number | null
+          salary_median?: number | null
+          salary_min?: number | null
+          sample_size?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          currency?: string | null
+          experience_years?: number | null
+          id?: string
+          job_role?: string
+          location?: string | null
+          salary_max?: number | null
+          salary_median?: number | null
+          salary_min?: number | null
+          sample_size?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       saved_jobs: {
         Row: {
           created_at: string | null
@@ -2442,6 +2718,88 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          criteria: Json
+          id: string
+          job_id: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          criteria?: Json
+          id?: string
+          job_id?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          criteria?: Json
+          id?: string
+          job_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_templates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecards: {
+        Row: {
+          candidate_id: string
+          general_notes: string | null
+          id: string
+          interview_type: string | null
+          interviewer_id: string
+          overall_recommendation: string | null
+          overall_score: number | null
+          scores: Json
+          submitted_at: string | null
+          template_id: string | null
+        }
+        Insert: {
+          candidate_id: string
+          general_notes?: string | null
+          id?: string
+          interview_type?: string | null
+          interviewer_id: string
+          overall_recommendation?: string | null
+          overall_score?: number | null
+          scores?: Json
+          submitted_at?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          general_notes?: string | null
+          id?: string
+          interview_type?: string | null
+          interviewer_id?: string
+          overall_recommendation?: string | null
+          overall_score?: number | null
+          scores?: Json
+          submitted_at?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecards_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -2571,6 +2929,174 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_interview_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          interview_id: string | null
+          question_order: number
+          question_text: string
+          question_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interview_id?: string | null
+          question_order: number
+          question_text: string
+          question_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interview_id?: string | null
+          question_order?: number
+          question_text?: string
+          question_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_interview_questions_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: false
+            referencedRelation: "video_interviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_interview_ratings: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          rated_by: string
+          rating: number | null
+          response_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          rated_by: string
+          rating?: number | null
+          response_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          rated_by?: string
+          rating?: number | null
+          response_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_interview_ratings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "video_interview_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_interview_responses: {
+        Row: {
+          candidate_id: string
+          duration_seconds: number | null
+          id: string
+          interview_id: string | null
+          question_id: string | null
+          retake_number: number | null
+          submitted_at: string | null
+          video_url: string
+        }
+        Insert: {
+          candidate_id: string
+          duration_seconds?: number | null
+          id?: string
+          interview_id?: string | null
+          question_id?: string | null
+          retake_number?: number | null
+          submitted_at?: string | null
+          video_url: string
+        }
+        Update: {
+          candidate_id?: string
+          duration_seconds?: number | null
+          id?: string
+          interview_id?: string | null
+          question_id?: string | null
+          retake_number?: number | null
+          submitted_at?: string | null
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_interview_responses_interview_id_fkey"
+            columns: ["interview_id"]
+            isOneToOne: false
+            referencedRelation: "video_interviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_interview_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "video_interview_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_interviews: {
+        Row: {
+          answer_time_seconds: number | null
+          created_at: string | null
+          created_by: string
+          deadline: string | null
+          id: string
+          instructions: string | null
+          job_id: string | null
+          max_retakes: number | null
+          status: string | null
+          think_time_seconds: number | null
+          title: string
+        }
+        Insert: {
+          answer_time_seconds?: number | null
+          created_at?: string | null
+          created_by: string
+          deadline?: string | null
+          id?: string
+          instructions?: string | null
+          job_id?: string | null
+          max_retakes?: number | null
+          status?: string | null
+          think_time_seconds?: number | null
+          title: string
+        }
+        Update: {
+          answer_time_seconds?: number | null
+          created_at?: string | null
+          created_by?: string
+          deadline?: string | null
+          id?: string
+          instructions?: string | null
+          job_id?: string | null
+          max_retakes?: number | null
+          status?: string | null
+          think_time_seconds?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_interviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vouches: {
         Row: {
