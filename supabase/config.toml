@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.parse-resume]
 verify_jwt = false
+
+[functions.moderate-review]
+verify_jwt = false
