@@ -18,7 +18,7 @@ import { ClientPlugChat } from '@/components/clients/ClientPlugChat';
 import { ContactDetailSheet } from '@/components/clients/ContactDetailSheet';
 import {
   Building2, Clock, Users, DollarSign, TrendingUp, FileText, Upload, Plus, Loader2, CheckCircle, Mail, Phone, Linkedin,
-  Calendar, MessageSquare, Briefcase, FolderOpen, Sparkles, ExternalLink, BarChart3, Target, Presentation, User, ChevronRight
+  Calendar, MessageSquare, Briefcase, FolderOpen, Sparkles, ExternalLink, BarChart3, Target, Presentation, User, ChevronRight, CalendarPlus
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -212,6 +212,32 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] }),
+  });
+
+  const addToCalendarMutation = useMutation({
+    mutationFn: async (task: any) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      const dueDate = task.due_date ? new Date(task.due_date) : null;
+      const { error } = await supabase.from('schedule_tasks' as any).insert({
+        user_id: user.id,
+        title: task.title,
+        description: task.description || null,
+        due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
+        due_time: dueDate ? format(dueDate, 'HH:mm') : '09:00',
+        priority: task.priority || 'medium',
+        task_type: 'task',
+        is_completed: false,
+        source: 'crm_activity',
+        source_table: 'client_tasks',
+        related_job: company?.name || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(isRTL ? 'נוסף ליומן!' : 'Added to calendar!');
+      queryClient.invalidateQueries({ queryKey: ['schedule-tasks'] });
+    },
+    onError: () => toast.error(isRTL ? 'שגיאה בהוספה ליומן' : 'Error adding to calendar'),
   });
 
   const addTimelineMutation = useMutation({
@@ -734,6 +760,15 @@ export function ClientProfilePage({ companyId, onBack }: ClientProfilePageProps)
                   </div>
                   <Badge variant={task.priority === 'urgent' ? 'destructive' : task.priority === 'high' ? 'default' : 'secondary'} className="text-xs shrink-0">{task.priority}</Badge>
                   {(task.source === 'ai_suggested' || task.source === 'automation') && <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />}
+                  <Button
+                    variant="ghost" size="sm"
+                    className="h-7 px-2 text-[10px] gap-1 text-muted-foreground hover:text-primary shrink-0"
+                    title={isRTL ? 'הוסף ליומן' : 'Add to Calendar'}
+                    onClick={() => addToCalendarMutation.mutate(task)}
+                    disabled={addToCalendarMutation.isPending}
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               ))}
             </div>

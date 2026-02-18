@@ -10,14 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Mail, Phone, Linkedin, Calendar, MessageSquare, Briefcase, Plus, Clock,
-  CheckCircle, Video, MapPin, User, Bell, Trash2, AlertCircle
+  CheckCircle, Video, MapPin, User, Bell, Trash2, AlertCircle, CalendarPlus, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 
 interface Contact {
   id: string;
@@ -49,6 +50,16 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '', event_date: '' });
   const [newReminder, setNewReminder] = useState({ title: '', description: '', remind_at: '', reminder_type: 'both' });
+
+  // "Create task from activity" inline mini-form
+  const [lastAddedActivity, setLastAddedActivity] = useState<{ id: string; title: string; type: string } | null>(null);
+  const [showCreateTaskFromActivity, setShowCreateTaskFromActivity] = useState(false);
+  const [taskFromActivity, setTaskFromActivity] = useState({
+    title: '',
+    due_date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    due_time: '09:00',
+    priority: 'high',
+  });
 
   // Fetch contact's conversations & meetings from timeline
   const { data: contactTimeline = [] } = useQuery({
@@ -115,15 +126,42 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
     enabled: !!contact?.id && showLinkProject,
   });
 
+  // "Create task from activity" mutation
+  const createTaskFromActivityMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id || !lastAddedActivity) throw new Error('Missing data');
+      const { error } = await supabase.from('schedule_tasks' as any).insert({
+        user_id: user.id,
+        title: taskFromActivity.title,
+        due_date: taskFromActivity.due_date,
+        due_time: taskFromActivity.due_time,
+        priority: taskFromActivity.priority,
+        task_type: lastAddedActivity.type === 'meeting' ? 'meeting' : 'followup',
+        is_completed: false,
+        source: 'crm_activity',
+        source_id: lastAddedActivity.id,
+        source_table: 'client_timeline',
+        external_attendees: contact?.email ? [{ name: contact.full_name, email: contact.email }] : [],
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(isRTL ? 'משימה נוצרה ביומן!' : 'Task added to calendar!');
+      setShowCreateTaskFromActivity(false);
+      setLastAddedActivity(null);
+      queryClient.invalidateQueries({ queryKey: ['schedule-tasks'] });
+    },
+  });
+
   // Add activity for this contact
   const addActivityMutation = useMutation({
     mutationFn: async (event: typeof newEvent) => {
       if (!user?.id || !contact?.id) throw new Error('Missing data');
       const eventDate = event.event_date || new Date().toISOString();
-      const { error } = await supabase.from('client_timeline').insert({
+      const { data: inserted, error } = await supabase.from('client_timeline').insert({
         event_type: event.event_type, title: event.title, description: event.description, event_date: eventDate,
         company_id: companyId, recruiter_id: user.id, contact_id: contact.id,
-      });
+      }).select('id').single();
       if (error) throw error;
       await supabase.from('companies').update({ last_contact_at: new Date().toISOString() }).eq('id', companyId);
       if (event.event_type === 'meeting') {
@@ -134,14 +172,26 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
           due_date: new Date(Date.now() + 3 * 86400000).toISOString(),
         });
       }
+      return { id: inserted?.id, title: event.title, type: event.event_type };
     },
-    onSuccess: () => {
+    onSuccess: (returned) => {
       queryClient.invalidateQueries({ queryKey: ['contact-timeline', contact?.id] });
       queryClient.invalidateQueries({ queryKey: ['client-timeline', companyId] });
       queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddActivity(false);
       setNewEvent({ event_type: 'call', title: '', description: '', event_date: '' });
       toast.success(isRTL ? 'פעילות נוספה' : 'Activity added');
+      // Show "create task from activity" CTA
+      if (returned?.id) {
+        setLastAddedActivity(returned);
+        setTaskFromActivity({
+          title: isRTL ? `פולואפ: ${returned.title}` : `Follow up: ${returned.title}`,
+          due_date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+          due_time: '09:00',
+          priority: returned.type === 'meeting' ? 'high' : 'medium',
+        });
+        setShowCreateTaskFromActivity(true);
+      }
     },
   });
 
@@ -516,7 +566,53 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* "Create Task from Activity" inline CTA */}
+        {showCreateTaskFromActivity && lastAddedActivity && (
+          <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-50 bg-card border border-primary/40 rounded-xl shadow-xl p-4 space-y-3" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CalendarPlus className="w-4 h-4 text-primary shrink-0" />
+                <p className="text-sm font-semibold">{isRTL ? '✅ פעילות נוספה — צור משימה?' : '✅ Activity logged — Create a task?'}</p>
+              </div>
+              <button onClick={() => { setShowCreateTaskFromActivity(false); setLastAddedActivity(null); }} className="text-muted-foreground hover:text-foreground shrink-0">
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              <Input
+                value={taskFromActivity.title}
+                onChange={(e) => setTaskFromActivity(p => ({ ...p, title: e.target.value }))}
+                placeholder={isRTL ? 'כותרת המשימה...' : 'Task title...'}
+                className="h-8 text-sm"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" value={taskFromActivity.due_date} onChange={(e) => setTaskFromActivity(p => ({ ...p, due_date: e.target.value }))} className="h-8 text-xs" />
+                <Input type="time" value={taskFromActivity.due_time} onChange={(e) => setTaskFromActivity(p => ({ ...p, due_time: e.target.value }))} className="h-8 text-xs" />
+              </div>
+              <Select value={taskFromActivity.priority} onValueChange={(v) => setTaskFromActivity(p => ({ ...p, priority: v }))}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">{isRTL ? 'נמוכה' : 'Low'}</SelectItem>
+                  <SelectItem value="medium">{isRTL ? 'בינונית' : 'Medium'}</SelectItem>
+                  <SelectItem value="high">{isRTL ? 'גבוהה' : 'High'}</SelectItem>
+                  <SelectItem value="urgent">{isRTL ? 'דחוף' : 'Urgent'}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => createTaskFromActivityMutation.mutate()} disabled={!taskFromActivity.title.trim() || createTaskFromActivityMutation.isPending}>
+                <CalendarPlus className="w-3.5 h-3.5" />
+                {isRTL ? '+ צור משימה ביומן' : '+ Add to Calendar'}
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs" onClick={() => { setShowCreateTaskFromActivity(false); setLastAddedActivity(null); }}>
+                {isRTL ? 'בסדר' : 'Dismiss'}
+              </Button>
+            </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
 }
+
