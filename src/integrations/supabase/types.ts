@@ -2722,6 +2722,54 @@ export type Database = {
           },
         ]
       }
+      schedule_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          id: string
+          is_completed: boolean
+          priority: string
+          related_candidate: string | null
+          related_job: string | null
+          task_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: string
+          related_candidate?: string | null
+          related_job?: string | null
+          task_type?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          id?: string
+          is_completed?: boolean
+          priority?: string
+          related_candidate?: string | null
+          related_job?: string | null
+          task_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       scorecard_templates: {
         Row: {
           created_at: string | null
