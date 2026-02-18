@@ -21,7 +21,8 @@ import {
   Phone,
   MessageSquare,
   User,
-  Download
+  Download,
+  Users
 } from 'lucide-react';
 import {
   Sheet,
@@ -49,6 +50,7 @@ import { toast } from 'sonner';
 import { InterviewScheduler } from './InterviewScheduler';
 import { HomeAssignmentTab } from './HomeAssignmentTab';
 import { ApplicationPlugChat } from './ApplicationPlugChat';
+import { TeamNotesTab } from './TeamNotesTab';
 import { StageProgressBar } from './StageProgressBar';
 import MatchScoreCircle from './MatchScoreCircle';
 import { CandidateVouchBadge } from '@/components/vouch/CandidateVouchBadge';
@@ -508,9 +510,9 @@ export function ApplicationDetailsSheet({
 
           <Separator />
 
-          {/* Tabs for Status, Interviews, Home Assignment, Plug */}
+          {/* Tabs for Status, Interviews, Home Assignment, Team Notes, Plug */}
           <Tabs defaultValue="status" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={`grid w-full ${isRecruiter ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <TabsTrigger value="status" className="text-xs">
                 {isRTL ? 'סטטוס' : 'Status'}
               </TabsTrigger>
@@ -522,6 +524,12 @@ export function ApplicationDetailsSheet({
                 <FileText className="h-3 w-3 mr-1" />
                 {isRTL ? 'מטלה' : 'Assignment'}
               </TabsTrigger>
+              {isRecruiter && (
+                <TabsTrigger value="team" className="text-xs">
+                  <Users className="h-3 w-3 mr-1" />
+                  {isRTL ? 'צוות' : 'Team'}
+                </TabsTrigger>
+              )}
               <TabsTrigger value="plug" className="text-xs">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Plug
@@ -566,6 +574,15 @@ export function ApplicationDetailsSheet({
             <TabsContent value="assignment" className="mt-4">
               <HomeAssignmentTab applicationId={application.id} />
             </TabsContent>
+
+            {isRecruiter && (
+              <TabsContent value="team" className="mt-4">
+                <TeamNotesTab
+                  applicationId={application.id}
+                  jobId={job?.id || ''}
+                />
+              </TabsContent>
+            )}
 
             <TabsContent value="plug" className="mt-4">
               <ApplicationPlugChat 
