@@ -52,6 +52,7 @@ import { ClientProfilePage } from '@/components/clients/ClientProfilePage';
 import { MissionBoard } from '@/components/missions/MissionBoard';
 import { CreateMissionForm } from '@/components/missions/CreateMissionForm';
 import { MyMissions } from '@/components/missions/MyMissions';
+import { HRToolsHub } from '@/components/hr-tools/HRToolsHub';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -594,6 +595,8 @@ export default function Dashboard() {
         );
       case 'schedule':
         return withBackButton(<ScheduleCalendar />);
+      case 'hr-tools':
+        return withBackButton(<HRToolsHub />);
         return renderOverviewContent();
     }
   };
