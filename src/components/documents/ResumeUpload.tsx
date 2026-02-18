@@ -4,7 +4,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, FileText, Trash2, Download, RefreshCw, CheckCircle, Sparkles, Brain } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Upload, FileText, Trash2, Download, RefreshCw, CheckCircle, Sparkles, Brain, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Progress } from '@/components/ui/progress';
@@ -44,6 +45,9 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [parsedModalOpen, setParsedModalOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadSuccessTip, setShowUploadSuccessTip] = useState(false);
 
@@ -395,16 +399,25 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
                   {new Date(existingResume.created_at).toLocaleDateString(isRTL ? 'he-IL' : 'en-US')}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={async () => {
+                  setIsParsing(true);
+                  try {
+                    const { data: signedData } = await supabase.storage.from('resumes').createSignedUrl(existingResume.file_path, 300);
+                    const { data, error } = await supabase.functions.invoke('parse-resume', { body: { resumeUrl: signedData?.signedUrl } });
+                    if (error) throw error;
+                    setParsedData(data?.data);
+                    setParsedModalOpen(true);
+                  } catch { toast.error(isRTL ? 'שגיאה בחילוץ נתונים' : 'Failed to extract data'); }
+                  finally { setIsParsing(false); }
+                }} disabled={isParsing} className="gap-1.5 text-primary border-primary/30">
+                  {isParsing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                  {isRTL ? 'חלץ נתונים' : 'Extract Data'}
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => deleteMutation.mutate()}
-                  disabled={deleteMutation.isPending}
-                >
+                <Button variant="outline" size="sm" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
                   <Trash2 className="w-4 h-4 text-destructive" />
                 </Button>
               </div>
@@ -590,6 +603,40 @@ export function ResumeUpload({ onSuccess, compact = false }: ResumeUploadProps) 
           autoHide={20000}
         />
       )}
+
+      {/* Parsed Data Modal */}
+      <Dialog open={parsedModalOpen} onOpenChange={setParsedModalOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-primary" />
+              {isRTL ? 'נתונים שחולצו מהקו"ח' : 'Extracted Resume Data'}
+            </DialogTitle>
+          </DialogHeader>
+          {parsedData && (
+            <div className="space-y-3 text-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+              {parsedData.full_name && <div><span className="font-medium text-muted-foreground">{isRTL ? 'שם: ' : 'Name: '}</span>{parsedData.full_name}</div>}
+              {parsedData.title && <div><span className="font-medium text-muted-foreground">{isRTL ? 'תפקיד: ' : 'Title: '}</span>{parsedData.title}</div>}
+              {parsedData.email && <div><span className="font-medium text-muted-foreground">{isRTL ? 'אימייל: ' : 'Email: '}</span>{parsedData.email}</div>}
+              {parsedData.skills?.length > 0 && <div><span className="font-medium text-muted-foreground">{isRTL ? 'כישורים: ' : 'Skills: '}</span>{parsedData.skills.join(', ')}</div>}
+              {parsedData.experience?.length > 0 && (
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">{isRTL ? 'ניסיון:' : 'Experience:'}</p>
+                  {parsedData.experience.slice(0, 3).map((e: any, i: number) => (
+                    <div key={i} className="ps-3 border-s-2 border-primary/30 mb-2">
+                      <p className="font-medium">{e.role} @ {e.company}</p>
+                      <p className="text-muted-foreground text-xs">{e.start_date} – {e.end_date}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button className="w-full mt-2" onClick={() => setParsedModalOpen(false)}>
+                {isRTL ? 'סגור' : 'Close'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

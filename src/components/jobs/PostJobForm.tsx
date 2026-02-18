@@ -24,6 +24,7 @@ import {
   getRolesByField 
 } from '@/lib/job-taxonomy';
 import { formatSalaryRange, monthlyEquivalent, CURRENCY_SYMBOLS } from '@/lib/salary-utils';
+import { KnockoutQuestionsSection, type KnockoutQuestion } from './KnockoutQuestionsSection';
 
 const JOB_TYPES = [
   { value: 'full-time', labelEn: 'Full-time', labelHe: 'משרה מלאה' },
@@ -65,6 +66,7 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
   const [jobType, setJobType] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [hybridOfficeDays, setHybridOfficeDays] = useState(3);
+  const [knockoutQuestions, setKnockoutQuestions] = useState<KnockoutQuestion[]>([]);
 
   // Structured salary
   const [salaryMin, setSalaryMin] = useState('');
@@ -159,6 +161,24 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
       } as any);
 
       if (error) throw error;
+
+      // Save knockout questions if any
+      if (knockoutQuestions.length > 0) {
+        const { data: newJob } = await supabase.from('jobs').select('id').eq('created_by', user.id).order('created_at', { ascending: false }).limit(1).single();
+        if (newJob) {
+          await supabase.from('knockout_questions').insert(
+            knockoutQuestions
+              .filter(q => q.question_text.trim())
+              .map((q, i) => ({
+                job_id: newJob.id,
+                question_text: q.question_text,
+                question_order: i + 1,
+                is_required: q.is_required,
+                correct_answer: q.correct_answer,
+              })) as any
+          );
+        }
+      }
     },
     onSuccess: () => {
       toast.success(isHebrew ? 'המשרה פורסמה בהצלחה!' : 'Job posted successfully!');
@@ -356,6 +376,13 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
             <Label>{isHebrew ? 'דרישות' : 'Requirements'}</Label>
             <Textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} placeholder={isHebrew ? 'כישורים, ניסיון, והסמכות נדרשות...' : 'Skills, experience, and qualifications required...'} className="min-h-[100px]" />
           </div>
+
+          {/* Knockout Questions */}
+          <KnockoutQuestionsSection
+            questions={knockoutQuestions}
+            onChange={setKnockoutQuestions}
+            jobTitle={title}
+          />
 
           {/* Submit */}
           <Button type="submit" disabled={postMutation.isPending} className="w-full gap-2">
