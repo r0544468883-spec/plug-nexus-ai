@@ -1,137 +1,187 @@
 
-# Plan: Photo Upload in Profile + Mission Board Marketplace
+# Daily CRM Calendar — Hourly View with Activity-Linked Tasks
 
-## Part A: Photo Upload in My Profile
+## What We're Building
 
-Currently, only job seekers see the `PersonalCardEditor` (which includes `PhotoUpload`) on the Profile page. For HR/recruiter roles, there's no photo upload option.
-
-### Changes:
-1. **`src/pages/Profile.tsx`** - Add `PhotoUpload` component for all roles (not just job seekers). Place it at the top of the profile page for non-job-seeker roles inside a Card with the user's name, email, and role badge.
-
-2. **`src/components/settings/ProfileSettings.tsx`** - Replace the non-functional "Change Photo" button with the actual `PhotoUpload` component that uploads to the existing `avatars` bucket.
-
-No database changes needed -- the `avatars` bucket already exists and is public, and `profiles.avatar_url` column already exists.
+A **full daily CRM calendar** (like HubSpot / Salesforce daily view) that shows tasks by time slots, with deep integration into CRM activity logs (conversations, meetings, calls). When you log any activity in the CRM, you can instantly create a linked follow-up task that appears in the calendar.
 
 ---
 
-## Part B: Mission Board (Tender Marketplace)
+## Current State Analysis
 
-A competitive marketplace where Companies post recruitment "Missions" and Hunters (freelance/in-house HR) bid to execute them.
+**Existing tables:**
+- `schedule_tasks` — General tasks (user_id, title, due_date, due_time, task_type, priority). Currently stores only text references to candidates/jobs (not FK).
+- `client_tasks` — CRM tasks per company (recruiter_id, company_id, due_date).
+- `client_timeline` — CRM activity log (meetings, calls, emails per contact/company).
+- `client_reminders` — Contact-level reminders.
 
-### Database Tables (new migration):
-
-**`missions`** - The tender/mission postings
-- `id`, `company_id` (uuid, FK companies), `created_by` (uuid), `job_id` (uuid, FK jobs, nullable)
-- `title`, `description` (text)
-- `commission_model` (text: 'percentage' | 'flat_fee')
-- `commission_value` (numeric)
-- `scope` (text: 'exclusive' | 'open')
-- `urgency` (text: 'standard' | 'high' | 'critical')
-- `min_reliability_score` (integer, nullable)
-- `required_specializations` (text[], nullable)
-- `status` (text: 'open' | 'in_progress' | 'completed' | 'cancelled', default 'open')
-- `created_at`, `updated_at`
-- RLS: Authenticated users can view open missions; creators can manage their own
-
-**`mission_bids`** - Hunter bids on missions
-- `id`, `mission_id` (uuid, FK missions), `hunter_id` (uuid)
-- `pitch` (text) - why the hunter is best fit
-- `verified_candidates_count` (integer)
-- `vouched_candidates_count` (integer)
-- `status` (text: 'pending' | 'reviewing' | 'accepted' | 'declined', default 'pending')
-- `created_at`, `updated_at`
-- RLS: Hunters manage own bids; mission creators can view/update bids on their missions
-
-### Frontend Components:
-
-1. **`src/components/missions/MissionBoard.tsx`** - Main marketplace view
-   - Card-based feed of all open missions
-   - Filters: Commission, Industry, Urgency, Company SLA
-   - "Best Match" AI badge (based on hunter's existing candidate pool)
-   - Stock-exchange-inspired clean UI with urgency color coding
-
-2. **`src/components/missions/MissionCard.tsx`** - Individual mission card
-   - Company logo + name, title, commission info
-   - Urgency badge (Standard=blue, High=orange, Critical=red)
-   - Scope badge (Exclusive/Open), bid count
-   - "Bid on Mission" CTA button
-
-3. **`src/components/missions/CreateMissionForm.tsx`** - For companies to post missions
-   - Form with all fields: title, description, link to job, commission model, scope, urgency, targeting
-   - Preview before posting
-
-4. **`src/components/missions/BidDialog.tsx`** - Hunter bid submission
-   - Pitch textarea
-   - Auto-calculated "Talent Snapshot" showing verified/vouched candidates from hunter's pool
-   - Status tracking after submission
-
-5. **`src/components/missions/MissionDetailSheet.tsx`** - Expanded mission view
-   - Full description, company info, all bids (for creator), bid status (for hunter)
-
-6. **`src/components/missions/MyMissions.tsx`** - Dashboard for mission creators
-   - List of posted missions with bid counts and statuses
-
-### Post-Award Automation (when a bid is accepted):
-
-- **CRM Integration**: Auto-create company profile in hunter's "My Clients" hub (insert into `companies` + link)
-- **Success Lounge**: Create a private conversation between hunter and company contact (insert into `conversations`)
-- **Contract Vault**: Generate a placeholder document in the company's vault (insert into `documents` with doc_type='contract')
-- **Timeline Entry**: Log "Mission Awarded" in the client timeline
-
-### Navigation:
-- Add "Mission Board" to the sidebar for HR roles in `DashboardLayout.tsx` (with a Target/Crosshair icon)
-- Add `'missions' | 'create-mission' | 'my-missions'` to `DashboardSection` type
-- Route handling in `Dashboard.tsx`
-
-### Notifications (preparation):
-- When a new mission matches a hunter's specialization, trigger a push notification
-- When a hunter bids on a mission, notify the company
-- Uses existing `push-notifications` edge function infrastructure
+**Gap:** The three separate task/reminder tables are not unified into a single calendar view. There's no hourly day view, no attendee/participant system, and no "create task from activity" flow.
 
 ---
 
-## Technical Details
+## Database Changes (Migration)
 
-### Migration SQL highlights:
-```text
-CREATE TABLE missions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id uuid REFERENCES companies(id),
-  created_by uuid NOT NULL,
-  job_id uuid REFERENCES jobs(id),
-  title text NOT NULL,
-  description text,
-  commission_model text NOT NULL DEFAULT 'percentage',
-  commission_value numeric NOT NULL DEFAULT 0,
-  scope text NOT NULL DEFAULT 'open',
-  urgency text NOT NULL DEFAULT 'standard',
-  min_reliability_score integer,
-  required_specializations text[],
-  status text NOT NULL DEFAULT 'open',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+### 1. Extend `schedule_tasks` with new columns
 
-CREATE TABLE mission_bids (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  mission_id uuid REFERENCES missions(id) ON DELETE CASCADE,
-  hunter_id uuid NOT NULL,
-  pitch text NOT NULL,
-  verified_candidates_count integer DEFAULT 0,
-  vouched_candidates_count integer DEFAULT 0,
-  status text NOT NULL DEFAULT 'pending',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+```sql
+ALTER TABLE schedule_tasks
+  ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual',
+  -- 'manual' | 'crm_activity' | 'crm_reminder' | 'interview'
+  ADD COLUMN IF NOT EXISTS source_id UUID,
+  -- FK to the originating record (client_timeline.id, client_reminders.id, etc.)
+  ADD COLUMN IF NOT EXISTS source_table TEXT,
+  -- 'client_timeline' | 'client_reminders' | 'applications'
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS meeting_link TEXT,
+  ADD COLUMN IF NOT EXISTS assigned_to UUID[] DEFAULT '{}',
+  -- Array of user_ids (internal users)
+  ADD COLUMN IF NOT EXISTS external_attendees JSONB DEFAULT '[]';
+  -- [{"name": "דנה כהן", "email": "dana@acme.com"}]
 ```
 
-RLS policies will ensure:
-- All authenticated users can view open missions
-- Only company roles / mission creators can create/edit missions
-- Hunters can create/view their own bids
-- Mission creators can view and update bid statuses on their missions
+### 2. Add `linked_task_id` to `client_timeline`
 
-### File summary:
-- **Modified**: `Profile.tsx`, `ProfileSettings.tsx`, `DashboardLayout.tsx`, `Dashboard.tsx`
-- **New**: `MissionBoard.tsx`, `MissionCard.tsx`, `CreateMissionForm.tsx`, `BidDialog.tsx`, `MissionDetailSheet.tsx`, `MyMissions.tsx`
-- **New migration**: missions + mission_bids tables with RLS
+```sql
+ALTER TABLE client_timeline
+  ADD COLUMN IF NOT EXISTS linked_task_id UUID REFERENCES schedule_tasks(id) ON DELETE SET NULL;
+```
+
+This creates a bidirectional link: activity → task and task → activity.
+
+---
+
+## Component Changes
+
+### A. Redesign `ScheduleCalendar.tsx` — Add Daily Hourly View
+
+Add a third view mode: **`'day'`** (in addition to existing `'calendar'` and `'list'`).
+
+**Daily View Layout (CRM style):**
+
+```text
++-------------------------------+
+| « Mon 18/02  [Day] [Week] [Month] [List] |
++----------+--------------------+
+|  08:00   |  [empty]           |
+|  09:00   |  🎤 ראיון — דנה כהן  |  ← colored block, height = duration
+|  10:00   |  ───               |
+|  11:00   |  👥 פגישה — Wix     |
+|  12:00   |  [empty]           |
+|  ...     |                    |
++----------+--------------------+
+```
+
+- Hours from 07:00 to 22:00 (scrollable)
+- Each task block: colored by type, shows title + linked entity (company/candidate)
+- Click a block → drawer/popover with full details + "Edit" / "Complete" / "Delete"
+- Click an empty slot → Quick-create task with that time pre-filled
+- Tasks **without a time** appear in an "All Day" row at the top
+- **Aggregate from all sources:** pulls from `schedule_tasks` (which now includes CRM-linked tasks and general tasks)
+
+### B. Update Add-Task Dialog in `ScheduleCalendar.tsx`
+
+Add new optional fields to the create dialog:
+- **מיקום** (location text input)
+- **לינק לפגישה** (meeting link)
+- **משתתפים פנימיים** (multi-select from profiles — internal users)
+- **משתתפים חיצוניים** (repeatable row: שם + מייל)
+
+When external attendees are added and the task is saved → option: **"שלח הזמנה במייל"** — sends a simple invitation email via the existing `process-reminders` edge function or a new one.
+
+### C. "Create Task from Activity" — Update `ContactDetailSheet.tsx`
+
+After successfully logging any activity (call, meeting, email) in the CRM, show a bottom action strip:
+
+```text
+✅ פגישה נוספה בהצלחה
+[ + צור משימה מהפגישה הזו ]   [ בסדר ]
+```
+
+Clicking **"+ צור משימה"** opens an inline mini-form (collapsed):
+- כותרת (auto-filled: `"פולואפ: {activity.title}"`)
+- תאריך + שעה (default: tomorrow 09:00)
+- עדיפות (default: high for meetings)
+- משתתפים חיצוניים (pre-filled from contact's email)
+- Submit → inserts into `schedule_tasks` with `source='crm_activity'` and `source_id=activity.id`
+
+Also: the existing `addActivityMutation` in `ContactDetailSheet.tsx` auto-creates a `client_tasks` follow-up for meetings — we'll keep that AND also insert into `schedule_tasks` so it appears in the unified calendar.
+
+### D. Update `ClientProfilePage.tsx` — "Add to Calendar" on Tasks
+
+In the existing task list (Timeline/Tasks tab), each `client_task` will show a small **"📅 הוסף ליומן"** button. Clicking it inserts the task into `schedule_tasks` with source linking.
+
+---
+
+## Data Flow Diagram
+
+```text
+ContactDetailSheet (log meeting/call)
+       │
+       ├─→ client_timeline (activity record)
+       │
+       └─→ [optional] schedule_tasks (linked task, source='crm_activity')
+                              │
+                              └─→ Appears in ScheduleCalendar Daily View
+                                  alongside ALL other tasks
+```
+
+---
+
+## Files to Create/Edit
+
+| File | Action | What Changes |
+|---|---|---|
+| `supabase/migrations/XXXX_calendar_upgrade.sql` | **Create** | Adds columns to `schedule_tasks` and `client_timeline` |
+| `src/components/dashboard/ScheduleCalendar.tsx` | **Edit** | Add daily hourly view, attendees fields in create dialog |
+| `src/components/clients/ContactDetailSheet.tsx` | **Edit** | Add "create task from activity" CTA after successful activity log |
+| `src/components/clients/ClientProfilePage.tsx` | **Edit** | "Add to calendar" button on client_tasks, sync to schedule_tasks |
+
+---
+
+## Implementation Details
+
+### Daily Hourly View — Key Logic
+
+```tsx
+// Hours grid: 07–22
+const hours = Array.from({ length: 16 }, (_, i) => i + 7); // [7, 8, ..., 22]
+
+// Place tasks in time slots
+const tasksByHour = tasks.reduce((acc, task) => {
+  const hour = task.due_time ? parseInt(task.due_time.split(':')[0]) : null;
+  if (hour !== null) {
+    acc[hour] = [...(acc[hour] || []), task];
+  }
+  return acc;
+}, {});
+
+// All-day tasks (no time set)
+const allDayTasks = tasks.filter(t => !t.due_time);
+```
+
+### Email Invitation for External Attendees
+
+When `external_attendees` array is non-empty on task save, call `supabase.functions.invoke('process-reminders', ...)` or a dedicated `send-calendar-invite` edge function that:
+- Sends a plain-text email via Resend (using existing `RESEND_API_KEY` if configured)
+- Email contains: event title, date/time, location/link, organizer name
+- Falls back gracefully if `RESEND_API_KEY` is not set (just saves the task, no email error)
+
+---
+
+## UX Details
+
+- **RTL support**: daily grid has times on the right, tasks on the left for Hebrew
+- **Colors**: same type-color system as current (meeting=orange, interview=purple, etc.)
+- **Scroll**: daily view scrolls to current hour automatically (or to first task of the day)
+- **Mobile**: daily view stacks nicely — hour labels above task blocks
+- **Empty state**: "לא נמצאו אירועים היום — לחץ על שעה כלשהי להוספת משימה"
+- **Navigation**: `[< יום קודם]` `[היום]` `[יום הבא >]` buttons in daily view header
+
+---
+
+## What Stays Unchanged
+
+- Existing monthly calendar grid view and list view — untouched
+- `client_tasks` table — continues to work as before
+- `client_reminders` — continues to work as before
+- All existing RLS policies remain intact
