@@ -372,7 +372,23 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
                 </button>
               </div>
 
-              <ScrollArea className="h-[calc(100%-60px)]">
+              {/* Start Guided Tour Button - right below header */}
+              {onStartTour && (
+                <div className="px-4 py-3 border-b border-border">
+                  <Button
+                    variant="default"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      setOpen(false);
+                      onStartTour();
+                    }}
+                  >
+                    🗺️ {isRTL ? 'התחל סיור מודרך' : 'Start Guided Tour'}
+                  </Button>
+                </div>
+              )}
+
+              <ScrollArea className={cn(onStartTour ? "h-[calc(100%-120px)]" : "h-[calc(100%-60px)]")}>
                 <div className="p-4 space-y-6">
 
                   {/* Progress */}
@@ -485,19 +501,6 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
                     </div>
                   </div>
 
-                  {/* Start Guided Tour Button */}
-                  {onStartTour && (
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => {
-                        setOpen(false);
-                        onStartTour();
-                      }}
-                    >
-                      🗺️ {isRTL ? 'התחל סיור מודרך' : 'Start Guided Tour'}
-                    </Button>
-                  )}
                 </div>
               </ScrollArea>
             </motion.div>
