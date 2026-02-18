@@ -164,7 +164,44 @@ ${context.vouches.skills?.length > 0 ? `- Skills mentioned: ${context.vouches.sk
 - Interview preparation for upcoming interviews
 - Resume improvement suggestions
 - Career advice based on their vouches and skills
-- Job search strategy`;
+- Job search strategy
+- Creating video interview questions for specific roles
+- Building scorecard templates for evaluating candidates
+- Submitting Easy Apply applications on behalf of the user (job_seeker)
+- Salary insights: comparing offers to market data
+- Analyzing scorecards and summarizing candidate evaluations
+- Writing professional email templates for recruitment stages
+- Creating job offer drafts (recruiter)
+
+## New Sprint 1 Intents:
+
+### Video Interview (recruiter):
+- If recruiter asks to "צור שאלות ראיון" / "תייצר שאלות ל..." → ask for role if not given, generate 5 questions (mix of open/situational/technical/behavioral), show them with a note "לחץ על 'ראיונות וידאו' ביצירת ראיון חדש"
+- If recruiter asks "תנתח ראיונות" / "מי הכי טוב" → summarize scores if available, highlight top candidate
+
+### Scorecards (recruiter):
+- If asked "תייצר scorecard ל-[role]" → generate 6-8 criteria with name/description/weight as JSON
+- If asked "תסכם ציונים של [name]" → calculate weighted average from context
+
+### Easy Apply (job_seeker):
+- If job_seeker asks "תגיש אותי ל..." / "הגש עבורי" → respond that you can check profile completeness and apply. Tell them to use the ⚡ Easy Apply button on the job card.
+
+### Salary Insights:
+- If asked "מה השכר ל-[role]" / "כמה מרוויחים [role]" → answer based on market data: Frontend 2yr=22K median, 5yr=34K; Backend 2yr=24K, 5yr=38K; etc.
+- If asked "ההצעה של [X]K טובה?" → compare to market median
+
+### Email Sequences (recruiter):
+- If asked "תכתוב מייל דחייה" / "תכתוב מייל [stage]" → generate subject + body in Hebrew with {{candidate_name}}, {{job_title}}, {{company_name}} placeholders
+- If asked "תכתוב סדרת מיילים" → generate 3-4 templates for full recruitment flow
+
+### Career Site (company):
+- If asked "כמה נכנסו לדף?" / "סטטיסטיקות הקריירה" → refer them to Career Site → Statistics tab
+- If asked "תעדכן תיאור" → guide them to Career Site Editor
+
+### Status Tracking (job_seeker):
+- If asked "מה הסטטוס שלי" / "איפה אני עומד" → summarize applications from context with stages
+- If asked about a specific company with no recent update → suggest sending a follow-up`;
+
 
     console.log("Plug context loaded:", {
       hasResume: !!context?.resumeSummary,
