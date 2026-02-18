@@ -479,7 +479,11 @@ export type Database = {
           cover_image_url: string | null
           created_at: string | null
           culture_text: string | null
+          custom_css: string | null
+          custom_domain: string | null
+          custom_font: string | null
           description: string | null
+          hide_plug_branding: boolean | null
           id: string
           is_published: boolean | null
           logo_url: string | null
@@ -498,7 +502,11 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string | null
           culture_text?: string | null
+          custom_css?: string | null
+          custom_domain?: string | null
+          custom_font?: string | null
           description?: string | null
+          hide_plug_branding?: boolean | null
           id?: string
           is_published?: boolean | null
           logo_url?: string | null
@@ -517,7 +525,11 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string | null
           culture_text?: string | null
+          custom_css?: string | null
+          custom_domain?: string | null
+          custom_font?: string | null
           description?: string | null
+          hide_plug_branding?: boolean | null
           id?: string
           is_published?: boolean | null
           logo_url?: string | null
@@ -2984,6 +2996,146 @@ export type Database = {
           },
         ]
       }
+      onboarding_instances: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          new_hire_id: string
+          start_date: string
+          status: string | null
+          template_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          new_hire_id: string
+          start_date?: string
+          status?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          new_hire_id?: string
+          start_date?: string
+          status?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_instances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_secure"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_new_hire_id_fkey"
+            columns: ["new_hire_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_new_hire_id_fkey"
+            columns: ["new_hire_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_secure"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "onboarding_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_task_progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          instance_id: string | null
+          is_completed: boolean | null
+          notes: string | null
+          task_index: number
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          instance_id?: string | null
+          is_completed?: boolean | null
+          notes?: string | null
+          task_index: number
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          instance_id?: string | null
+          is_completed?: boolean | null
+          notes?: string | null
+          task_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_task_progress_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_templates: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          name: string
+          tasks: Json
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          tasks?: Json
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          tasks?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "onboarding_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_secure"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           about_me: string | null
@@ -3940,6 +4092,95 @@ export type Database = {
           weight?: number
         }
         Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          event: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          sent_at: string | null
+          subscription_id: string | null
+        }
+        Insert: {
+          event: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          sent_at?: string | null
+          subscription_id?: string | null
+        }
+        Update: {
+          event?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          sent_at?: string | null
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_subscriptions: {
+        Row: {
+          created_at: string | null
+          events: string[]
+          fail_count: number | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          secret: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          events?: string[]
+          fail_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          secret?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          events?: string[]
+          fail_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          secret?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "webhook_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_secure"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       webinar_registrations: {
         Row: {
