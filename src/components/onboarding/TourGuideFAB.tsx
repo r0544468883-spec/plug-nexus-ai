@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Route, X, ChevronRight, Check } from 'lucide-react';
+import { Route, X, ChevronRight, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
   const isRTL = language === 'he';
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setOpen(true);
@@ -411,37 +412,55 @@ export function TourGuideFAB({ onNavigate, onStartTour }: TourGuideFABProps) {
                     </div>
                   </div>
 
-                  {/* Checklist */}
+                  {/* Checklist - collapsible */}
                   <div>
-                    <h3 className="font-semibold mb-3">{isRTL ? '✅ שלבים ראשונים:' : '✅ First steps:'}</h3>
-                    <div className="space-y-1.5">
-                      {checklist.map((item) => (
-                        <button
-                          key={item.key}
-                          onClick={() => {
-                            if (!item.done && item.section && onNavigate) {
-                              onNavigate(item.section);
-                              setOpen(false);
-                            }
-                          }}
-                          className={cn(
-                            'w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-start',
-                            item.done
-                              ? 'text-muted-foreground'
-                              : 'hover:bg-secondary/50 text-foreground cursor-pointer'
-                          )}
-                          disabled={item.done}
+                    <button
+                      onClick={() => setChecklistOpen(prev => !prev)}
+                      className="w-full flex items-center justify-between mb-2 hover:opacity-80 transition-opacity"
+                    >
+                      <h3 className="font-semibold">{isRTL ? '✅ שלבים ראשונים:' : '✅ First steps:'}</h3>
+                      <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform duration-200', checklistOpen && 'rotate-180')} />
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {checklistOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
                         >
-                          {item.done ? (
-                            <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                          ) : (
-                            <div className="w-4 h-4 rounded border border-border flex-shrink-0" />
-                          )}
-                          <span className={item.done ? 'line-through text-sm' : 'text-sm'}>{item.label}</span>
-                          {!item.done && <ChevronRight className="w-4 h-4 ms-auto text-muted-foreground" />}
-                        </button>
-                      ))}
-                    </div>
+                          <div className="space-y-1.5 pt-1">
+                            {checklist.map((item) => (
+                              <button
+                                key={item.key}
+                                onClick={() => {
+                                  if (!item.done && item.section && onNavigate) {
+                                    onNavigate(item.section);
+                                    setOpen(false);
+                                  }
+                                }}
+                                className={cn(
+                                  'w-full flex items-center gap-3 p-2.5 rounded-lg transition-colors text-start',
+                                  item.done
+                                    ? 'text-muted-foreground'
+                                    : 'hover:bg-secondary/50 text-foreground cursor-pointer'
+                                )}
+                                disabled={item.done}
+                              >
+                                {item.done ? (
+                                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                                ) : (
+                                  <div className="w-4 h-4 rounded border border-border flex-shrink-0" />
+                                )}
+                                <span className={item.done ? 'line-through text-sm' : 'text-sm'}>{item.label}</span>
+                                {!item.done && <ChevronRight className="w-4 h-4 ms-auto text-muted-foreground" />}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Tool Categories */}
