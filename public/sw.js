@@ -1,66 +1,46 @@
-// Service Worker for Push Notifications
-self.addEventListener('push', function(event) {
+const CACHE_NAME = 'plug-v2';
+const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS).catch(() => {}))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.url.includes('/rest/') || event.request.url.includes('/functions/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
+  );
+});
+
+self.addEventListener('push', (event) => {
   const options = {
     body: event.data ? event.data.text() : 'New notification',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     vibrate: [100, 50, 100],
-    data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
-    },
-    actions: [
-      {
-        action: 'explore',
-        title: 'View',
-      },
-      {
-        action: 'close',
-        title: 'Close',
-      },
-    ]
   };
-
-  event.waitUntil(
-    self.registration.showNotification('Plug', options)
-  );
+  event.waitUntil(self.registration.showNotification('PLUG', options));
 });
 
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/dashboard')
-    );
-  }
-});
-
-// Cache important resources
-const CACHE_NAME = 'plug-cache-v1';
-const urlsToCache = [
-  '/',
-  '/dashboard',
-];
-
-self.addEventListener('install', function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) {
-        return cache.addAll(urlsToCache);
-      })
-  );
-});
-
-self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
+  event.waitUntil(clients.openWindow('/'));
 });

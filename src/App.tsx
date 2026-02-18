@@ -16,6 +16,7 @@ import CVBuilderPage from "./pages/CVBuilder";
 import FuelUp from "./pages/FuelUp";
 import Credits from "./pages/Credits";
 import InterviewPrep from "./pages/InterviewPrep";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/fuel-up" element={<FuelUp />} />
                 <Route path="/credits" element={<Credits />} />
                 <Route path="/interview-prep" element={<InterviewPrep />} />
+                <Route path="/reports" element={<Reports />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
