@@ -573,6 +573,7 @@ export type Database = {
           event_date: string
           event_type: string
           id: string
+          linked_task_id: string | null
           metadata: Json | null
           recruiter_id: string
           title: string
@@ -585,6 +586,7 @@ export type Database = {
           event_date?: string
           event_type: string
           id?: string
+          linked_task_id?: string | null
           metadata?: Json | null
           recruiter_id: string
           title: string
@@ -597,6 +599,7 @@ export type Database = {
           event_date?: string
           event_type?: string
           id?: string
+          linked_task_id?: string | null
           metadata?: Json | null
           recruiter_id?: string
           title?: string
@@ -621,6 +624,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_timeline_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -2724,45 +2734,66 @@ export type Database = {
       }
       schedule_tasks: {
         Row: {
+          assigned_to: string[] | null
           created_at: string
           description: string | null
           due_date: string | null
           due_time: string | null
+          external_attendees: Json | null
           id: string
           is_completed: boolean
+          location: string | null
+          meeting_link: string | null
           priority: string
           related_candidate: string | null
           related_job: string | null
+          source: string | null
+          source_id: string | null
+          source_table: string | null
           task_type: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to?: string[] | null
           created_at?: string
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          external_attendees?: Json | null
           id?: string
           is_completed?: boolean
+          location?: string | null
+          meeting_link?: string | null
           priority?: string
           related_candidate?: string | null
           related_job?: string | null
+          source?: string | null
+          source_id?: string | null
+          source_table?: string | null
           task_type?: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to?: string[] | null
           created_at?: string
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          external_attendees?: Json | null
           id?: string
           is_completed?: boolean
+          location?: string | null
+          meeting_link?: string | null
           priority?: string
           related_candidate?: string | null
           related_job?: string | null
+          source?: string | null
+          source_id?: string | null
+          source_table?: string | null
           task_type?: string
           title?: string
           updated_at?: string
