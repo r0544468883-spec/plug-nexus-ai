@@ -57,46 +57,71 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Could not fetch page content' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Use AI to extract company info
-    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    console.log('Page content length:', pageContent.length);
+    console.log('Page content preview:', pageContent.substring(0, 500));
+
+    // Use AI to extract company info (via Lovable AI Gateway)
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
-        messages: [{
-          role: 'user',
-          content: `Extract company information from this webpage content. Return ONLY valid JSON (no markdown, no code blocks):
-{
-  "name": "Company Name",
-  "description": "Brief 2-3 sentence description",
-  "industry": "Industry name",
-  "tech_stack": ["tech1", "tech2"],
-  "lead_status": "active or lead or cold",
-  "logo_url": "URL if found"
-}
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a data extraction assistant. Always respond with valid JSON only. Never use markdown code blocks. Never add any explanation.',
+          },
+          {
+            role: 'user',
+            content: `Extract company information from the following webpage content and return a JSON object with these exact fields:
+- name: the company name (string)
+- description: 2-3 sentence company description (string)
+- industry: the industry/sector (string)
+- tech_stack: array of technologies mentioned (array of strings)
+- lead_status: "active" if actively hiring, "lead" if general info, "cold" if outdated (string)
+- logo_url: logo image URL if found (string or null)
 
-Rules:
-- lead_status: "active" if they're actively hiring or have open positions, "lead" if general company page, "cold" if outdated
-- tech_stack: programming languages, frameworks, tools mentioned
-- Be concise and accurate
+Return ONLY the JSON object. No markdown, no code fences, no explanation.
 
-Page content from ${formattedUrl}:
-${pageContent}`
-        }],
+Webpage URL: ${formattedUrl}
+Webpage content:
+${pageContent.substring(0, 20000)}`
+          }
+        ],
         temperature: 0.1,
-        max_tokens: 500,
+        max_tokens: 800,
       }),
     });
 
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || '';
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text();
+      console.error('AI API error:', aiResponse.status, errText);
+      throw new Error(`AI API failed: ${aiResponse.status}`);
+    }
 
-    // Parse JSON from response
+    const aiData = await aiResponse.json();
+    console.log('AI raw response:', JSON.stringify(aiData).substring(0, 500));
+    const content = aiData.choices?.[0]?.message?.content || '';
+    console.log('AI content:', content.substring(0, 500));
+
+    // Parse JSON from response — try direct parse first, then regex extraction
     let company: any = {};
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) company = JSON.parse(jsonMatch[0]);
-    } catch { console.error('Failed to parse AI response:', content); }
+      // First try direct JSON parse (works when response_format is json_object)
+      company = JSON.parse(content);
+    } catch {
+      try {
+        // Fallback: extract JSON from possible markdown wrapping
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          company = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e2) {
+        console.error('Failed to parse AI response:', content);
+      }
+    }
+
+    console.log('Extracted company:', JSON.stringify(company));
 
     return new Response(JSON.stringify({ company, source_url: formattedUrl }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
