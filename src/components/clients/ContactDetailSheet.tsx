@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Mail, Phone, Linkedin, Calendar, MessageSquare, Briefcase, Plus, Clock,
-  CheckCircle, Video, MapPin, User, Bell, Trash2, AlertCircle, CalendarPlus, ChevronDown, ChevronUp
+  CheckCircle, Video, MapPin, User, Bell, Trash2, AlertCircle, CalendarPlus, ChevronDown, UserPlus, X, Send
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 
@@ -48,8 +48,13 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [showLinkProject, setShowLinkProject] = useState(false);
   const [showAddReminder, setShowAddReminder] = useState(false);
-  const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '', event_date: '' });
+  const [newEvent, setNewEvent] = useState({ event_type: 'call', title: '', description: '', event_date: '', location: '', meeting_link: '' });
   const [newReminder, setNewReminder] = useState({ title: '', description: '', remind_at: '', reminder_type: 'both' });
+
+  // External attendees for meeting invitations
+  const [externalAttendees, setExternalAttendees] = useState<{ name: string; email: string }[]>([]);
+  const [newAttendee, setNewAttendee] = useState({ name: '', email: '' });
+  const [sendingInvites, setSendingInvites] = useState(false);
 
   // "Create task from activity" inline mini-form
   const [lastAddedActivity, setLastAddedActivity] = useState<{ id: string; title: string; type: string } | null>(null);
@@ -179,7 +184,8 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
       queryClient.invalidateQueries({ queryKey: ['client-timeline', companyId] });
       queryClient.invalidateQueries({ queryKey: ['client-tasks', companyId] });
       setShowAddActivity(false);
-      setNewEvent({ event_type: 'call', title: '', description: '', event_date: '' });
+      setNewEvent({ event_type: 'call', title: '', description: '', event_date: '', location: '', meeting_link: '' });
+      setExternalAttendees([]);
       toast.success(isRTL ? 'פעילות נוספה' : 'Activity added');
       // Show "create task from activity" CTA
       if (returned?.id) {
@@ -330,7 +336,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
 
           {/* Conversations Tab */}
           <TabsContent value="conversations" className="space-y-3 mt-3">
-            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'call', title: '', description: '', event_date: '' }); setShowAddActivity(true); }}>
+            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'call', title: '', description: '', event_date: '', location: '', meeting_link: '' }); setExternalAttendees([]); setShowAddActivity(true); }}>
               <Plus className="w-3.5 h-3.5" />{isRTL ? 'הוסף שיחה' : 'Log Conversation'}
             </Button>
             {conversations.length === 0 ? (
@@ -354,7 +360,7 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
 
           {/* Meetings Tab */}
           <TabsContent value="meetings" className="space-y-3 mt-3">
-            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'meeting', title: '', description: '', event_date: '' }); setShowAddActivity(true); }}>
+            <Button size="sm" className="gap-1.5 w-full" variant="outline" onClick={() => { setNewEvent({ event_type: 'meeting', title: '', description: '', event_date: '', location: '', meeting_link: '' }); setExternalAttendees([]); setShowAddActivity(true); }}>
               <Plus className="w-3.5 h-3.5" />{isRTL ? 'הוסף פגישה' : 'Log Meeting'}
             </Button>
             {meetings.length === 0 ? (
@@ -492,8 +498,8 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
         </Tabs>
 
         {/* Add Activity Dialog */}
-        <Dialog open={showAddActivity} onOpenChange={setShowAddActivity}>
-          <DialogContent>
+        <Dialog open={showAddActivity} onOpenChange={(open) => { setShowAddActivity(open); if (!open) setExternalAttendees([]); }}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{isRTL ? 'פעילות חדשה' : 'New Activity'}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <Select value={newEvent.event_type} onValueChange={(v) => setNewEvent(p => ({ ...p, event_type: v }))}>
@@ -512,12 +518,158 @@ export function ContactDetailSheet({ contact, companyId, companyName, open, onOp
                 <Input type="datetime-local" value={newEvent.event_date} onChange={(e) => setNewEvent(p => ({ ...p, event_date: e.target.value }))} />
               </div>
               <Textarea value={newEvent.description} onChange={(e) => setNewEvent(p => ({ ...p, description: e.target.value }))} placeholder={isRTL ? 'סיכום / תיאור' : 'Summary / Description'} rows={3} />
-              <Button onClick={() => addActivityMutation.mutate(newEvent)} disabled={!newEvent.title.trim()} className="w-full">
-                {isRTL ? 'הוסף' : 'Add'}
+
+              {/* Meeting-specific fields */}
+              {(newEvent.event_type === 'meeting' || newEvent.event_type === 'video_call') && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                      {isRTL ? 'מיקום' : 'Location'}
+                    </label>
+                    <Input
+                      value={newEvent.location}
+                      onChange={(e) => setNewEvent(p => ({ ...p, location: e.target.value }))}
+                      placeholder={isRTL ? 'כתובת / שם המקום' : 'Address or place name'}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                      <Video className="w-3.5 h-3.5 text-muted-foreground" />
+                      {isRTL ? 'לינק לפגישה' : 'Meeting Link'}
+                    </label>
+                    <Input
+                      value={newEvent.meeting_link}
+                      onChange={(e) => setNewEvent(p => ({ ...p, meeting_link: e.target.value }))}
+                      placeholder="https://meet.google.com/..."
+                      type="url"
+                    />
+                  </div>
+
+                  {/* External attendees */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <UserPlus className="w-3.5 h-3.5 text-muted-foreground" />
+                      {isRTL ? 'משתתפים חיצוניים' : 'External Attendees'}
+                    </label>
+
+                    {externalAttendees.length > 0 && (
+                      <div className="space-y-1.5">
+                        {externalAttendees.map((att, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2">
+                            <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-medium flex-1 truncate">{att.name}</span>
+                            <span className="text-xs text-muted-foreground truncate">{att.email}</span>
+                            <button
+                              onClick={() => setExternalAttendees(prev => prev.filter((_, idx) => idx !== i))}
+                              className="text-muted-foreground hover:text-destructive shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Input
+                        value={newAttendee.name}
+                        onChange={(e) => setNewAttendee(p => ({ ...p, name: e.target.value }))}
+                        placeholder={isRTL ? 'שם' : 'Name'}
+                        className="h-8 text-sm"
+                      />
+                      <Input
+                        value={newAttendee.email}
+                        onChange={(e) => setNewAttendee(p => ({ ...p, email: e.target.value }))}
+                        placeholder={isRTL ? 'מייל' : 'Email'}
+                        type="email"
+                        className="h-8 text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2 shrink-0"
+                        disabled={!newAttendee.name.trim() || !newAttendee.email.includes('@')}
+                        onClick={() => {
+                          setExternalAttendees(prev => [...prev, { ...newAttendee }]);
+                          setNewAttendee({ name: '', email: '' });
+                        }}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+
+                    {contact?.email && externalAttendees.length === 0 && (
+                      <button
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                        onClick={() => setExternalAttendees([{ name: contact.full_name, email: contact.email! }])}
+                      >
+                        <Plus className="w-3 h-3" />
+                        {isRTL ? `הוסף את ${contact.full_name}` : `Add ${contact.full_name}`}
+                      </button>
+                    )}
+
+                    {externalAttendees.length > 0 && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Send className="w-3 h-3" />
+                        {isRTL ? 'הזמנה תישלח במייל לכל המשתתפים' : 'Invitation will be emailed to all attendees'}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Button
+                onClick={async () => {
+                  // Capture attendees and event data before mutation clears state
+                  const attendeesToInvite = [...externalAttendees];
+                  const eventData = { ...newEvent };
+                  try {
+                    await addActivityMutation.mutateAsync(eventData);
+                    // onSuccess already closes dialog & clears state. Send invites after.
+                    if (attendeesToInvite.length > 0 && user) {
+                      setSendingInvites(true);
+                      try {
+                        await supabase.functions.invoke('send-meeting-invite', {
+                          body: {
+                            title: eventData.title,
+                            description: eventData.description,
+                            event_date: eventData.event_date || new Date().toISOString(),
+                            location: eventData.location || undefined,
+                            meeting_link: eventData.meeting_link || undefined,
+                            organizer_name: user.email || 'Recruiter',
+                            company_name: companyName,
+                            external_attendees: attendeesToInvite,
+                          },
+                        });
+                        toast.success(isRTL ? `✉️ הזמנות נשלחו ל-${attendeesToInvite.length} משתתפים` : `✉️ Invitations sent to ${attendeesToInvite.length} attendees`);
+                      } catch (e) {
+                        console.error('Failed to send invites:', e);
+                        toast.error(isRTL ? 'שגיאה בשליחת הזמנות' : 'Failed to send invitations');
+                      } finally {
+                        setSendingInvites(false);
+                      }
+                    }
+                  } catch (e) {
+                    // mutation error handled by mutation itself
+                  }
+                }}
+                disabled={!newEvent.title.trim() || addActivityMutation.isPending || sendingInvites}
+                className="w-full gap-2"
+              >
+                {sendingInvites
+                  ? (isRTL ? 'שולח הזמנות...' : 'Sending invitations...')
+                  : externalAttendees.length > 0
+                    ? (isRTL ? `הוסף ושלח ${externalAttendees.length} הזמנות` : `Add & Send ${externalAttendees.length} Invites`)
+                    : (isRTL ? 'הוסף' : 'Add')
+                }
+                {externalAttendees.length > 0 && <Send className="w-3.5 h-3.5" />}
               </Button>
+
             </div>
           </DialogContent>
         </Dialog>
+
 
         {/* Add Reminder Dialog */}
         <Dialog open={showAddReminder} onOpenChange={setShowAddReminder}>
