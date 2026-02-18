@@ -18,6 +18,16 @@ const TYPE_LABELS: Record<string, { en: string; he: string }> = {
   hire: { en: 'Hire Approval', he: 'אישור גיוס' },
 };
 
+const DEMO_INCOMING = [
+  { id: 'd1', request_type: 'new_job', requester: { full_name: 'ירדן כהן' }, notes: 'משרת DevOps Senior — דחוף', created_at: new Date(Date.now() - 2 * 3600000).toISOString() },
+  { id: 'd2', request_type: 'offer', requester: { full_name: 'מאיה לוי' }, notes: 'הצעת שכר ₪32,000 לדנה פרידמן', created_at: new Date(Date.now() - 18 * 3600000).toISOString() },
+  { id: 'd3', request_type: 'budget', requester: { full_name: 'עמית ברק' }, notes: 'תקציב לכנס HR 2026', created_at: new Date(Date.now() - 48 * 3600000).toISOString() },
+];
+const DEMO_OUTGOING = [
+  { id: 'o1', request_type: 'hire', status: 'approved', approver: { full_name: 'CEO' } },
+  { id: 'o2', request_type: 'new_job', status: 'pending', approver: { full_name: 'VP R&D' } },
+];
+
 export function ApprovalInbox() {
   const { user } = useAuth();
   const { language } = useLanguage();
@@ -56,17 +66,11 @@ export function ApprovalInbox() {
 
   const decideMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: 'approved' | 'rejected' }) => {
-      const { error } = await supabase.from('approval_requests').update({
-        status,
-        decided_at: new Date().toISOString(),
-      } as any).eq('id', id);
+      const { error } = await supabase.from('approval_requests').update({ status, decided_at: new Date().toISOString() } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
-      const msg = vars.status === 'approved'
-        ? (isHebrew ? 'אושר בהצלחה!' : 'Approved!')
-        : (isHebrew ? 'נדחה' : 'Rejected');
-      toast.success(msg);
+      toast.success(vars.status === 'approved' ? (isHebrew ? 'אושר!' : 'Approved!') : (isHebrew ? 'נדחה' : 'Rejected'));
       queryClient.invalidateQueries({ queryKey: ['approval-inbox'] });
       queryClient.invalidateQueries({ queryKey: ['approval-outbox'] });
     },
@@ -78,30 +82,38 @@ export function ApprovalInbox() {
     return <Badge variant="secondary"><Clock className="w-3 h-3 me-1 inline" />{isHebrew ? 'ממתין' : 'Pending'}</Badge>;
   };
 
+  const isDemo = incoming.length === 0 && outgoing.length === 0 && !loadingIncoming && !loadingOutgoing;
+  const displayIncoming = isDemo ? DEMO_INCOMING : incoming;
+  const displayOutgoing = isDemo ? DEMO_OUTGOING : outgoing;
+
   return (
     <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+      {isDemo && (
+        <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-600">
+          ✨ {isHebrew ? 'נתוני דוגמה — בקשות אמיתיות יופיעו כשישלחו בקשות אישור' : 'Demo data — real requests appear once approval flows are used'}
+        </div>
+      )}
+
       {/* Incoming */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Inbox className="w-4 h-4 text-primary" />
             {isHebrew ? 'ממתין לאישורך' : 'Awaiting Your Approval'}
-            {incoming.length > 0 && <Badge variant="destructive" className="text-xs">{incoming.length}</Badge>}
+            {displayIncoming.length > 0 && <Badge variant="destructive" className="text-xs">{displayIncoming.length}</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loadingIncoming ? (
             <Skeleton className="h-20" />
-          ) : incoming.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">{isHebrew ? 'אין בקשות ממתינות' : 'No pending requests'}</p>
           ) : (
             <div className="space-y-3">
-              {incoming.map((req: any) => {
+              {displayIncoming.map((req: any) => {
                 const typeLabel = TYPE_LABELS[req.request_type] || { en: req.request_type, he: req.request_type };
                 return (
                   <div key={req.id} className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline" className="text-xs">{isHebrew ? typeLabel.he : typeLabel.en}</Badge>
                           <span className="text-sm font-medium">{req.requester?.full_name}</span>
@@ -113,24 +125,18 @@ export function ApprovalInbox() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 gap-1.5 text-green-600 border-green-200 hover:bg-green-50"
-                        onClick={() => decideMutation.mutate({ id: req.id, status: 'approved' })}
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5"
+                        onClick={() => !isDemo && decideMutation.mutate({ id: req.id, status: 'approved' })}
                         disabled={decideMutation.isPending}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
                         {isHebrew ? 'אשר' : 'Approve'}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5"
-                        onClick={() => decideMutation.mutate({ id: req.id, status: 'rejected' })}
+                      <Button size="sm" variant="outline" className="flex-1 gap-1.5"
+                        onClick={() => !isDemo && decideMutation.mutate({ id: req.id, status: 'rejected' })}
                         disabled={decideMutation.isPending}
                       >
-                        <XCircle className="w-3.5 h-3.5" />
+                        <XCircle className="w-3.5 h-3.5 text-destructive" />
                         {isHebrew ? 'דחה' : 'Reject'}
                       </Button>
                     </div>
@@ -150,11 +156,9 @@ export function ApprovalInbox() {
         <CardContent>
           {loadingOutgoing ? (
             <Skeleton className="h-20" />
-          ) : outgoing.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-2">{isHebrew ? 'לא שלחת בקשות עדיין' : 'No requests sent yet'}</p>
           ) : (
             <div className="space-y-2">
-              {outgoing.map((req: any) => {
+              {displayOutgoing.map((req: any) => {
                 const typeLabel = TYPE_LABELS[req.request_type] || { en: req.request_type, he: req.request_type };
                 return (
                   <div key={req.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20 gap-2">
