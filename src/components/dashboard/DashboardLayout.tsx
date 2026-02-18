@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PlugFAB } from '@/components/chat/PlugFAB';
 import { PlugLogo } from '@/components/PlugLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
@@ -271,6 +272,9 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         </main>
 
       </div>
+
+      {/* Global Plug FAB - accessible from every screen */}
+      <PlugFAB contextPage="dashboard" />
     </div>
   );
 }
