@@ -64,16 +64,17 @@ export function PipelineAnalytics() {
       { key: 'hired', labelEn: 'Hired', labelHe: 'התקבלו' },
     ];
     const total = filteredApps.length;
+    const counts = stages.map((s, idx) => {
+      if (idx === 0) return total;
+      return filteredApps.filter((a: any) => a.current_stage === s.key).length;
+    });
     return stages.map((s, idx) => {
-      const count = idx === 0 ? total : filteredApps.filter((a: any) =>
-        ['screening', 'interview', 'offer', 'hired'].slice(0, idx).some(st => a.current_stage === st || a.current_stage === s.key)
-        || a.current_stage === s.key
-      ).length;
-      const prevCount = idx === 0 ? total : (funnelData?.[idx - 1]?.count ?? total);
+      const count = counts[idx];
+      const prevCount = idx === 0 ? total : counts[idx - 1];
       return {
         name: isHebrew ? s.labelHe : s.labelEn,
         count: count || Math.max(0, total - idx * Math.floor(total * 0.3)),
-        rate: total > 0 ? Math.round(((count || 1) / total) * 100) : 0,
+        rate: prevCount > 0 ? Math.round(((count || 1) / prevCount) * 100) : 0,
         fill: STAGE_COLORS[idx],
       };
     });
