@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Key, Download, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Key, Download, Trash2, Loader2, AlertTriangle, Building2 } from 'lucide-react';
 
 export function AccountSettings() {
   const { user, signOut } = useAuth();
@@ -225,8 +225,32 @@ export function AccountSettings() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
-  );
-}
+          </AlertDialog>
+
+          {/* Enterprise SSO */}
+          <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" />
+              <p className="font-medium text-sm">
+                {isHebrew ? 'כניסה ארגונית (SSO)' : 'Enterprise SSO'}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isHebrew
+                ? 'לחברות שרוצות להתחבר דרך Okta, Azure AD או Google Workspace'
+                : 'For companies wanting to connect via Okta, Azure AD or Google Workspace'}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2"
+              onClick={() => window.location.href = 'mailto:enterprise@plugnexus.ai?subject=בקשת SSO ארגוני'}
+            >
+              <Building2 className="w-4 h-4" />
+              {isHebrew ? 'צור קשר לחיבור ארגוני' : 'Contact for Enterprise SSO'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
