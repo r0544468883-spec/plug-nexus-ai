@@ -13,6 +13,8 @@ import { he, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EditJobFieldForm } from './EditJobFieldForm';
 import { formatSalaryRange, getILSFootnote } from '@/lib/salary-utils';
+import { CompanyReviews } from '@/components/reviews/CompanyReviews';
+
 
 interface Job {
   id: string;
@@ -265,6 +267,14 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply, onRefresh }:
                   {isHebrew ? 'צפה במקור המשרה' : 'View original posting'}
                 </a>
               </div>
+            )}
+
+            {/* Company Reviews */}
+            {job.company?.name && (
+              <>
+                <Separator className="my-6" />
+                <CompanyReviews companyName={job.company.name} />
+              </>
             )}
           </div>
         </ScrollArea>

@@ -1168,6 +1168,63 @@ export type Database = {
         }
         Relationships: []
       }
+      company_reviews: {
+        Row: {
+          advice: string | null
+          company_name: string
+          cons: string | null
+          created_at: string | null
+          culture_rating: number | null
+          growth_rating: number | null
+          id: string
+          is_anonymous: boolean | null
+          is_approved: boolean | null
+          management_rating: number | null
+          overall_rating: number | null
+          pros: string | null
+          relationship: string | null
+          reviewer_id: string
+          salary_rating: number | null
+          worklife_rating: number | null
+        }
+        Insert: {
+          advice?: string | null
+          company_name: string
+          cons?: string | null
+          created_at?: string | null
+          culture_rating?: number | null
+          growth_rating?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_approved?: boolean | null
+          management_rating?: number | null
+          overall_rating?: number | null
+          pros?: string | null
+          relationship?: string | null
+          reviewer_id: string
+          salary_rating?: number | null
+          worklife_rating?: number | null
+        }
+        Update: {
+          advice?: string | null
+          company_name?: string
+          cons?: string | null
+          created_at?: string | null
+          culture_rating?: number | null
+          growth_rating?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          is_approved?: boolean | null
+          management_rating?: number | null
+          overall_rating?: number | null
+          pros?: string | null
+          relationship?: string | null
+          reviewer_id?: string
+          salary_rating?: number | null
+          worklife_rating?: number | null
+        }
+        Relationships: []
+      }
       company_vouch_prompts: {
         Row: {
           application_id: string
