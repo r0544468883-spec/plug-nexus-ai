@@ -26,6 +26,9 @@ export function AuthForm({ selectedRole, onBack, onSuccess }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [visibleToHR, setVisibleToHR] = useState(true);
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
+  const [consentMarketing, setConsentMarketing] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
