@@ -3989,6 +3989,10 @@ export type Database = {
         Args: { giver_id: string; skill_ids: string[] }
         Returns: number
       }
+      can_view_company_review: {
+        Args: { review_company_name: string }
+        Returns: boolean
+      }
       can_view_contact_details: {
         Args: { profile_user_id: string }
         Returns: boolean
