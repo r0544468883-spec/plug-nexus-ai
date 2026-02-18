@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ import {
 import { CandidateCard } from './CandidateCard';
 import { MatchingCandidatesTab } from './MatchingCandidatesTab';
 import { TopTalentPing } from './TopTalentPing';
+import { ImportLinkedIn } from './ImportLinkedIn';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Users, Search, Filter, Sparkles, UserCheck, Globe, Heart, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
@@ -58,6 +59,14 @@ export function CandidatesPage() {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [jobFilter, setJobFilter] = useState<string>('all');
   const [globalSearch, setGlobalSearch] = useState('');
+  const [linkedInOpen, setLinkedInOpen] = useState(false);
+
+  // Listen for external event to open LinkedIn import dialog (from Tour Guide / System Guide)
+  useEffect(() => {
+    const handler = () => setLinkedInOpen(true);
+    window.addEventListener('plug:open-linkedin-import', handler);
+    return () => window.removeEventListener('plug:open-linkedin-import', handler);
+  }, []);
 
   // Fetch applications for jobs created by current user
   const { data: candidates = [], isLoading } = useQuery({
@@ -153,6 +162,7 @@ export function CandidatesPage() {
           <Users className="w-6 h-6 text-primary" />
           {isHebrew ? 'מועמדים' : 'Candidates'}
         </h2>
+        <ImportLinkedIn open={linkedInOpen} onOpenChange={setLinkedInOpen} />
       </div>
 
       {/* Statistics Row */}

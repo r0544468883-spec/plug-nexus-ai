@@ -7,7 +7,7 @@ import { TourTooltip } from './TourTooltip';
 import { TransitionScreen } from './TransitionScreen';
 import { 
   Sparkles, Users, Briefcase, Building2, Target, MessageSquare,
-  Heart, Newspaper, Globe, User, Settings, BarChart3, Zap, FileEdit
+  Heart, Newspaper, Globe, User, Settings, BarChart3, Zap, FileEdit, LayoutGrid
 } from 'lucide-react';
 
 interface TourStep {
@@ -66,6 +66,15 @@ const FREELANCE_HR_STEPS: TourStep[] = [
     descriptionHe: 'פרסם משרות חדשות עם כל הפרטים: תיאור, דרישות, שכר, מיקום ועוד. אפשר גם לייבא מלינק.',
     descriptionEn: 'Post new jobs with full details: description, requirements, salary, location & more. Import from link too.',
     icon: Briefcase,
+  },
+  {
+    section: 'hr-tools',
+    targetSelector: '[data-tour="hr-tools-hub"]',
+    titleHe: 'כלי HR מתקדמים 🛠️',
+    titleEn: 'HR Power Tools 🛠️',
+    descriptionHe: 'Pipeline Analytics, Talent Pool, אישורים, התראות וסקרי מועמדים — כל כלי HR המתקדמים שלך במקום אחד!',
+    descriptionEn: 'Pipeline Analytics, Talent Pool, approvals, alerts & surveys — all your advanced HR tools in one place!',
+    icon: LayoutGrid,
   },
   {
     section: 'missions',
@@ -148,8 +157,8 @@ const INHOUSE_HR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="candidates-section"]',
     titleHe: 'ניהול מועמדים 👥',
     titleEn: 'Candidate Management 👥',
-    descriptionHe: 'צפה ונהל מועמדים: סיכומי AI, ציוני התאמה, ומעקב שלבי גיוס.',
-    descriptionEn: 'View and manage candidates: AI summaries, match scores, and recruitment stage tracking.',
+    descriptionHe: 'צפה ונהל מועמדים: סיכומי AI, ציוני התאמה, ומעקב שלבי גיוס. ייבא מועמדים מ-LinkedIn בלחיצה.',
+    descriptionEn: 'View and manage candidates: AI summaries, match scores, and stage tracking. Import from LinkedIn in one click.',
     icon: Users,
   },
   {
@@ -157,17 +166,26 @@ const INHOUSE_HR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="post-job-form"]',
     titleHe: 'פרסום משרות 📋',
     titleEn: 'Post Jobs 📋',
-    descriptionHe: 'פרסם משרות חדשות לחברה שלך. הגדר דרישות, שכר, ומיקום.',
-    descriptionEn: 'Post new jobs for your company. Set requirements, salary, and location.',
+    descriptionHe: 'פרסם משרות חדשות לחברה שלך. הגדר שאלות Knockout לסינון אוטומטי של מועמדים לא מתאימים.',
+    descriptionEn: 'Post new jobs for your company. Set Knockout questions to auto-filter unfit candidates.',
     icon: Briefcase,
+  },
+  {
+    section: 'hr-tools',
+    targetSelector: '[data-tour="hr-tools-hub"]',
+    titleHe: 'כלי HR מתקדמים 🛠️',
+    titleEn: 'HR Power Tools 🛠️',
+    descriptionHe: 'Pipeline Analytics, Talent Pool, אישורים, התראות וסקרי מועמדים — כל כלי HR המתקדמים שלך במקום אחד!',
+    descriptionEn: 'Pipeline Analytics, Talent Pool, approvals, alerts & surveys — all your advanced HR tools in one place!',
+    icon: LayoutGrid,
   },
   {
     section: 'missions',
     targetSelector: '[data-tour="billboard-stats"]',
     titleHe: 'לוח פרויקטים (Billboard) 🎯',
     titleEn: 'Hunters Billboard 🎯',
-    descriptionHe: 'פרסם פרויקטי גיוס! הגדר עמלה, דחיפות, ובחר Hunters שיעבדו עבורך. עקוב אחרי הצעות בזמן אמת.',
-    descriptionEn: 'Post recruitment projects! Set commission, urgency, and choose Hunters. Track bids in real-time.',
+    descriptionHe: 'פרסם פרויקטי גיוס! הגדר עמלה, דחיפות, ובחר Hunters שיעבדו עבורך.',
+    descriptionEn: 'Post recruitment projects! Set commission, urgency, and choose Hunters to work for you.',
     icon: Target,
   },
   {
@@ -202,8 +220,8 @@ const INHOUSE_HR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="preferences"]',
     titleHe: 'הגדרות ⚙️',
     titleEn: 'Settings ⚙️',
-    descriptionHe: 'התאם את חווית השימוש: שפה, התראות, ופרטיות.',
-    descriptionEn: 'Customize your experience: language, notifications, and privacy.',
+    descriptionHe: 'התאם את חווית השימוש: שפה, התראות, Webhooks, ופרטיות.',
+    descriptionEn: 'Customize your experience: language, notifications, Webhooks, and privacy.',
     icon: Settings,
   },
 ];

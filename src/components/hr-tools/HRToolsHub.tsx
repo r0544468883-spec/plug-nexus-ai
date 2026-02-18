@@ -140,7 +140,7 @@ export function HRToolsHub({ onBack }: HRToolsHubProps) {
   }
 
   return (
-    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'} data-tour="hr-tools-hub">
       {/* Header */}
       <div className="flex items-center gap-3">
         {onBack && (
