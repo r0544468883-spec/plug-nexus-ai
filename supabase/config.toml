@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.moderate-review]
 verify_jwt = false
+
+[functions.skill-gap-analysis]
+verify_jwt = false
