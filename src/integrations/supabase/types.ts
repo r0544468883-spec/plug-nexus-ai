@@ -1910,6 +1910,36 @@ export type Database = {
         }
         Relationships: []
       }
+      gdpr_requests: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          request_type: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          request_type: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          request_type?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       home_assignments: {
         Row: {
           application_id: string
@@ -3295,6 +3325,51 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      team_notes: {
+        Row: {
+          application_id: string
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          mentioned_user_ids: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          mentioned_user_ids?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          mentioned_user_ids?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_notes_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_credits: {
         Row: {
