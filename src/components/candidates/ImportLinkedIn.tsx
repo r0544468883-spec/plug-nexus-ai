@@ -26,12 +26,22 @@ interface LinkedInProfile {
   experience: { company: string; role: string; duration: string }[];
 }
 
-export function ImportLinkedIn() {
+interface ImportLinkedInProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ImportLinkedIn({ open: externalOpen, onOpenChange: externalOnOpenChange }: ImportLinkedInProps = {}) {
   const { user } = useAuth();
   const { language } = useLanguage();
   const isHebrew = language === 'he';
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (val: boolean) => {
+    setInternalOpen(val);
+    externalOnOpenChange?.(val);
+  };
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [profile, setProfile] = useState<LinkedInProfile | null>(null);
