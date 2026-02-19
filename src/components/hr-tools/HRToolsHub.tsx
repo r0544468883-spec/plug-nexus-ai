@@ -7,6 +7,7 @@ import { ApprovalInbox } from '@/components/approvals/ApprovalInbox';
 import { JobAlertSetup } from '@/components/alerts/JobAlertSetup';
 import { ReferralPanel } from '@/components/referrals/ReferralPanel';
 import { SurveyResults } from '@/components/surveys/SurveyResults';
+import { DocumentsPage } from '@/components/documents/DocumentsPage';
 import { Button } from '@/components/ui/button';
 import {
   BarChart3,
@@ -18,7 +19,9 @@ import {
   ArrowLeft,
   ArrowRight,
   LayoutGrid,
+  FileSignature,
 } from 'lucide-react';
+
 
 type HRSubSection =
   | 'hub'
@@ -27,7 +30,8 @@ type HRSubSection =
   | 'approvals'
   | 'job-alerts'
   | 'referrals'
-  | 'surveys';
+  | 'surveys'
+  | 'documents';
 
 interface HRToolsHubProps {
   onBack?: () => void;
@@ -101,6 +105,16 @@ export function HRToolsHub({ onBack }: HRToolsHubProps) {
       color: 'from-yellow-500/10 to-amber-500/10 border-yellow-500/20',
       iconColor: 'text-yellow-500',
     },
+    {
+      id: 'documents' as HRSubSection,
+      icon: FileSignature,
+      labelHe: 'מסמכים לחתימה',
+      labelEn: 'eSignature Documents',
+      descHe: 'שלח מסמכים לחתימה דיגיטלית – חוזים, NDA, הצעות',
+      descEn: 'Send documents for digital signing – contracts, NDAs, offers',
+      color: 'from-indigo-500/10 to-blue-500/10 border-indigo-500/20',
+      iconColor: 'text-indigo-500',
+    },
   ];
 
   const renderSubSection = () => {
@@ -117,6 +131,8 @@ export function HRToolsHub({ onBack }: HRToolsHubProps) {
         return <ReferralPanel />;
       case 'surveys':
         return <SurveyResults />;
+      case 'documents':
+        return <DocumentsPage onBack={() => setSubSection('hub')} />;
       default:
         return null;
     }
