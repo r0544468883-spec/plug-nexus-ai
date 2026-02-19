@@ -11,10 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { SignatureCanvas } from '@/components/documents/SignatureCanvas';
 import {
   FileText, Plus, Send, Eye, CheckCircle, XCircle, Clock, AlertCircle,
-  Trash2, RotateCcw, FileEdit, Download, Users, ArrowLeft, ArrowRight
+  Trash2, RotateCcw, FileEdit, Download, Users, ArrowLeft, ArrowRight,
+  Mail, MessageCircle, Zap, User, Phone
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -28,6 +28,49 @@ const STATUS_CONFIG = {
   expired: { labelHe: 'פג תוקף', labelEn: 'Expired', color: 'bg-orange-500/20 text-orange-700', icon: AlertCircle },
   cancelled: { labelHe: 'בוטל', labelEn: 'Cancelled', color: 'bg-muted text-muted-foreground', icon: Trash2 },
 };
+
+const CHANNEL_CONFIG = {
+  plug: {
+    labelHe: 'פלאג (בתוך האפליקציה)',
+    labelEn: 'Plug (In-App)',
+    icon: Zap,
+    color: 'border-primary/40 bg-primary/5 hover:bg-primary/10',
+    selectedColor: 'border-primary bg-primary/15',
+    iconColor: 'text-primary',
+    requiresEmail: false,
+    requiresPhone: false,
+  },
+  email: {
+    labelHe: 'מייל',
+    labelEn: 'Email',
+    icon: Mail,
+    color: 'border-blue-400/40 bg-blue-50/50 hover:bg-blue-50',
+    selectedColor: 'border-blue-500 bg-blue-50',
+    iconColor: 'text-blue-500',
+    requiresEmail: true,
+    requiresPhone: false,
+  },
+  whatsapp: {
+    labelHe: 'וואטסאפ',
+    labelEn: 'WhatsApp',
+    icon: MessageCircle,
+    color: 'border-green-400/40 bg-green-50/50 hover:bg-green-50',
+    selectedColor: 'border-green-500 bg-green-50',
+    iconColor: 'text-green-500',
+    requiresEmail: false,
+    requiresPhone: true,
+  },
+} as const;
+
+type SendChannel = keyof typeof CHANNEL_CONFIG;
+
+interface SendDialogState {
+  documentId: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  channel: SendChannel;
+}
 
 interface DocumentsPageProps {
   onBack?: () => void;
@@ -48,6 +91,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<SigningDocument | null>(null);
+  const [sendDialog, setSendDialog] = useState<SendDialogState | null>(null);
   const [createForm, setCreateForm] = useState({ title: '', content_html: '', template_id: '', expires_days: '7' });
   const [templateForm, setTemplateForm] = useState({ name: '', description: '', content_html: '', category: 'general' });
 
@@ -72,6 +116,35 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     }
   };
 
+  const openSendDialog = (docId: string) => {
+    setSendDialog({ documentId: docId, recipientName: '', recipientEmail: '', recipientPhone: '', channel: 'plug' });
+  };
+
+  const handleSend = () => {
+    if (!sendDialog || !sendDialog.recipientName) return;
+    const cfg = CHANNEL_CONFIG[sendDialog.channel];
+    if (cfg.requiresEmail && !sendDialog.recipientEmail) return;
+    if (cfg.requiresPhone && !sendDialog.recipientPhone) return;
+
+    sendDocument.mutate({
+      documentId: sendDialog.documentId,
+      recipientName: sendDialog.recipientName,
+      recipientEmail: sendDialog.recipientEmail || undefined,
+      recipientPhone: sendDialog.recipientPhone || undefined,
+      channel: sendDialog.channel,
+    });
+
+    // Open WhatsApp or email client
+    if (sendDialog.channel === 'whatsapp' && sendDialog.recipientPhone) {
+      const msg = encodeURIComponent(`שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`);
+      window.open(`https://wa.me/${sendDialog.recipientPhone.replace(/\D/g, '')}?text=${msg}`, '_blank');
+    } else if (sendDialog.channel === 'email' && sendDialog.recipientEmail) {
+      window.open(`mailto:${sendDialog.recipientEmail}?subject=מסמך לחתימה&body=שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`, '_blank');
+    }
+
+    setSendDialog(null);
+  };
+
   const getStatusBadge = (status: string) => {
     const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.draft;
     const Icon = config.icon;
@@ -81,6 +154,26 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         {isHebrew ? config.labelHe : config.labelEn}
       </span>
     );
+  };
+
+  const getChannelBadge = (channel: string | null) => {
+    if (!channel) return null;
+    const cfg = CHANNEL_CONFIG[channel as SendChannel];
+    if (!cfg) return null;
+    const Icon = cfg.icon;
+    return (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${cfg.iconColor} bg-current/10`}>
+        <Icon className="w-3 h-3" />
+      </span>
+    );
+  };
+
+  const isSendValid = () => {
+    if (!sendDialog || !sendDialog.recipientName) return false;
+    const cfg = CHANNEL_CONFIG[sendDialog.channel];
+    if (cfg.requiresEmail && !sendDialog.recipientEmail) return false;
+    if (cfg.requiresPhone && !sendDialog.recipientPhone) return false;
+    return true;
   };
 
   return (
@@ -161,16 +254,18 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
                       <div className="flex items-center gap-2">
                         <p className="font-semibold truncate">{doc.title}</p>
                         {getStatusBadge(doc.status)}
+                        {getChannelBadge(doc.send_channel)}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                         <span className="font-mono">{doc.document_number}</span>
                         <span>{format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: he })}</span>
+                        {doc.recipient_name && <span className="flex items-center gap-1"><User className="w-3 h-3" />{doc.recipient_name}</span>}
                         {doc.view_count > 0 && <span><Eye className="w-3 h-3 inline me-1" />{doc.view_count}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       {doc.status === 'draft' && (
-                        <Button size="sm" variant="outline" className="gap-1" onClick={() => sendDocument.mutate(doc.id)}>
+                        <Button size="sm" variant="outline" className="gap-1" onClick={() => openSendDialog(doc.id)}>
                           <Send className="w-3 h-3" />
                           {isHebrew ? 'שלח' : 'Send'}
                         </Button>
@@ -224,6 +319,95 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Send Dialog */}
+      <Dialog open={!!sendDialog} onOpenChange={() => setSendDialog(null)}>
+        <DialogContent className="sm:max-w-md" dir={isHebrew ? 'rtl' : 'ltr'}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              {isHebrew ? 'שליחת מסמך לחתימה' : 'Send Document for Signing'}
+            </DialogTitle>
+          </DialogHeader>
+          {sendDialog && (
+            <div className="space-y-5">
+              {/* Recipient */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">{isHebrew ? '👤 פרטי הנמען' : '👤 Recipient Details'}</p>
+                <div className="relative">
+                  <User className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="ps-9"
+                    placeholder={isHebrew ? 'שם מלא *' : 'Full name *'}
+                    value={sendDialog.recipientName}
+                    onChange={e => setSendDialog(p => p ? { ...p, recipientName: e.target.value } : null)}
+                  />
+                </div>
+                {(sendDialog.channel === 'email' || sendDialog.channel === 'plug') && (
+                  <div className="relative">
+                    <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      className="ps-9"
+                      type="email"
+                      placeholder={isHebrew ? `כתובת מייל${sendDialog.channel === 'email' ? ' *' : ' (אופציונלי)'}` : `Email${sendDialog.channel === 'email' ? ' *' : ' (optional)'}`}
+                      value={sendDialog.recipientEmail}
+                      onChange={e => setSendDialog(p => p ? { ...p, recipientEmail: e.target.value } : null)}
+                    />
+                  </div>
+                )}
+                {(sendDialog.channel === 'whatsapp') && (
+                  <div className="relative">
+                    <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      className="ps-9"
+                      type="tel"
+                      placeholder={isHebrew ? 'מספר טלפון *' : 'Phone number *'}
+                      value={sendDialog.recipientPhone}
+                      onChange={e => setSendDialog(p => p ? { ...p, recipientPhone: e.target.value } : null)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Channel Selection */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">{isHebrew ? '📤 ערוץ שליחה' : '📤 Send Via'}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.entries(CHANNEL_CONFIG) as [SendChannel, typeof CHANNEL_CONFIG[SendChannel]][]).map(([key, cfg]) => {
+                    const Icon = cfg.icon;
+                    const isSelected = sendDialog.channel === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSendDialog(p => p ? { ...p, channel: key } : null)}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium ${isSelected ? cfg.selectedColor : cfg.color}`}
+                      >
+                        <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
+                        <span className="text-xs text-center leading-tight">
+                          {isHebrew ? cfg.labelHe : cfg.labelEn}
+                        </span>
+                        {isSelected && <div className={`w-2 h-2 rounded-full ${cfg.iconColor.replace('text-', 'bg-')}`} />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {sendDialog.channel === 'plug' && (isHebrew ? '📱 הנמען יקבל התראה בתוך האפליקציה' : '📱 Recipient gets an in-app notification')}
+                  {sendDialog.channel === 'email' && (isHebrew ? '📧 ייפתח לקוח המייל שלך עם ההודעה' : '📧 Your email client will open with the message')}
+                  {sendDialog.channel === 'whatsapp' && (isHebrew ? '💬 ייפתח וואטסאפ עם ההודעה המוכנה' : '💬 WhatsApp will open with a pre-written message')}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setSendDialog(null)}>{isHebrew ? 'ביטול' : 'Cancel'}</Button>
+            <Button onClick={handleSend} disabled={!isSendValid()} className="gap-2">
+              <Send className="w-4 h-4" />
+              {isHebrew ? 'שלח מסמך' : 'Send Document'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Document Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -294,6 +478,8 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">{isHebrew ? 'מספר מסמך:' : 'Doc #:'}</span> <span className="font-mono font-medium">{viewingDoc.document_number}</span></div>
                 <div><span className="text-muted-foreground">{isHebrew ? 'נוצר:' : 'Created:'}</span> {format(new Date(viewingDoc.created_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>
+                {viewingDoc.recipient_name && <div><span className="text-muted-foreground">{isHebrew ? 'נמען:' : 'Recipient:'}</span> {viewingDoc.recipient_name}</div>}
+                {viewingDoc.send_channel && <div><span className="text-muted-foreground">{isHebrew ? 'ערוץ:' : 'Channel:'}</span> {isHebrew ? CHANNEL_CONFIG[viewingDoc.send_channel as SendChannel]?.labelHe : CHANNEL_CONFIG[viewingDoc.send_channel as SendChannel]?.labelEn}</div>}
                 {viewingDoc.sent_at && <div><span className="text-muted-foreground">{isHebrew ? 'נשלח:' : 'Sent:'}</span> {format(new Date(viewingDoc.sent_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>}
                 {viewingDoc.signed_at && <div><span className="text-muted-foreground">{isHebrew ? 'נחתם:' : 'Signed:'}</span> {format(new Date(viewingDoc.signed_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>}
                 {viewingDoc.expires_at && <div><span className="text-muted-foreground">{isHebrew ? 'תוקף עד:' : 'Expires:'}</span> {format(new Date(viewingDoc.expires_at), 'dd/MM/yyyy', { locale: he })}</div>}
@@ -312,7 +498,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
             </div>
             <DialogFooter className="gap-2">
               {viewingDoc.status === 'draft' && (
-                <Button onClick={() => { sendDocument.mutate(viewingDoc.id); setViewingDoc(null); }} className="gap-2">
+                <Button onClick={() => { setViewingDoc(null); openSendDialog(viewingDoc.id); }} className="gap-2">
                   <Send className="w-4 h-4" />
                   {isHebrew ? 'שלח לחתימה' : 'Send for Signing'}
                 </Button>

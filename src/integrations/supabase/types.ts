@@ -3860,7 +3860,11 @@ export type Database = {
           expires_at: string | null
           id: string
           last_viewed_at: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
           reminder_sent_at: string | null
+          send_channel: string | null
           sent_at: string | null
           signature_data: string | null
           signed_at: string | null
@@ -3883,7 +3887,11 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
           reminder_sent_at?: string | null
+          send_channel?: string | null
           sent_at?: string | null
           signature_data?: string | null
           signed_at?: string | null
@@ -3906,7 +3914,11 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
           reminder_sent_at?: string | null
+          send_channel?: string | null
           sent_at?: string | null
           signature_data?: string | null
           signed_at?: string | null

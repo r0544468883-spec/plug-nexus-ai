@@ -24,6 +24,10 @@ export interface SigningDocument {
   title: string;
   content_html: string;
   status: 'draft' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired' | 'cancelled';
+  recipient_name: string | null;
+  recipient_email: string | null;
+  recipient_phone: string | null;
+  send_channel: 'plug' | 'email' | 'whatsapp' | null;
   sent_at: string | null;
   expires_at: string | null;
   signed_at: string | null;
@@ -114,13 +118,32 @@ export function useSigningDocuments() {
   });
 
   const sendDocument = useMutation({
-    mutationFn: async (documentId: string) => {
+    mutationFn: async ({
+      documentId,
+      recipientName,
+      recipientEmail,
+      recipientPhone,
+      channel,
+    }: {
+      documentId: string;
+      recipientName: string;
+      recipientEmail?: string;
+      recipientPhone?: string;
+      channel: 'plug' | 'email' | 'whatsapp';
+    }) => {
       const { error } = await supabase
         .from('signing_documents')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          recipient_name: recipientName,
+          recipient_email: recipientEmail || null,
+          recipient_phone: recipientPhone || null,
+          send_channel: channel,
+        })
         .eq('id', documentId);
       if (error) throw error;
-      await addAuditEvent(documentId, 'sent', user!.id, 'מסמך נשלח לחתימה');
+      await addAuditEvent(documentId, 'sent', user!.id, `מסמך נשלח ל-${recipientName} דרך ${channel}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['signing-documents'] });
