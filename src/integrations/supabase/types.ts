@@ -3860,6 +3860,9 @@ export type Database = {
           expires_at: string | null
           id: string
           last_viewed_at: string | null
+          original_file_name: string | null
+          original_file_type: string | null
+          original_file_url: string | null
           recipient_email: string | null
           recipient_name: string | null
           recipient_phone: string | null
@@ -3887,6 +3890,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          original_file_name?: string | null
+          original_file_type?: string | null
+          original_file_url?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
           recipient_phone?: string | null
@@ -3914,6 +3920,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           last_viewed_at?: string | null
+          original_file_name?: string | null
+          original_file_type?: string | null
+          original_file_url?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
           recipient_phone?: string | null

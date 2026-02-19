@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSigningDocuments, SigningDocument, DocumentTemplate } from '@/hooks/useSigningDocuments';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSigningDocuments, SigningDocument } from '@/hooks/useSigningDocuments';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,14 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { DocumentSigningViewer } from '@/components/documents/DocumentSigningViewer';
 import {
   FileText, Plus, Send, Eye, CheckCircle, XCircle, Clock, AlertCircle,
-  Trash2, RotateCcw, FileEdit, Download, Users, ArrowLeft, ArrowRight,
-  Mail, MessageCircle, Zap, User, Phone
+  Trash2, RotateCcw, FileEdit, ArrowLeft, ArrowRight,
+  Mail, MessageCircle, Zap, User, Phone, Upload, File, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const STATUS_CONFIG = {
   draft: { labelHe: 'טיוטה', labelEn: 'Draft', color: 'bg-secondary text-secondary-foreground', icon: FileEdit },
@@ -30,36 +31,9 @@ const STATUS_CONFIG = {
 };
 
 const CHANNEL_CONFIG = {
-  plug: {
-    labelHe: 'פלאג (בתוך האפליקציה)',
-    labelEn: 'Plug (In-App)',
-    icon: Zap,
-    color: 'border-primary/40 bg-primary/5 hover:bg-primary/10',
-    selectedColor: 'border-primary bg-primary/15',
-    iconColor: 'text-primary',
-    requiresEmail: false,
-    requiresPhone: false,
-  },
-  email: {
-    labelHe: 'מייל',
-    labelEn: 'Email',
-    icon: Mail,
-    color: 'border-blue-400/40 bg-blue-50/50 hover:bg-blue-50',
-    selectedColor: 'border-blue-500 bg-blue-50',
-    iconColor: 'text-blue-500',
-    requiresEmail: true,
-    requiresPhone: false,
-  },
-  whatsapp: {
-    labelHe: 'וואטסאפ',
-    labelEn: 'WhatsApp',
-    icon: MessageCircle,
-    color: 'border-green-400/40 bg-green-50/50 hover:bg-green-50',
-    selectedColor: 'border-green-500 bg-green-50',
-    iconColor: 'text-green-500',
-    requiresEmail: false,
-    requiresPhone: true,
-  },
+  plug: { labelHe: 'פלאג', labelEn: 'Plug', icon: Zap, color: 'border-primary/40 bg-primary/5 hover:bg-primary/10', selectedColor: 'border-primary bg-primary/15', iconColor: 'text-primary', requiresEmail: false, requiresPhone: false },
+  email: { labelHe: 'מייל', labelEn: 'Email', icon: Mail, color: 'border-blue-400/40 bg-blue-500/5 hover:bg-blue-500/10', selectedColor: 'border-blue-500 bg-blue-500/10', iconColor: 'text-blue-500', requiresEmail: true, requiresPhone: false },
+  whatsapp: { labelHe: 'וואטסאפ', labelEn: 'WhatsApp', icon: MessageCircle, color: 'border-green-400/40 bg-green-500/5 hover:bg-green-500/10', selectedColor: 'border-green-500 bg-green-500/10', iconColor: 'text-green-500', requiresEmail: false, requiresPhone: true },
 } as const;
 
 type SendChannel = keyof typeof CHANNEL_CONFIG;
@@ -79,12 +53,11 @@ interface DocumentsPageProps {
 export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const { language } = useLanguage();
   const isHebrew = language === 'he';
-  const { user } = useAuth();
   const BackIcon = isHebrew ? ArrowRight : ArrowLeft;
 
   const {
     documents, templates, stats, isLoading,
-    createDocument, sendDocument, cancelDocument, sendReminder, createTemplate,
+    createDocument, sendDocument, cancelDocument, sendReminder, createTemplate, signDocument, declineDocument, uploadFile,
   } = useSigningDocuments();
 
   const [tab, setTab] = useState('documents');
@@ -92,21 +65,59 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<SigningDocument | null>(null);
   const [sendDialog, setSendDialog] = useState<SendDialogState | null>(null);
-  const [createForm, setCreateForm] = useState({ title: '', content_html: '', template_id: '', expires_days: '7' });
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [createForm, setCreateForm] = useState({
+    title: '', content_html: '', template_id: '', expires_days: '7',
+    uploadedFile: null as File | null,
+    uploadedFileUrl: '',
+    uploadedFileName: '',
+    uploadedFileType: '',
+  });
   const [templateForm, setTemplateForm] = useState({ name: '', description: '', content_html: '', category: 'general' });
 
-  const handleCreateDoc = () => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(isHebrew ? 'ניתן להעלות PDF, Word, או תמונה בלבד' : 'Only PDF, Word, or image files are allowed');
+      return;
+    }
+    setCreateForm(p => ({ ...p, uploadedFile: file, uploadedFileName: file.name }));
+  };
+
+  const handleRemoveFile = () => {
+    setCreateForm(p => ({ ...p, uploadedFile: null, uploadedFileUrl: '', uploadedFileName: '', uploadedFileType: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCreateDoc = async () => {
     if (!createForm.title) return;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + parseInt(createForm.expires_days || '7'));
-    createDocument.mutate({
-      title: createForm.title,
-      content_html: createForm.content_html || templates.find(t => t.id === createForm.template_id)?.content_html || '',
-      template_id: createForm.template_id || undefined,
-      expires_at: expiresAt.toISOString(),
-    });
-    setShowCreateDialog(false);
-    setCreateForm({ title: '', content_html: '', template_id: '', expires_days: '7' });
+    setIsUploading(true);
+    try {
+      let filePayload = {};
+      if (createForm.uploadedFile) {
+        const uploaded = await uploadFile(createForm.uploadedFile);
+        filePayload = { original_file_url: uploaded.url, original_file_name: uploaded.name, original_file_type: uploaded.type };
+      }
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + parseInt(createForm.expires_days || '7'));
+      createDocument.mutate({
+        title: createForm.title,
+        content_html: createForm.content_html || templates.find(t => t.id === createForm.template_id)?.content_html || '',
+        template_id: createForm.template_id || undefined,
+        expires_at: expiresAt.toISOString(),
+        ...filePayload,
+      });
+      setShowCreateDialog(false);
+      setCreateForm({ title: '', content_html: '', template_id: '', expires_days: '7', uploadedFile: null, uploadedFileUrl: '', uploadedFileName: '', uploadedFileType: '' });
+    } catch {
+      toast.error(isHebrew ? 'שגיאה בהעלאת הקובץ' : 'File upload failed');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleTemplateSelect = (templateId: string) => {
@@ -125,7 +136,6 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     const cfg = CHANNEL_CONFIG[sendDialog.channel];
     if (cfg.requiresEmail && !sendDialog.recipientEmail) return;
     if (cfg.requiresPhone && !sendDialog.recipientPhone) return;
-
     sendDocument.mutate({
       documentId: sendDialog.documentId,
       recipientName: sendDialog.recipientName,
@@ -133,15 +143,12 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       recipientPhone: sendDialog.recipientPhone || undefined,
       channel: sendDialog.channel,
     });
-
-    // Open WhatsApp or email client
     if (sendDialog.channel === 'whatsapp' && sendDialog.recipientPhone) {
       const msg = encodeURIComponent(`שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`);
       window.open(`https://wa.me/${sendDialog.recipientPhone.replace(/\D/g, '')}?text=${msg}`, '_blank');
     } else if (sendDialog.channel === 'email' && sendDialog.recipientEmail) {
       window.open(`mailto:${sendDialog.recipientEmail}?subject=מסמך לחתימה&body=שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`, '_blank');
     }
-
     setSendDialog(null);
   };
 
@@ -152,18 +159,6 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         <Icon className="w-3 h-3" />
         {isHebrew ? config.labelHe : config.labelEn}
-      </span>
-    );
-  };
-
-  const getChannelBadge = (channel: string | null) => {
-    if (!channel) return null;
-    const cfg = CHANNEL_CONFIG[channel as SendChannel];
-    if (!cfg) return null;
-    const Icon = cfg.icon;
-    return (
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${cfg.iconColor} bg-current/10`}>
-        <Icon className="w-3 h-3" />
       </span>
     );
   };
@@ -249,17 +244,31 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
               {documents.map(doc => (
                 <Card key={doc.id} className="hover:border-primary/30 transition-colors cursor-pointer" onClick={() => setViewingDoc(doc)}>
                   <CardContent className="p-4 flex items-center gap-4">
-                    <FileText className="w-8 h-8 text-muted-foreground shrink-0" />
+                    <div className="shrink-0">
+                      {doc.original_file_name ? (
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <File className="w-5 h-5 text-primary" />
+                        </div>
+                      ) : (
+                        <FileText className="w-8 h-8 text-muted-foreground" />
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold truncate">{doc.title}</p>
                         {getStatusBadge(doc.status)}
-                        {getChannelBadge(doc.send_channel)}
+                        {doc.original_file_name && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <File className="w-3 h-3" />
+                            {doc.original_file_type?.toUpperCase()}
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 flex-wrap">
                         <span className="font-mono">{doc.document_number}</span>
                         <span>{format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: he })}</span>
                         {doc.recipient_name && <span className="flex items-center gap-1"><User className="w-3 h-3" />{doc.recipient_name}</span>}
+                        {doc.original_file_name && <span className="truncate max-w-32">{doc.original_file_name}</span>}
                         {doc.view_count > 0 && <span><Eye className="w-3 h-3 inline me-1" />{doc.view_count}</span>}
                       </div>
                     </div>
@@ -320,6 +329,29 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
         </TabsContent>
       </Tabs>
 
+      {/* Document Signing Viewer */}
+      {viewingDoc && (
+        <DocumentSigningViewer
+          open={!!viewingDoc}
+          onClose={() => setViewingDoc(null)}
+          documentTitle={viewingDoc.title}
+          fileUrl={viewingDoc.original_file_url}
+          fileName={viewingDoc.original_file_name}
+          fileType={viewingDoc.original_file_type}
+          contentHtml={viewingDoc.content_html}
+          existingSignature={viewingDoc.signature_data}
+          isReadOnly={viewingDoc.status === 'signed' || viewingDoc.status === 'declined' || viewingDoc.status === 'cancelled'}
+          onSign={(signatureData) => {
+            signDocument.mutate({ documentId: viewingDoc.id, signatureData, signerName: viewingDoc.recipient_name || 'unknown' });
+            setViewingDoc(null);
+          }}
+          onDecline={(reason) => {
+            declineDocument.mutate({ documentId: viewingDoc.id, reason });
+            setViewingDoc(null);
+          }}
+        />
+      )}
+
       {/* Send Dialog */}
       <Dialog open={!!sendDialog} onOpenChange={() => setSendDialog(null)}>
         <DialogContent className="sm:max-w-md" dir={isHebrew ? 'rtl' : 'ltr'}>
@@ -331,45 +363,25 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           </DialogHeader>
           {sendDialog && (
             <div className="space-y-5">
-              {/* Recipient */}
               <div className="space-y-3">
                 <p className="text-sm font-semibold">{isHebrew ? '👤 פרטי הנמען' : '👤 Recipient Details'}</p>
                 <div className="relative">
                   <User className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    className="ps-9"
-                    placeholder={isHebrew ? 'שם מלא *' : 'Full name *'}
-                    value={sendDialog.recipientName}
-                    onChange={e => setSendDialog(p => p ? { ...p, recipientName: e.target.value } : null)}
-                  />
+                  <Input className="ps-9" placeholder={isHebrew ? 'שם מלא *' : 'Full name *'} value={sendDialog.recipientName} onChange={e => setSendDialog(p => p ? { ...p, recipientName: e.target.value } : null)} />
                 </div>
                 {(sendDialog.channel === 'email' || sendDialog.channel === 'plug') && (
                   <div className="relative">
                     <Mail className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      className="ps-9"
-                      type="email"
-                      placeholder={isHebrew ? `כתובת מייל${sendDialog.channel === 'email' ? ' *' : ' (אופציונלי)'}` : `Email${sendDialog.channel === 'email' ? ' *' : ' (optional)'}`}
-                      value={sendDialog.recipientEmail}
-                      onChange={e => setSendDialog(p => p ? { ...p, recipientEmail: e.target.value } : null)}
-                    />
+                    <Input className="ps-9" type="email" placeholder={isHebrew ? `כתובת מייל${sendDialog.channel === 'email' ? ' *' : ' (אופציונלי)'}` : `Email${sendDialog.channel === 'email' ? ' *' : ' (optional)'}`} value={sendDialog.recipientEmail} onChange={e => setSendDialog(p => p ? { ...p, recipientEmail: e.target.value } : null)} />
                   </div>
                 )}
-                {(sendDialog.channel === 'whatsapp') && (
+                {sendDialog.channel === 'whatsapp' && (
                   <div className="relative">
                     <Phone className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      className="ps-9"
-                      type="tel"
-                      placeholder={isHebrew ? 'מספר טלפון *' : 'Phone number *'}
-                      value={sendDialog.recipientPhone}
-                      onChange={e => setSendDialog(p => p ? { ...p, recipientPhone: e.target.value } : null)}
-                    />
+                    <Input className="ps-9" type="tel" placeholder={isHebrew ? 'מספר טלפון *' : 'Phone number *'} value={sendDialog.recipientPhone} onChange={e => setSendDialog(p => p ? { ...p, recipientPhone: e.target.value } : null)} />
                   </div>
                 )}
               </div>
-
-              {/* Channel Selection */}
               <div className="space-y-3">
                 <p className="text-sm font-semibold">{isHebrew ? '📤 ערוץ שליחה' : '📤 Send Via'}</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -377,24 +389,18 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
                     const Icon = cfg.icon;
                     const isSelected = sendDialog.channel === key;
                     return (
-                      <button
-                        key={key}
-                        onClick={() => setSendDialog(p => p ? { ...p, channel: key } : null)}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium ${isSelected ? cfg.selectedColor : cfg.color}`}
-                      >
+                      <button key={key} onClick={() => setSendDialog(p => p ? { ...p, channel: key } : null)}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium ${isSelected ? cfg.selectedColor : cfg.color}`}>
                         <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
-                        <span className="text-xs text-center leading-tight">
-                          {isHebrew ? cfg.labelHe : cfg.labelEn}
-                        </span>
-                        {isSelected && <div className={`w-2 h-2 rounded-full ${cfg.iconColor.replace('text-', 'bg-')}`} />}
+                        <span className="text-xs text-center leading-tight">{isHebrew ? cfg.labelHe : cfg.labelEn}</span>
                       </button>
                     );
                   })}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {sendDialog.channel === 'plug' && (isHebrew ? '📱 הנמען יקבל התראה בתוך האפליקציה' : '📱 Recipient gets an in-app notification')}
-                  {sendDialog.channel === 'email' && (isHebrew ? '📧 ייפתח לקוח המייל שלך עם ההודעה' : '📧 Your email client will open with the message')}
-                  {sendDialog.channel === 'whatsapp' && (isHebrew ? '💬 ייפתח וואטסאפ עם ההודעה המוכנה' : '💬 WhatsApp will open with a pre-written message')}
+                  {sendDialog.channel === 'email' && (isHebrew ? '📧 ייפתח לקוח המייל שלך' : '📧 Your email client will open')}
+                  {sendDialog.channel === 'whatsapp' && (isHebrew ? '💬 ייפתח וואטסאפ עם הודעה מוכנה' : '💬 WhatsApp opens with a pre-written message')}
                 </p>
               </div>
             </div>
@@ -416,6 +422,40 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
             <DialogTitle>{isHebrew ? 'מסמך חדש לחתימה' : 'New Signing Document'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
+            {/* File Upload Zone */}
+            <div>
+              <label className="text-sm font-medium block mb-2">{isHebrew ? '📎 העלה קובץ (PDF, Word, תמונה)' : '📎 Upload File (PDF, Word, Image)'}</label>
+              {createForm.uploadedFile ? (
+                <div className="flex items-center gap-3 p-3 border-2 border-primary/30 rounded-lg bg-primary/5">
+                  <File className="w-8 h-8 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{createForm.uploadedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(createForm.uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={handleRemoveFile}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">{isHebrew ? 'לחץ להעלאת קובץ' : 'Click to upload file'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, DOC, PNG, JPG</p>
+                </div>
+              )}
+              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleFileSelect} />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs text-muted-foreground">{isHebrew ? 'או כתוב תוכן' : 'or write content'}</span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
             <div>
               <label className="text-sm font-medium">{isHebrew ? 'תבנית (אופציונלי)' : 'Template (optional)'}</label>
               <Select onValueChange={handleTemplateSelect}>
@@ -429,22 +469,16 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
             </div>
             <div>
               <label className="text-sm font-medium">{isHebrew ? 'כותרת המסמך *' : 'Document Title *'}</label>
-              <Input
-                value={createForm.title}
-                onChange={e => setCreateForm(p => ({ ...p, title: e.target.value }))}
-                placeholder={isHebrew ? 'הסכם עבודה – ישראל ישראלי' : 'Employment Agreement – John Doe'}
-              />
+              <Input value={createForm.title} onChange={e => setCreateForm(p => ({ ...p, title: e.target.value }))}
+                placeholder={isHebrew ? 'הסכם עבודה – ישראל ישראלי' : 'Employment Agreement – John Doe'} />
             </div>
-            <div>
-              <label className="text-sm font-medium">{isHebrew ? 'תוכן המסמך (HTML)' : 'Document Content (HTML)'}</label>
-              <Textarea
-                value={createForm.content_html}
-                onChange={e => setCreateForm(p => ({ ...p, content_html: e.target.value }))}
-                placeholder={isHebrew ? 'תוכן המסמך...' : 'Document content...'}
-                rows={10}
-                className="font-mono text-xs"
-              />
-            </div>
+            {!createForm.uploadedFile && (
+              <div>
+                <label className="text-sm font-medium">{isHebrew ? 'תוכן המסמך (HTML)' : 'Document Content (HTML)'}</label>
+                <Textarea value={createForm.content_html} onChange={e => setCreateForm(p => ({ ...p, content_html: e.target.value }))}
+                  placeholder={isHebrew ? 'תוכן המסמך...' : 'Document content...'} rows={8} className="font-mono text-xs" />
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium">{isHebrew ? 'תוקף (ימים)' : 'Expires in (days)'}</label>
               <Select value={createForm.expires_days} onValueChange={v => setCreateForm(p => ({ ...p, expires_days: v }))}>
@@ -457,63 +491,13 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowCreateDialog(false)}>{isHebrew ? 'ביטול' : 'Cancel'}</Button>
-            <Button onClick={handleCreateDoc} disabled={!createForm.title}>
+            <Button onClick={handleCreateDoc} disabled={!createForm.title || isUploading} className="gap-2">
+              {isUploading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               {isHebrew ? 'צור מסמך' : 'Create Document'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Document Detail Dialog */}
-      {viewingDoc && (
-        <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {viewingDoc.title}
-                {getStatusBadge(viewingDoc.status)}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">{isHebrew ? 'מספר מסמך:' : 'Doc #:'}</span> <span className="font-mono font-medium">{viewingDoc.document_number}</span></div>
-                <div><span className="text-muted-foreground">{isHebrew ? 'נוצר:' : 'Created:'}</span> {format(new Date(viewingDoc.created_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>
-                {viewingDoc.recipient_name && <div><span className="text-muted-foreground">{isHebrew ? 'נמען:' : 'Recipient:'}</span> {viewingDoc.recipient_name}</div>}
-                {viewingDoc.send_channel && <div><span className="text-muted-foreground">{isHebrew ? 'ערוץ:' : 'Channel:'}</span> {isHebrew ? CHANNEL_CONFIG[viewingDoc.send_channel as SendChannel]?.labelHe : CHANNEL_CONFIG[viewingDoc.send_channel as SendChannel]?.labelEn}</div>}
-                {viewingDoc.sent_at && <div><span className="text-muted-foreground">{isHebrew ? 'נשלח:' : 'Sent:'}</span> {format(new Date(viewingDoc.sent_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>}
-                {viewingDoc.signed_at && <div><span className="text-muted-foreground">{isHebrew ? 'נחתם:' : 'Signed:'}</span> {format(new Date(viewingDoc.signed_at), 'dd/MM/yyyy HH:mm', { locale: he })}</div>}
-                {viewingDoc.expires_at && <div><span className="text-muted-foreground">{isHebrew ? 'תוקף עד:' : 'Expires:'}</span> {format(new Date(viewingDoc.expires_at), 'dd/MM/yyyy', { locale: he })}</div>}
-                <div><span className="text-muted-foreground">{isHebrew ? 'נצפה:' : 'Views:'}</span> {viewingDoc.view_count}</div>
-              </div>
-
-              {viewingDoc.signature_data && (
-                <div>
-                  <p className="text-sm font-medium mb-2">{isHebrew ? 'חתימה:' : 'Signature:'}</p>
-                  <img src={viewingDoc.signature_data} alt="Signature" className="border rounded-lg max-h-24 bg-white p-2" />
-                </div>
-              )}
-
-              <div className="border rounded-lg p-4 max-h-64 overflow-y-auto bg-muted/30 text-sm"
-                dangerouslySetInnerHTML={{ __html: viewingDoc.content_html }} />
-            </div>
-            <DialogFooter className="gap-2">
-              {viewingDoc.status === 'draft' && (
-                <Button onClick={() => { setViewingDoc(null); openSendDialog(viewingDoc.id); }} className="gap-2">
-                  <Send className="w-4 h-4" />
-                  {isHebrew ? 'שלח לחתימה' : 'Send for Signing'}
-                </Button>
-              )}
-              {(viewingDoc.status === 'sent' || viewingDoc.status === 'viewed') && (
-                <Button variant="outline" onClick={() => { sendReminder.mutate(viewingDoc.id); }} className="gap-2">
-                  <RotateCcw className="w-4 h-4" />
-                  {isHebrew ? 'שלח תזכורת' : 'Send Reminder'}
-                </Button>
-              )}
-              <Button variant="ghost" onClick={() => setViewingDoc(null)}>{isHebrew ? 'סגור' : 'Close'}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Create Template Dialog */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>

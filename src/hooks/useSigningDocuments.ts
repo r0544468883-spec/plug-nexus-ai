@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCallback } from 'react';
 
 export interface DocumentTemplate {
   id: string;
@@ -28,6 +29,9 @@ export interface SigningDocument {
   recipient_email: string | null;
   recipient_phone: string | null;
   send_channel: 'plug' | 'email' | 'whatsapp' | null;
+  original_file_url: string | null;
+  original_file_name: string | null;
+  original_file_type: string | null;
   sent_at: string | null;
   expires_at: string | null;
   signed_at: string | null;
@@ -92,6 +96,25 @@ export function useSigningDocuments() {
     draft: documents.filter(d => d.status === 'draft').length,
   };
 
+  const uploadFile = useCallback(async (file: File): Promise<{ url: string; name: string; type: string }> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'bin';
+    const path = `${user!.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from('signing-documents')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('signing-documents').getPublicUrl(path);
+    // For private bucket, use signed URL
+    const { data: signedData } = await supabase.storage
+      .from('signing-documents')
+      .createSignedUrl(path, 60 * 60 * 24 * 30); // 30 days
+    return {
+      url: signedData?.signedUrl || urlData.publicUrl,
+      name: file.name,
+      type: ext,
+    };
+  }, [user]);
+
   const createDocument = useMutation({
     mutationFn: async (payload: {
       title: string;
@@ -100,6 +123,9 @@ export function useSigningDocuments() {
       application_id?: string;
       template_id?: string;
       expires_at?: string;
+      original_file_url?: string;
+      original_file_name?: string;
+      original_file_type?: string;
     }) => {
       const { data, error } = await supabase
         .from('signing_documents')
@@ -236,7 +262,7 @@ export function useSigningDocuments() {
 
   return {
     documents, templates, stats, isLoading,
-    createDocument, sendDocument, cancelDocument, signDocument, declineDocument, sendReminder, createTemplate, trackView,
+    createDocument, sendDocument, cancelDocument, signDocument, declineDocument, sendReminder, createTemplate, trackView, uploadFile,
   };
 }
 
