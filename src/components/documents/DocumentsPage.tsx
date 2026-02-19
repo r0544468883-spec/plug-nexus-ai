@@ -14,7 +14,7 @@ import { DocumentSigningViewer } from '@/components/documents/DocumentSigningVie
 import {
   FileText, Plus, Send, Eye, CheckCircle, XCircle, Clock, AlertCircle,
   Trash2, RotateCcw, FileEdit, ArrowLeft, ArrowRight,
-  Mail, MessageCircle, Zap, User, Phone, Upload, File, X
+  Mail, MessageCircle, Zap, User, Phone, Upload, File, X, Link, Copy
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -65,6 +65,7 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<SigningDocument | null>(null);
   const [sendDialog, setSendDialog] = useState<SendDialogState | null>(null);
+  const [plugSigningLink, setPlugSigningLink] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,11 +132,15 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
     setSendDialog({ documentId: docId, recipientName: '', recipientEmail: '', recipientPhone: '', channel: 'plug' });
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!sendDialog || !sendDialog.recipientName) return;
     const cfg = CHANNEL_CONFIG[sendDialog.channel];
     if (cfg.requiresEmail && !sendDialog.recipientEmail) return;
     if (cfg.requiresPhone && !sendDialog.recipientPhone) return;
+
+    // Get the document's signing_token before mutating
+    const docToSend = documents.find(d => d.id === sendDialog.documentId);
+
     sendDocument.mutate({
       documentId: sendDialog.documentId,
       recipientName: sendDialog.recipientName,
@@ -143,13 +148,27 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
       recipientPhone: sendDialog.recipientPhone || undefined,
       channel: sendDialog.channel,
     });
-    if (sendDialog.channel === 'whatsapp' && sendDialog.recipientPhone) {
-      const msg = encodeURIComponent(`שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`);
+
+    if (sendDialog.channel === 'plug') {
+      // Show the signing link so HR can copy and share it
+      const token = docToSend?.signing_token;
+      if (token) {
+        const link = `${window.location.origin}/sign/${token}`;
+        setPlugSigningLink(link);
+      }
+      setSendDialog(null);
+    } else if (sendDialog.channel === 'whatsapp' && sendDialog.recipientPhone) {
+      const token = docToSend?.signing_token;
+      const link = token ? ` ${window.location.origin}/sign/${token}` : '';
+      const msg = encodeURIComponent(`שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.${link}`);
       window.open(`https://wa.me/${sendDialog.recipientPhone.replace(/\D/g, '')}?text=${msg}`, '_blank');
+      setSendDialog(null);
     } else if (sendDialog.channel === 'email' && sendDialog.recipientEmail) {
-      window.open(`mailto:${sendDialog.recipientEmail}?subject=מסמך לחתימה&body=שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.`, '_blank');
+      const token = docToSend?.signing_token;
+      const link = token ? `\n\nקישור לחתימה: ${window.location.origin}/sign/${token}` : '';
+      window.open(`mailto:${sendDialog.recipientEmail}?subject=מסמך לחתימה&body=שלום ${sendDialog.recipientName}, נשלח לך מסמך לחתימה דיגיטלית דרך PLUG.${link}`, '_blank');
+      setSendDialog(null);
     }
-    setSendDialog(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -520,6 +539,43 @@ export function DocumentsPage({ onBack }: DocumentsPageProps) {
             <Button variant="ghost" onClick={() => setShowTemplateDialog(false)}>{isHebrew ? 'ביטול' : 'Cancel'}</Button>
             <Button onClick={() => { createTemplate.mutate(templateForm as Parameters<typeof createTemplate.mutate>[0]); setShowTemplateDialog(false); }} disabled={!templateForm.name}>
               {isHebrew ? 'שמור תבנית' : 'Save Template'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plug Signing Link Dialog */}
+      <Dialog open={!!plugSigningLink} onOpenChange={() => setPlugSigningLink(null)}>
+        <DialogContent className="sm:max-w-md" dir={isHebrew ? 'rtl' : 'ltr'}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link className="w-5 h-5 text-primary" />
+              {isHebrew ? 'קישור לחתימה' : 'Signing Link'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {isHebrew ? 'העתק את הקישור ושלח אותו לנמען. הם יוכלו לחתום על המסמך ישירות.' : 'Copy this link and send it to the recipient. They can sign the document directly.'}
+            </p>
+            <div className="flex gap-2 items-center">
+              <Input readOnly value={plugSigningLink || ''} className="font-mono text-xs" />
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => {
+                  if (plugSigningLink) {
+                    navigator.clipboard.writeText(plugSigningLink);
+                    toast.success(isHebrew ? 'הקישור הועתק!' : 'Link copied!');
+                  }
+                }}
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setPlugSigningLink(null)}>
+              {isHebrew ? 'סגור' : 'Close'}
             </Button>
           </DialogFooter>
         </DialogContent>

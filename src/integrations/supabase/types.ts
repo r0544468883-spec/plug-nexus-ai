@@ -3872,6 +3872,7 @@ export type Database = {
           signature_data: string | null
           signed_at: string | null
           signed_document_url: string | null
+          signing_token: string | null
           status: string
           template_id: string | null
           title: string
@@ -3902,6 +3903,7 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           signed_document_url?: string | null
+          signing_token?: string | null
           status?: string
           template_id?: string | null
           title: string
@@ -3932,6 +3934,7 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           signed_document_url?: string | null
+          signing_token?: string | null
           status?: string
           template_id?: string | null
           title?: string

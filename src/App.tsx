@@ -20,6 +20,7 @@ import InterviewPrep from "./pages/InterviewPrep";
 import Reports from "./pages/Reports";
 import CareerSitePage from "./pages/CareerSitePage";
 import NotFound from "./pages/NotFound";
+import SignDocument from "./pages/SignDocument";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
                   <Route path="/interview-prep" element={<InterviewPrep />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/careers/:slug" element={<CareerSitePage />} />
+                  <Route path="/sign/:token" element={<SignDocument />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

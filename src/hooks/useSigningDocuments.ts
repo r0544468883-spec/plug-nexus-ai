@@ -29,6 +29,7 @@ export interface SigningDocument {
   recipient_email: string | null;
   recipient_phone: string | null;
   send_channel: 'plug' | 'email' | 'whatsapp' | null;
+  signing_token: string | null;
   original_file_url: string | null;
   original_file_name: string | null;
   original_file_type: string | null;
