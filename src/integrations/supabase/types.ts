@@ -433,6 +433,85 @@ export type Database = {
           },
         ]
       }
+      career_site_analytics: {
+        Row: {
+          career_site_id: string
+          created_at: string
+          event_type: string
+          id: string
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          career_site_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          career_site_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_site_analytics_career_site_id_fkey"
+            columns: ["career_site_id"]
+            isOneToOne: false
+            referencedRelation: "career_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_site_blocks: {
+        Row: {
+          block_type: string
+          career_site_id: string
+          config: Json
+          created_at: string
+          id: string
+          is_visible: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          block_type: string
+          career_site_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          block_type?: string
+          career_site_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_site_blocks_career_site_id_fkey"
+            columns: ["career_site_id"]
+            isOneToOne: false
+            referencedRelation: "career_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_site_stats: {
         Row: {
           applications: number | null
@@ -464,6 +543,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "career_site_stats_career_site_id_fkey"
+            columns: ["career_site_id"]
+            isOneToOne: false
+            referencedRelation: "career_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_site_team_stories: {
+        Row: {
+          career_site_id: string
+          created_at: string
+          employee_avatar_url: string | null
+          employee_name: string
+          employee_title: string | null
+          id: string
+          quote: string
+          sort_order: number
+        }
+        Insert: {
+          career_site_id: string
+          created_at?: string
+          employee_avatar_url?: string | null
+          employee_name: string
+          employee_title?: string | null
+          id?: string
+          quote: string
+          sort_order?: number
+        }
+        Update: {
+          career_site_id?: string
+          created_at?: string
+          employee_avatar_url?: string | null
+          employee_name?: string
+          employee_title?: string | null
+          id?: string
+          quote?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_site_team_stories_career_site_id_fkey"
             columns: ["career_site_id"]
             isOneToOne: false
             referencedRelation: "career_sites"
@@ -1727,6 +1847,42 @@ export type Database = {
           requested_at?: string | null
           status?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      document_templates: {
+        Row: {
+          category: string
+          content_html: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content_html: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content_html?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3646,6 +3802,141 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signing_document_audit: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          created_at: string
+          document_id: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          document_id: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          document_id?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signing_document_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "signing_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signing_documents: {
+        Row: {
+          application_id: string | null
+          candidate_id: string | null
+          content_html: string
+          created_at: string
+          created_by: string
+          decline_reason: string | null
+          declined_at: string | null
+          document_number: string
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          reminder_sent_at: string | null
+          sent_at: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_document_url: string | null
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          application_id?: string | null
+          candidate_id?: string | null
+          content_html: string
+          created_at?: string
+          created_by: string
+          decline_reason?: string | null
+          declined_at?: string | null
+          document_number: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          reminder_sent_at?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_document_url?: string | null
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          application_id?: string | null
+          candidate_id?: string | null
+          content_html?: string
+          created_at?: string
+          created_by?: string
+          decline_reason?: string | null
+          declined_at?: string | null
+          document_number?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          reminder_sent_at?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_document_url?: string | null
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signing_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signing_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications_candidate_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signing_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
             referencedColumns: ["id"]
           },
         ]
