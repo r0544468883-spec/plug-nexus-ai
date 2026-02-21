@@ -27,6 +27,18 @@ dist-ssr
 .firebase/
 .firebaserc
 firebase-debug.log*
+firebase.json
+
+# Deployment scripts and docs
+deploy.sh
+deploy.bat
+check-dns.sh
+check-dns.bat
+DEPLOYMENT.md
+README-DEPLOYMENT.md
+SETUP_STATUS.md
+NEXT_STEPS.md
+public/test-connection.html
 
 # Environment
 .env
