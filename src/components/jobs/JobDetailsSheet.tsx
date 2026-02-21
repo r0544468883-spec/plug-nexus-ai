@@ -13,6 +13,9 @@ import { he, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EditJobFieldForm } from './EditJobFieldForm';
 import { formatSalaryRange, getILSFootnote } from '@/lib/salary-utils';
+import { CompanyReviews } from '@/components/reviews/CompanyReviews';
+import { SkillGapAnalysis } from '@/components/skills/SkillGapAnalysis';
+
 
 interface Job {
   id: string;
@@ -265,6 +268,31 @@ export function JobDetailsSheet({ job, open, onOpenChange, onApply, onRefresh }:
                   {isHebrew ? 'צפה במקור המשרה' : 'View original posting'}
                 </a>
               </div>
+            )}
+
+            {/* Skill Gap Analysis - for logged-in job seekers */}
+            {user && (job.requirements || job.description) && (
+              <>
+                <Separator className="my-6" />
+                <div>
+                  <h3 className="font-semibold mb-3">
+                    {isHebrew ? 'מה חסר לך?' : 'Your Skill Gap'}
+                  </h3>
+                  <SkillGapAnalysis
+                    jobTitle={job.title}
+                    jobRequirements={job.requirements}
+                    jobDescription={job.description}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Company Reviews */}
+            {job.company?.name && (
+              <>
+                <Separator className="my-6" />
+                <CompanyReviews companyName={job.company.name} />
+              </>
             )}
           </div>
         </ScrollArea>

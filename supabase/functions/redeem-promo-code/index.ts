@@ -6,11 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Secret promo code - validated server-side only
-const PROMO_CODES: Record<string, { type: 'unlimited' | 'bonus'; amount?: number }> = {
-  'Plugismybestfriend': { type: 'unlimited' },
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -44,20 +39,49 @@ serve(async (req) => {
 
     const { code } = await req.json();
     
-    if (!code || typeof code !== 'string') {
+    if (!code || typeof code !== 'string' || code.length > 100) {
       return new Response(
         JSON.stringify({ error: 'Invalid code format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if code exists (case-sensitive)
-    const promoConfig = PROMO_CODES[code];
-    
-    if (!promoConfig) {
-      console.log(`Invalid promo code attempt: ${code.substring(0, 3)}...`);
+    // Look up the code in the database (stored as plaintext hash for now - code_hash column stores the code value)
+    const { data: promoCode, error: lookupError } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('code_hash', code)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (lookupError) {
+      console.error('Promo code lookup error:', lookupError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to validate code', success: false }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!promoCode) {
+      console.log(`Invalid promo code attempt by user ${user.id}`);
       return new Response(
         JSON.stringify({ error: 'Invalid promo code', success: false }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check expiration
+    if (promoCode.expires_at && new Date(promoCode.expires_at) < new Date()) {
+      return new Response(
+        JSON.stringify({ error: 'Code has expired', success: false }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check max uses
+    if (promoCode.max_uses && promoCode.uses_count >= promoCode.max_uses) {
+      return new Response(
+        JSON.stringify({ error: 'Code has reached maximum uses', success: false }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -80,8 +104,7 @@ serve(async (req) => {
     // Apply the promo code
     let creditsAwarded = 0;
     
-    if (promoConfig.type === 'unlimited') {
-      // Set a very high amount of permanent fuel (999999)
+    if (promoCode.type === 'unlimited') {
       creditsAwarded = 999999;
       
       const { error: updateError } = await supabase
@@ -96,12 +119,12 @@ serve(async (req) => {
         console.error('Error updating credits:', updateError);
         throw new Error('Failed to apply promo code');
       }
-    } else if (promoConfig.type === 'bonus' && promoConfig.amount) {
-      creditsAwarded = promoConfig.amount;
+    } else if (promoCode.type === 'bonus' && promoCode.amount) {
+      creditsAwarded = promoCode.amount;
       
       const { error: updateError } = await supabase.rpc('increment_permanent_fuel', {
         p_user_id: user.id,
-        p_amount: promoConfig.amount
+        p_amount: promoCode.amount
       });
 
       if (updateError) {
@@ -109,6 +132,12 @@ serve(async (req) => {
         throw new Error('Failed to apply promo code');
       }
     }
+
+    // Increment uses_count on the promo code
+    await supabase
+      .from('promo_codes')
+      .update({ uses_count: promoCode.uses_count + 1 })
+      .eq('id', promoCode.id);
 
     // Record the redemption
     await supabase
@@ -124,10 +153,10 @@ serve(async (req) => {
       .from('credit_transactions')
       .insert({
         user_id: user.id,
-        action: 'promo_code',
+        action_type: 'promo_code',
         amount: creditsAwarded,
-        fuel_type: 'permanent',
-        description: `Promo code: ${code.substring(0, 4)}***`
+        credit_type: 'permanent',
+        description: `Promo code redeemed`
       });
 
     console.log(`Promo code redeemed by user ${user.id}: ${creditsAwarded} credits`);
@@ -136,7 +165,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         creditsAwarded,
-        message: promoConfig.type === 'unlimited' ? 'Unlimited fuel activated! 🚀' : `${creditsAwarded} fuel added!`
+        message: promoCode.type === 'unlimited' ? 'Unlimited fuel activated! 🚀' : `${creditsAwarded} fuel added!`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -6,6 +6,7 @@ import { useCredits } from '@/contexts/CreditsContext';
 import { CreditCostBanner } from '@/components/credits/CreditCostBadge';
 import { VoicePracticeSession } from './VoicePracticeSession';
 import { VideoPracticeSession } from './VideoPracticeSession';
+import { NegotiationSandbox } from './NegotiationSandbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -470,7 +471,7 @@ export function InterviewPrepContent() {
   );
 
   return (
-    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'} data-tour="interview-prep">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold flex items-center gap-3">
@@ -496,7 +497,7 @@ export function InterviewPrepContent() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="practice" className="gap-2">
             <Play className="w-4 h-4" />
             {isRTL ? 'אימון' : 'Practice'}
@@ -504,6 +505,10 @@ export function InterviewPrepContent() {
           <TabsTrigger value="tips" className="gap-2">
             <BookOpen className="w-4 h-4" />
             {isRTL ? 'טיפים' : 'Tips'}
+          </TabsTrigger>
+          <TabsTrigger value="negotiation" className="gap-2">
+            <Target className="w-4 h-4" />
+            {isRTL ? 'משא ומתן' : 'Negotiation'}
           </TabsTrigger>
         </TabsList>
 
@@ -513,6 +518,10 @@ export function InterviewPrepContent() {
 
         <TabsContent value="tips" className="mt-6">
           {renderTipsTab()}
+        </TabsContent>
+
+        <TabsContent value="negotiation" className="mt-6">
+          <NegotiationSandbox />
         </TabsContent>
       </Tabs>
     </div>

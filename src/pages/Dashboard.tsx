@@ -1,9 +1,10 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ScheduleCalendar } from '@/components/dashboard/ScheduleCalendar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout, DashboardSection } from '@/components/dashboard/DashboardLayout';
-import { WelcomeCard } from '@/components/dashboard/WelcomeCard';
+import { TodaysFocus } from '@/components/dashboard/TodaysFocus';
 import { PlugChat } from '@/components/chat/PlugChat';
 import { ApplicationsPage } from '@/components/applications/ApplicationsPage';
 import { JobSearchPage } from '@/components/jobs/JobSearchPage';
@@ -19,11 +20,18 @@ import { MessageInbox } from '@/components/messaging/MessageInbox';
 import { CandidatesPage } from '@/components/candidates/CandidatesPage';
 import { PostJobForm } from '@/components/jobs/PostJobForm';
 import { JobSeekerTour } from '@/components/onboarding/JobSeekerTour';
+import { RecruiterTour } from '@/components/onboarding/RecruiterTour';
+import { DailyWelcome } from '@/components/onboarding/DailyWelcome';
+import { TourGuideFAB } from '@/components/onboarding/TourGuideFAB';
+// SmartTriggers removed - notifications now handled by NotificationBell
+import { MobileBottomBar } from '@/components/navigation/MobileBottomBar';
+import { AchievementsPanel } from '@/components/gamification/AchievementsPanel';
+import { WeeklyQuests } from '@/components/gamification/WeeklyQuests';
+import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { CVBuilder } from '@/components/cv-builder/CVBuilder';
 import { CompanyRecommendations } from '@/components/jobs/CompanyRecommendations';
-import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { PlugTipContainer } from '@/components/tips/PlugTipContainer';
 import { PersonalCardEditor } from '@/components/profile/PersonalCardEditor';
+import { PhotoUpload } from '@/components/profile/PhotoUpload';
 import { MobileWelcomeStats } from '@/components/dashboard/MobileWelcomeStats';
 import { InterviewPrepContent } from '@/components/interview/InterviewPrepContent';
 import { FeedPage } from '@/components/feed/FeedPage';
@@ -32,11 +40,23 @@ import { CreateWebinar } from '@/components/feed/CreateWebinar';
 import { CommunityHubsList } from '@/components/communities/CommunityHubsList';
 import { CreateCommunityHub } from '@/components/communities/CreateCommunityHub';
 import { CommunityHubView } from '@/components/communities/CommunityHubView';
-
+import { ContentDashboard } from '@/components/feed/ContentDashboard';
+import { NegotiationSandbox } from '@/components/interview/NegotiationSandbox';
+import { PlacementRevenue } from '@/components/dashboard/PlacementRevenue';
+import { SLAMonitor } from '@/components/dashboard/SLAMonitor';
+import { VacancyCalculator } from '@/components/jobs/VacancyCalculator';
+import { PersonalizedFeedWidget } from '@/components/feed/PersonalizedFeedWidget';
+import { RecruiterProfileEditor } from '@/components/profile/RecruiterProfileEditor';
+import { ClientsPage } from '@/components/clients/ClientsPage';
+import { ClientProfilePage } from '@/components/clients/ClientProfilePage';
+import { MissionBoard } from '@/components/missions/MissionBoard';
+import { CreateMissionForm } from '@/components/missions/CreateMissionForm';
+import { MyMissions } from '@/components/missions/MyMissions';
+import { HRToolsHub } from '@/components/hr-tools/HRToolsHub';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, Sparkles, Route, Flag, FileEdit, Building2, User, Mic, Newspaper } from 'lucide-react';
+import { Users, Briefcase, FileText, TrendingUp, Plus, Upload, Search, Zap, MessageSquare, Settings, FolderOpen, Heart, FileEdit, Building2, User, Mic, Newspaper, ArrowLeft, ArrowRight, BarChart3, Video, Globe, DollarSign, Sparkles, ArrowDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -71,24 +91,7 @@ function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
   );
 }
 
-interface QuickActionProps {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-}
 
-function QuickAction({ title, icon: Icon, onClick }: QuickActionProps) {
-  return (
-    <Button
-      variant="outline"
-      className="w-full justify-start gap-3 h-12 bg-card/50 border-border hover:bg-primary/10 hover:border-primary/50 transition-all"
-      onClick={onClick}
-    >
-      <Icon className="w-5 h-5 text-primary" />
-      <span>{title}</span>
-    </Button>
-  );
-}
 
 export default function Dashboard() {
   const { profile, role, user } = useAuth();
@@ -99,6 +102,7 @@ export default function Dashboard() {
   const [chatContextSection, setChatContextSection] = useState<DashboardSection>('overview');
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [viewingHubId, setViewingHubId] = useState<string | null>(null);
+  const [viewingClientId, setViewingClientId] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   const isRTL = language === 'he';
@@ -121,7 +125,7 @@ export default function Dashboard() {
   // Scroll to top on mount
   useEffect(() => {
     const scrollToTop = () => {
-      const el = document.getElementById('dashboard-scroll');
+      const el = document.getElementById('main-content');
       if (el) {
         el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
       }
@@ -136,7 +140,7 @@ export default function Dashboard() {
 
   // Scroll to top on section change
   useEffect(() => {
-    const el = document.getElementById('dashboard-scroll');
+    const el = document.getElementById('main-content');
     if (el) {
       el.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
     }
@@ -201,77 +205,8 @@ export default function Dashboard() {
     }
   };
 
-  // Role-specific quick actions with handlers
-  const getQuickActions = () => {
-    // Vouch action available for all roles
-    const vouchAction = { 
-      title: isRTL ? 'ה-Vouches שלי' : 'My Vouches', 
-      icon: Heart,
-      onClick: () => window.location.href = '/profile',
-    };
-
-    switch (role) {
-      case 'job_seeker':
-        return [
-          { 
-            title: isRTL ? 'בניית קו״ח' : 'CV Builder', 
-            icon: FileEdit,
-            onClick: () => setCurrentSection('cv-builder'),
-          },
-          { 
-            title: isRTL ? 'הכנה לראיון' : 'Interview Prep', 
-            icon: Mic,
-            onClick: () => setCurrentSection('interview-prep'),
-          },
-          { 
-            title: t('actions.uploadCV') || 'Upload CV', 
-            icon: Upload,
-            onClick: () => setShowResumeDialog(true),
-          },
-          { 
-            title: isRTL ? 'חיפוש משרות' : 'Search Jobs', 
-            icon: Search,
-            onClick: () => setCurrentSection('job-search'),
-          },
-          { 
-            title: isRTL ? 'המשרות שלי' : 'My Applications', 
-            icon: FileText,
-            onClick: () => setCurrentSection('applications'),
-          },
-          vouchAction,
-        ];
-      case 'freelance_hr':
-      case 'inhouse_hr':
-        return [
-          { title: t('actions.postJob') || 'Post Job', icon: Plus, onClick: () => {} },
-          { title: t('actions.searchCandidates') || 'Search Candidates', icon: Search, onClick: () => {} },
-          { title: t('actions.viewPipeline') || 'View Pipeline', icon: Users, onClick: () => {} },
-          vouchAction,
-        ];
-      case 'company_employee':
-        return [
-          { title: t('actions.referCandidate') || 'Refer Candidate', icon: Plus, onClick: () => {} },
-          { title: t('actions.viewOpenings') || 'View Openings', icon: Briefcase, onClick: () => {} },
-          { title: t('actions.trackReferrals') || 'Track Referrals', icon: TrendingUp, onClick: () => {} },
-          vouchAction,
-        ];
-      default:
-        return [];
-    }
-  };
-
   const stats = getStats();
-  const quickActions = getQuickActions();
 
-  const handleWelcomeMessage = (message: string) => {
-    setChatContextSection(currentSection);
-    setPendingMessage(message);
-    setPendingMessageKey((k) => k + 1);
-    // Scroll to chat after a brief delay
-    setTimeout(() => {
-      chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
 
   const handleMessageSent = () => {
     setPendingMessage(null);
@@ -289,18 +224,8 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Contextual Plug Tips for job seekers */}
-      {role === 'job_seeker' && (
-        <PlugTipContainer context="dashboard" maxTips={1} />
-      )}
-
-      {/* Onboarding Checklist for job seekers */}
-      {role === 'job_seeker' && (
-        <OnboardingChecklist 
-          onNavigate={setCurrentSection}
-          onShowResumeDialog={() => setShowResumeDialog(true)}
-        />
-      )}
+      {/* Today's Focus (includes onboarding steps) */}
+      <TodaysFocus onNavigate={setCurrentSection} onShowResumeDialog={() => setShowResumeDialog(true)} />
 
       {/* PLUG Feed Entry Card - job seekers only */}
       {role === 'job_seeker' && (
@@ -324,9 +249,6 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Welcome Card with Plug CTA */}
-      <WelcomeCard onSendMessage={handleWelcomeMessage} />
-
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-tour="stats-row">
         {stats.map((stat, index) => (
@@ -334,27 +256,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Main Content - Chat Centered with Actions on Sides */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Quick Actions - Left Side - Sticky */}
-        <div className="lg:col-span-1 space-y-3" data-tour="quick-actions">
-          <div className="lg:sticky lg:top-4">
-            <Card className="bg-card border-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  {t('dashboard.quickActions') || 'Quick Actions'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {quickActions.map((action, index) => (
-                  <QuickAction key={index} {...action} />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
+      {/* Main Content - Chat with Insights on Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* PLUG Chat - Center (Large) */}
         <div className="lg:col-span-2" ref={chatRef}>
           <PlugChat 
@@ -413,11 +316,29 @@ export default function Dashboard() {
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       <h2 className="text-2xl font-bold flex items-center gap-3">
         <User className="w-6 h-6 text-primary" />
-        {isRTL ? 'פרופיל ומסמכים' : 'Profile & documents'}
+        {isRTL ? 'הפרופיל שלי' : 'My Profile'}
       </h2>
 
-      {/* Personal Card Editor - First for job seekers */}
+      {/* Personal Card Editor - First for job seekers (includes photo) */}
       {role === 'job_seeker' && <PersonalCardEditor />}
+
+      {/* Photo for non-job-seeker roles */}
+      {role !== 'job_seeker' && user && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-6 flex flex-col items-center gap-3">
+            <PhotoUpload
+              userId={user.id}
+              currentAvatarUrl={profile?.avatar_url || null}
+              userName={profile?.full_name || 'User'}
+              onUpload={() => {}}
+              size="lg"
+            />
+            <p className="font-semibold text-lg">{profile?.full_name}</p>
+            <p className="text-sm text-muted-foreground">{profile?.email}</p>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Portfolio Links Section */}
       <PortfolioLinks />
@@ -456,6 +377,11 @@ export default function Dashboard() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Vouches Section */}
+      {user && profile && (
+        <VouchWidget />
+      )}
     </div>
   );
 
@@ -516,50 +442,161 @@ export default function Dashboard() {
   };
 
 
+  const BackIcon = isRTL ? ArrowRight : ArrowLeft;
+
+  // Wrapper for non-overview sections with back button
+  const withBackButton = (content: React.ReactNode, backTo: DashboardSection = 'overview') => (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground" onClick={() => setCurrentSection(backTo)}>
+        <BackIcon className="w-4 h-4" />
+        {isRTL ? 'חזרה' : 'Back'}
+      </Button>
+      {content}
+    </div>
+  );
+
+  // Content Hub for recruiters
+  const renderContentHub = () => (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'} data-tour="content-hub">
+      <h2 className="text-2xl font-bold flex items-center gap-3">
+        <Newspaper className="w-6 h-6 text-primary" />
+        {isRTL ? 'תוכן וקהילה' : 'Content & Community'}
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[
+          { icon: BarChart3, label: isRTL ? 'דאשבורד תוכן' : 'Content Dashboard', desc: isRTL ? 'צפיות, לייקים ואנליטיקס' : 'Views, likes & analytics', section: 'content-dashboard' as DashboardSection },
+          { icon: Newspaper, label: isRTL ? 'יצירת תוכן' : 'Create Content', desc: isRTL ? 'טיפים, סקרים, וידאו ועוד' : 'Tips, polls, video & more', section: 'create-feed-post' as DashboardSection },
+          { icon: Video, label: isRTL ? 'וובינרים' : 'Webinars', desc: isRTL ? 'יצירה וניהול וובינרים' : 'Create & manage webinars', section: 'create-webinar' as DashboardSection },
+          { icon: Globe, label: isRTL ? 'קהילות' : 'Communities', desc: isRTL ? 'קהילות מקצועיות' : 'Professional communities', section: 'communities' as DashboardSection },
+        ].map((item) => (
+          <Card key={item.section} className="bg-card border-border cursor-pointer plug-card-hover" onClick={() => setCurrentSection(item.section)}>
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10"><item.icon className="w-6 h-6 text-primary" /></div>
+              <div><h3 className="font-semibold">{item.label}</h3><p className="text-sm text-muted-foreground">{item.desc}</p></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  
+
   const renderSectionContent = () => {
     switch (currentSection) {
       case 'overview':
         return renderOverviewContent();
       case 'profile-docs':
-        return renderProfileDocsContent();
+        return withBackButton(renderProfileDocsContent());
       case 'chat':
-        return renderChatContent();
+        return withBackButton(renderChatContent());
       case 'settings':
-        return renderSettingsContent();
+        return withBackButton(renderSettingsContent());
       case 'applications':
-        return <ApplicationsPage />;
+        return withBackButton(
+          <div className="space-y-6">
+            <ApplicationsPage />
+            <PlugChat contextPage="applications" />
+          </div>
+        );
       case 'job-search':
-        return <JobSearchPage />;
+        return withBackButton(
+          <div className="space-y-6">
+            <JobSearchPage />
+            <PlugChat contextPage="jobs" />
+          </div>
+        );
       case 'messages':
-        return <MessageInbox />;
+        return withBackButton(<MessageInbox />);
       case 'candidates':
-        return <CandidatesPage />;
+        return withBackButton(<CandidatesPage />);
       case 'post-job':
-        return <PostJobForm onSuccess={() => setCurrentSection('overview')} />;
+        return withBackButton(<PostJobForm onSuccess={() => setCurrentSection('overview')} />);
       case 'cv-builder':
-        return <CVBuilder />;
+        return withBackButton(
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent" />
+                <span className="text-sm font-medium">{isRTL ? 'Plug ממש כאן בשבילך!' : 'Plug is right here for you!'}</span>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                const el = document.getElementById('cv-plug-chat');
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}>
+                <ArrowDown className="w-3 h-3" />
+                {isRTL ? 'דבר עם Plug' : 'Chat with Plug'}
+              </Button>
+            </div>
+            <CVBuilder />
+            <div id="cv-plug-chat">
+              <PlugChat contextPage="cv-builder" />
+            </div>
+          </div>
+        );
       case 'interview-prep':
-        return <InterviewPrepContent />;
+        return withBackButton(<InterviewPrepContent />);
       case 'feed':
-        return <FeedPage />;
+        return withBackButton(<FeedPage />);
       case 'create-feed-post':
-        return <CreateFeedPost />;
+        return withBackButton(<CreateFeedPost />, 'content-hub' as DashboardSection);
       case 'create-webinar':
-        return <CreateWebinar />;
+        return withBackButton(<CreateWebinar />, 'content-hub' as DashboardSection);
+      case 'content-dashboard':
+        return withBackButton(<ContentDashboard onNavigate={(s) => setCurrentSection(s as DashboardSection)} />, 'content-hub' as DashboardSection);
+      case 'content-hub' as DashboardSection:
+        return withBackButton(renderContentHub());
+      
+      case 'recruiter-profile' as DashboardSection:
+        return withBackButton(<RecruiterProfileEditor />);
+      case 'negotiation-sandbox':
+        return withBackButton(<NegotiationSandbox />);
+      case 'clients':
+        return withBackButton(<ClientsPage onViewClient={(id) => { setViewingClientId(id); setCurrentSection('client-profile' as DashboardSection); }} />);
+      case 'client-profile':
+        return viewingClientId ? withBackButton(
+          <ClientProfilePage companyId={viewingClientId} onBack={() => setCurrentSection('clients')} />,
+          'clients'
+        ) : null;
       case 'communities':
-        return <CommunityHubsList 
+        return withBackButton(<CommunityHubsList 
           onViewHub={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
           onCreateHub={() => setCurrentSection('create-community')} 
-        />;
+        />, 'content-hub' as DashboardSection);
       case 'create-community':
-        return <CreateCommunityHub 
+        return withBackButton(<CreateCommunityHub 
           onSuccess={(hubId) => { setViewingHubId(hubId); setCurrentSection('community-view'); }} 
           onCancel={() => setCurrentSection('communities')} 
-        />;
+        />, 'communities');
       case 'community-view':
-        return viewingHubId ? (
-          <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />
+        return viewingHubId ? withBackButton(
+          <CommunityHubView hubId={viewingHubId} onBack={() => setCurrentSection('communities')} />,
+          'communities'
         ) : null;
+      case 'missions':
+        return withBackButton(
+          <MissionBoard 
+            onCreateMission={() => setCurrentSection('create-mission' as DashboardSection)} 
+            onMyMissions={() => setCurrentSection('my-missions' as DashboardSection)} 
+          />
+        );
+      case 'create-mission':
+        return withBackButton(
+          <CreateMissionForm 
+            onSuccess={() => setCurrentSection('missions' as DashboardSection)} 
+            onCancel={() => setCurrentSection('missions' as DashboardSection)} 
+          />,
+          'missions' as DashboardSection
+        );
+      case 'my-missions':
+        return withBackButton(
+          <MyMissions onBack={() => setCurrentSection('missions' as DashboardSection)} />,
+          'missions' as DashboardSection
+        );
+      case 'schedule':
+        return withBackButton(<ScheduleCalendar />);
+      case 'hr-tools':
+        return withBackButton(<HRToolsHub />);
         return renderOverviewContent();
     }
   };
@@ -572,14 +609,12 @@ export default function Dashboard() {
   };
 
   const startTour = () => {
-    // Always navigate to overview first so targets exist
     setCurrentSection('overview');
-
-    // Trigger the tour for all roles - the JobSeekerTour will handle job_seeker
-    // For other roles, show coming soon message for now
     setTimeout(() => {
       if (role === 'job_seeker') {
         window.dispatchEvent(new CustomEvent('plug:start-job-seeker-tour'));
+      } else if (role === 'freelance_hr' || role === 'inhouse_hr') {
+        window.dispatchEvent(new CustomEvent('plug:start-recruiter-tour'));
       } else {
         toast.info(isRTL 
           ? 'סיור מודרך לתפקיד שלך יהיה זמין בקרוב!' 
@@ -588,19 +623,11 @@ export default function Dashboard() {
     }, 100);
   };
 
-  // Route with flag icon for guided tour
-  const TourGuideIcon = () => (
-    <div className="relative">
-      <Route className="w-6 h-6" />
-      <Flag className="w-3 h-3 absolute -top-1 -right-1 text-primary" />
-    </div>
-  );
 
   return (
     <DashboardLayout 
       currentSection={currentSection} 
       onSectionChange={(next) => {
-        // Track last non-chat section so Plug can greet per page
         if (next !== 'chat') setChatContextSection(next);
         setCurrentSection(next);
       }}
@@ -612,15 +639,26 @@ export default function Dashboard() {
           setPendingMessage(initialMessage);
           setPendingMessageKey((k) => k + 1);
         }
-        // Navigate to chat section when opened via Quick Actions
         setCurrentSection('chat');
       }}
+      onStartTour={() => {
+        // Open the TourGuideFAB panel
+        window.dispatchEvent(new CustomEvent('plug:open-tour-guide'));
+      }}
     >
-      {/* Interactive tour for job seekers */}
+      {/* Interactive tours */}
       <JobSeekerTour 
         currentSection={currentSection}
         onNavigate={setCurrentSection}
       />
+      <RecruiterTour 
+        currentSection={currentSection}
+        onNavigate={setCurrentSection}
+      />
+
+      {/* Daily Welcome (first visit of the day) */}
+      <DailyWelcome />
+
       
       {renderSectionContent()}
 
@@ -641,32 +679,14 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Buttons - Available for all roles */}
-      <>
-        {/* Onboarding Tour Button - Bottom Left */}
-        <button
-          onClick={startTour}
-          className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full bg-secondary text-secondary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
-          title={isRTL ? 'התחל סיור מודרך' : 'Start guided tour'}
-        >
-          <TourGuideIcon />
-          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {isRTL ? 'סיור מודרך' : 'Guided Tour'}
-          </span>
-        </button>
+      {/* Tour Guide FAB */}
+      <TourGuideFAB onNavigate={setCurrentSection} onStartTour={startTour} />
 
-        {/* Plug Chat Button - Bottom Right */}
-        <button
-          onClick={scrollToChat}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group animate-pulse hover:animate-none"
-          title={isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-        >
-          <Sparkles className="w-6 h-6" />
-          <span className="absolute bottom-full mb-2 px-3 py-1.5 bg-popover text-popover-foreground text-sm rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-            {isRTL ? 'שוחח עם Plug' : 'Chat with Plug'}
-          </span>
-        </button>
-      </>
+      {/* Mobile Bottom Bar */}
+      <MobileBottomBar currentSection={currentSection} onSectionChange={(next) => {
+        if (next !== 'chat') setChatContextSection(next);
+        setCurrentSection(next);
+      }} />
     </DashboardLayout>
   );
 }

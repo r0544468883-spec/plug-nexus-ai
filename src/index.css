@@ -106,6 +106,29 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Accessibility: Focus indicators */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Bidi text isolation for inputs */
+  input, textarea {
+    unicode-bidi: plaintext;
+  }
+
+  /* Skip to content */
+  .skip-to-content {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .skip-to-content:focus {
+    right: 8px;
+  }
 }
 
 @layer utilities {
@@ -173,5 +196,34 @@
   .plug-score-glow {
     box-shadow: 0 0 15px hsl(270 91% 65% / 0.4),
                 0 0 30px hsl(270 91% 65% / 0.2);
+  }
+
+  /* Micro-interactions: Skeleton shimmer */
+  .plug-skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--secondary)) 25%,
+      hsl(var(--secondary) / 0.5) 50%,
+      hsl(var(--secondary)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* AI typing dots */
+  .plug-typing-dot {
+    animation: plug-bounce 1.4s infinite;
+  }
+  .plug-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .plug-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes plug-bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
   }
 }

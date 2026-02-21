@@ -1,6 +1,7 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PlugFAB } from '@/components/chat/PlugFAB';
 import { PlugLogo } from '@/components/PlugLogo';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
@@ -10,34 +11,14 @@ import { MessageBadge } from '@/components/messaging/MessageBadge';
 import { CreditHUD } from '@/components/credits/CreditHUD';
 import { NavTooltip } from '@/components/ui/nav-tooltip';
 import { VisibleToHRBanner } from '@/components/sidebar/VisibleToHRBanner';
-import { PlugFloatingHint } from '@/components/chat/PlugFloatingHint';
+// PlugFloatingHint removed - notifications now in NotificationBell
 import { 
-  LayoutDashboard, 
-  Users, 
-  Briefcase, 
-  FileText, 
-  MessageSquare,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  User,
-  Search,
-  ArrowLeft,
-  ArrowRight,
-  Heart,
-  FileEdit,
-  Route,
-  Sparkles,
-  Mic,
-  Newspaper,
-  Video,
-  Globe
+  LayoutDashboard, Users, Briefcase, FileText, MessageSquare, Settings, LogOut, Menu, X, User, Search, ArrowLeft, ArrowRight, Heart, FileEdit, Route, Sparkles, Mic, Newspaper, Video, Globe, BarChart3, DollarSign, Building2, Target, Calendar, LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view';
+export type DashboardSection = 'overview' | 'profile-docs' | 'applications' | 'candidates' | 'jobs' | 'job-search' | 'chat' | 'settings' | 'messages' | 'post-job' | 'saved-jobs' | 'cv-builder' | 'interview-prep' | 'feed' | 'create-feed-post' | 'create-webinar' | 'communities' | 'create-community' | 'community-view' | 'content-dashboard' | 'negotiation-sandbox' | 'content-hub' | 'b2b-suite' | 'recruiter-profile' | 'clients' | 'client-profile' | 'missions' | 'create-mission' | 'my-missions' | 'schedule' | 'hr-tools';
 
 interface NavItemConfig {
   icon: typeof LayoutDashboard;
@@ -52,13 +33,15 @@ interface DashboardLayoutProps {
   currentSection: DashboardSection;
   onSectionChange: (section: DashboardSection) => void;
   onChatOpen?: (initialMessage?: string, sourceSection?: DashboardSection) => void;
+  onStartTour?: () => void;
 }
 
-export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen }: DashboardLayoutProps) {
+export function DashboardLayout({ children, currentSection, onSectionChange, onChatOpen, onStartTour }: DashboardLayoutProps) {
   const { profile, role, signOut } = useAuth();
-  const { t, direction } = useLanguage();
+  const { t, direction, language } = useLanguage();
+  const isRTL = language === 'he';
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [plugHintSignal, setPlugHintSignal] = useState(0);
+  
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -86,9 +69,10 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     if (role === 'job_seeker') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על החשבון, סטטיסטיקות והודעות מ-Plug', tooltipEn: 'Overview of your account, stats, and Plug messages' },
-        { icon: User, label: 'Profile & documents', section: 'profile-docs', tooltipHe: 'כרטיס אישי, קו"ח ולינקים מקצועיים', tooltipEn: 'Personal card, resume, and professional links' },
+        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'profile-docs', tooltipHe: 'כרטיס אישי, קו"ח, Vouches ולינקים מקצועיים', tooltipEn: 'Personal card, resume, Vouches & professional links' },
         { icon: Search, label: t('dashboard.jobSearch') || 'Job Search', section: 'job-search', tooltipHe: 'חיפוש משרות חדשות וסינון לפי מיקום, קטגוריה וסוג', tooltipEn: 'Search new jobs and filter by location, category, and type' },
         { icon: Briefcase, label: 'My Applications', section: 'applications', tooltipHe: 'ניהול ומעקב אחר כל המועמדויות שהגשת', tooltipEn: 'Manage and track all your submitted applications' },
+        { icon: Calendar, label: isRTL ? 'יומן' : 'Schedule', section: 'schedule', tooltipHe: 'יומן משימות, ראיונות ותזכורות', tooltipEn: 'Tasks, interviews and reminders calendar' },
         { icon: FileEdit, label: 'CV Builder', section: 'cv-builder', tooltipHe: 'בניית קורות חיים מקצועיים עם תבניות ו-AI', tooltipEn: 'Build professional CVs with templates and AI' },
         { icon: Mic, label: 'Interview Prep', section: 'interview-prep', tooltipHe: 'הכנה לראיון עבודה עם שאלות ותרגול AI', tooltipEn: 'Interview preparation with AI questions and practice' },
         { icon: Newspaper, label: 'PLUG Feed', section: 'feed', tooltipHe: 'פיד תוכן מותאם אישית – הרוויחו דלק מכל אינטראקציה', tooltipEn: 'Personalized content feed – earn fuel from every interaction' },
@@ -101,13 +85,15 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     if (role === 'freelance_hr' || role === 'inhouse_hr') {
       return [
         { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי על הפעילות שלך', tooltipEn: 'Overview of your activity' },
+        { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'recruiter-profile' as DashboardSection, tooltipHe: 'עריכת הפרופיל המקצועי, Vouches והמלצות', tooltipEn: 'Edit your professional profile, Vouches & recommendations' },
+        { icon: Building2, label: isRTL ? 'הלקוחות שלי' : 'My Clients', section: 'clients' as DashboardSection, tooltipHe: 'ניהול לקוחות (חברות מגייסות) עם CRM חכם', tooltipEn: 'Manage hiring companies with smart CRM' },
         { icon: Users, label: 'Candidates', section: 'candidates', tooltipHe: 'צפייה ומעקב אחר מועמדים למשרות שפרסמת', tooltipEn: 'View and track candidates for your posted jobs' },
         { icon: Briefcase, label: 'Post Job', section: 'post-job', tooltipHe: 'פרסום משרה חדשה וקבלת מועמדויות', tooltipEn: 'Post a new job and receive applications' },
-        { icon: Newspaper, label: 'Create Feed Content', section: 'create-feed-post', tooltipHe: 'יצירת תוכן לפיד – טיפים, תרבות וסקרים למועמדים', tooltipEn: 'Create feed content – tips, culture & polls for candidates' },
-        { icon: Video, label: 'Webinars', section: 'create-webinar', tooltipHe: 'יצירת וניהול וובינרים למועמדים', tooltipEn: 'Create and manage webinars for candidates' },
-        { icon: Globe, label: 'Communities', section: 'communities', tooltipHe: 'קהילות מקצועיות – יצירה וניהול', tooltipEn: 'Professional communities – create & manage' },
+        { icon: LayoutGrid, label: isRTL ? 'כלי HR' : 'HR Tools', section: 'hr-tools' as DashboardSection, tooltipHe: 'אנליטיקות, בנק מועמדים, אישורים, התראות ועוד', tooltipEn: 'Analytics, talent pool, approvals, alerts & more' },
+        { icon: Calendar, label: isRTL ? 'יומן' : 'Schedule', section: 'schedule', tooltipHe: 'יומן משימות, ראיונות ותזכורות', tooltipEn: 'Tasks, interviews and reminders calendar' },
+        { icon: Newspaper, label: isRTL ? 'תוכן וקהילה' : 'Content & Community', section: 'content-hub' as DashboardSection, tooltipHe: 'דאשבורד תוכן, יצירת פוסטים, וובינרים וקהילות', tooltipEn: 'Content dashboard, posts, webinars & communities' },
+        { icon: Target, label: isRTL ? 'לוח פרויקטים' : 'Hunters Billboard', section: 'missions' as DashboardSection, tooltipHe: 'שוק תחרותי לפרויקטי גיוס', tooltipEn: 'Competitive recruitment project marketplace' },
         { icon: MessageSquare, label: 'Messages', section: 'messages', tooltipHe: 'הודעות פנימיות עם מועמדים ואנשי קשר', tooltipEn: 'Internal messages with candidates and contacts' },
-        { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים וקבצים', tooltipEn: 'Documents and files' },
         { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות פרופיל והעדפות', tooltipEn: 'Profile settings and preferences' },
       ];
     }
@@ -115,22 +101,13 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
     // Default for company_employee and others
     return [
       { icon: LayoutDashboard, label: t('dashboard.overview'), section: 'overview', tooltipHe: 'מבט כללי', tooltipEn: 'Overview' },
-      { icon: FileText, label: 'Documents', section: 'profile-docs', tooltipHe: 'מסמכים', tooltipEn: 'Documents' },
-      { icon: MessageSquare, label: 'Chat with Plug', section: 'chat', tooltipHe: 'צ\'אט עם העוזר האישי Plug', tooltipEn: 'Chat with Plug AI assistant' },
+      { icon: User, label: isRTL ? 'הפרופיל שלי' : 'My Profile', section: 'profile-docs', tooltipHe: 'פרופיל, מסמכים ו-Vouches', tooltipEn: 'Profile, documents & Vouches' },
       { icon: Settings, label: 'Settings', section: 'settings', tooltipHe: 'הגדרות', tooltipEn: 'Settings' },
     ];
   };
 
   const navItems = getNavItems();
 
-  const hintContextPage = useMemo(() => {
-    return (
-      currentSection === 'cv-builder' ? 'cv-builder' :
-      currentSection === 'applications' ? 'applications' :
-      currentSection === 'job-search' ? 'jobs' :
-      'dashboard'
-    );
-  }, [currentSection]);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -144,7 +121,7 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
       {/* Sidebar - Added bg-background to fix transparency issue on mobile */}
       <aside className={cn(
-        'fixed lg:static inset-y-0 z-50 w-64 bg-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
+        'fixed lg:sticky lg:top-0 inset-y-0 z-50 w-64 h-screen bg-background border-e border-sidebar-border flex flex-col transition-transform duration-300',
         direction === 'rtl' ? 'right-0' : 'left-0',
         sidebarOpen ? 'translate-x-0' : direction === 'rtl' ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
@@ -185,21 +162,19 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
 
         {/* Visible to HR Banner for job seekers */}
         <VisibleToHRBanner />
-        {/* User info */}
-        <div className="p-4 border-t border-sidebar-border">
-          <Link 
-            to="/profile"
-            className="flex items-center gap-3 mb-3 p-2 -m-2 rounded-lg hover:bg-sidebar-accent/10 transition-colors"
-          >
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
-              {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
-              <p className="text-xs text-muted-foreground truncate">{getRoleLabel()}</p>
-            </div>
-            <User className="w-4 h-4 text-muted-foreground" />
-          </Link>
+        {/* Tour Guide + Sign out */}
+        <div className="p-4 border-t border-sidebar-border space-y-1">
+          {onStartTour && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-accent"
+              onClick={onStartTour}
+            >
+              <Route className="w-4 h-4" />
+              {isRTL ? 'מדריך המערכת' : 'System Guide'}
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="sm" 
@@ -270,18 +245,6 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
               </span>
             </NavTooltip>
 
-            {/* Re-show Plug hint */}
-            <NavTooltip content={direction === 'rtl' ? 'הצג מחדש את Plug' : 'Show Plug hint again'} side="bottom">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setPlugHintSignal((v) => v + 1)}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label={direction === 'rtl' ? 'הצג מחדש את Plug' : 'Show Plug hint again'}
-              >
-                <Sparkles className="h-5 w-5" />
-              </Button>
-            </NavTooltip>
             
             <NavTooltip content={direction === 'rtl' ? 'החלף שפה - עברית/אנגלית' : 'Language Toggle - Hebrew/English'} side="bottom">
               <span>
@@ -304,21 +267,14 @@ export function DashboardLayout({ children, currentSection, onSectionChange, onC
         </header>
 
         {/* Page content */}
-        <main id="dashboard-scroll" className="flex-1 p-4 md:p-6 overflow-auto">
+        <main id="main-content" className="flex-1 p-4 md:p-6 overflow-auto pb-24 lg:pb-6" data-dashboard-scroll>
           {children}
         </main>
 
-        {/* Floating Plug Hint - contextual based on current section */}
-        <PlugFloatingHint 
-          contextPage={hintContextPage}
-          forceShowSignal={plugHintSignal}
-          onChatOpen={(initialMessage) => {
-            // Let the parent decide how/when to navigate to chat.
-            // We pass the source section so Plug can keep correct context.
-            onChatOpen?.(initialMessage, currentSection);
-          }}
-        />
       </div>
+
+      {/* Global Plug FAB - accessible from every screen */}
+      <PlugFAB contextPage="dashboard" />
     </div>
   );
 }

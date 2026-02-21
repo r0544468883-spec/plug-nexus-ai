@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,6 +25,7 @@ import {
   getRolesByField 
 } from '@/lib/job-taxonomy';
 import { formatSalaryRange, monthlyEquivalent, CURRENCY_SYMBOLS } from '@/lib/salary-utils';
+import { KnockoutQuestionsSection, type KnockoutQuestion } from './KnockoutQuestionsSection';
 
 const JOB_TYPES = [
   { value: 'full-time', labelEn: 'Full-time', labelHe: 'משרה מלאה' },
@@ -65,6 +67,9 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
   const [jobType, setJobType] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [hybridOfficeDays, setHybridOfficeDays] = useState(3);
+  const [knockoutQuestions, setKnockoutQuestions] = useState<KnockoutQuestion[]>([]);
+  const [blindHiring, setBlindHiring] = useState(false);
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(['plug', 'google_jobs']);
 
   // Structured salary
   const [salaryMin, setSalaryMin] = useState('');
@@ -138,27 +143,43 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
       const maxVal = salaryMax ? parseInt(salaryMax) : null;
 
       const { error } = await supabase.from('jobs').insert({
-        title,
-        description,
-        requirements,
-        location,
+        title, description, requirements, location,
         salary_range: formatSalaryRange(minVal, maxVal, salaryCurrency, salaryPeriod),
-        salary_min: minVal,
-        salary_max: maxVal,
+        salary_min: minVal, salary_max: maxVal,
         salary_currency: (minVal || maxVal) ? salaryCurrency : null,
         salary_period: (minVal || maxVal) ? salaryPeriod : null,
         hybrid_office_days: jobType === 'hybrid' ? hybridOfficeDays : null,
-        category: fieldSlug,
-        field_id: fieldId,
-        role_id: roleId,
-        experience_level_id: experienceLevelId,
-        job_type: jobType,
-        company_id: companyId,
-        created_by: user.id,
-        status: 'active',
+        category: fieldSlug, field_id: fieldId, role_id: roleId,
+        experience_level_id: experienceLevelId, job_type: jobType,
+        company_id: companyId, created_by: user.id, status: 'active',
       } as any);
-
       if (error) throw error;
+
+      // Get the new job ID and create publications
+      const { data: newJob } = await supabase.from('jobs').select('id').eq('created_by', user.id).order('created_at', { ascending: false }).limit(1).single();
+      if (newJob) {
+        await supabase.from('job_publications' as any).insert(
+          selectedChannels.map(ch => ({
+            job_id: newJob.id,
+            channel: ch,
+            status: ch === 'plug' || ch === 'google_jobs' ? 'published' : 'pending',
+            published_at: ch === 'plug' || ch === 'google_jobs' ? new Date().toISOString() : null,
+          }))
+        );
+        if (newJob) {
+          await supabase.from('knockout_questions').insert(
+            knockoutQuestions
+              .filter(q => q.question_text.trim())
+              .map((q, i) => ({
+                job_id: newJob.id,
+                question_text: q.question_text,
+                question_order: i + 1,
+                is_required: q.is_required,
+                correct_answer: q.correct_answer,
+              })) as any
+          );
+        }
+      }
     },
     onSuccess: () => {
       toast.success(isHebrew ? 'המשרה פורסמה בהצלחה!' : 'Job posted successfully!');
@@ -184,7 +205,7 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
   };
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-card border-border" data-tour="post-job-form">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="w-5 h-5 text-primary" />
@@ -356,6 +377,13 @@ export function PostJobForm({ onSuccess }: PostJobFormProps) {
             <Label>{isHebrew ? 'דרישות' : 'Requirements'}</Label>
             <Textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} placeholder={isHebrew ? 'כישורים, ניסיון, והסמכות נדרשות...' : 'Skills, experience, and qualifications required...'} className="min-h-[100px]" />
           </div>
+
+          {/* Knockout Questions */}
+          <KnockoutQuestionsSection
+            questions={knockoutQuestions}
+            onChange={setKnockoutQuestions}
+            jobTitle={title}
+          />
 
           {/* Submit */}
           <Button type="submit" disabled={postMutation.isPending} className="w-full gap-2">

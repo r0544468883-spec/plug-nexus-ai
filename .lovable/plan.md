@@ -1,107 +1,187 @@
 
-# שדרוג טופס משרות (היברידי + שכר מובנה) + שיפור מערכת קהילות
+# Daily CRM Calendar — Hourly View with Activity-Linked Tasks
 
-## חלק 1: שדרוג טופס פרסום משרה
+## What We're Building
 
-### A. מודל עבודה היברידי
-- הוספת ערך `'hybrid'` לרשימת `JOB_TYPES` (היברידי / Hybrid)
-- כשנבחר `hybrid`, מופיע שדה נוסף: **"כמה ימים מהמשרד?"** -- slider או select עם ערכים 1-5
-- שמירה בטבלת `jobs`: עמודות חדשות `hybrid_office_days` (int, nullable)
-
-### B. שכר מובנה עם מטבע ותדירות
-במקום שדה טקסט חופשי `salary_range`, נבנה מערכת שכר מובנית:
-
-**שדות חדשים בטבלת `jobs`:**
-| עמודה | סוג | תיאור |
-|-------|------|--------|
-| salary_min | integer | שכר מינימום |
-| salary_max | integer | שכר מקסימום |
-| salary_currency | text | 'ILS' / 'USD' / 'EUR' |
-| salary_period | text | 'monthly' / 'yearly' |
-
-**טופס:**
-- שני שדות מספריים: מינימום ומקסימום
-- Select מטבע: שקלים (ILS), דולרים (USD), יורו (EUR)
-- Select תדירות: חודשי / שנתי
-
-**חישוב אוטומטי:** הטופס ממיר ומציג את השכר בצורה נקייה. למשל אם הזינו $120,000 שנתי, מציג גם $10,000/חודש.
-
-**הערת כוכבית למשתמשים ישראליים:** כשמשתמש עם locale ישראלי (language=he) צופה במשרה עם שכר בדולרים/יורו, מוצגת הערה קטנה:
-`* ≈ ₪XX,XXX לחודש` (המרה בשער קבוע מוגדר מראש: USD=3.6, EUR=3.9)
-
-### C. עדכון תצוגה בכרטיסי משרות
-- `JobCard.tsx` -- הצגת שכר מעוצב: `$80K-$120K/yr` או `₪25,000-₪35,000/mo`
-- `JobDetailsSheet.tsx` -- הצגה מלאה + הערת המרה לשקלים
-- Badge "Hybrid (3 days)" ברשימת badges
+A **full daily CRM calendar** (like HubSpot / Salesforce daily view) that shows tasks by time slots, with deep integration into CRM activity logs (conversations, meetings, calls). When you log any activity in the CRM, you can instantly create a linked follow-up task that appears in the calendar.
 
 ---
 
-## חלק 2: שיפור מערכת קהילות -- הסרת תבניות, הוספת הגדרות מנהל
+## Current State Analysis
 
-### שינוי מהותי
-במקום לבחור תבנית (Expert Hub / Branding Lounge וכו'), מנהל הקהילה מקבל **גישה מלאה לכל הפיצ'רים** ויכול להפעיל/לכבות כל אחד מהם.
+**Existing tables:**
+- `schedule_tasks` — General tasks (user_id, title, due_date, due_time, task_type, priority). Currently stores only text references to candidates/jobs (not FK).
+- `client_tasks` — CRM tasks per company (recruiter_id, company_id, due_date).
+- `client_timeline` — CRM activity log (meetings, calls, emails per contact/company).
+- `client_reminders` — Contact-level reminders.
 
-### A. עמודות חדשות בטבלת `community_hubs`
-| עמודה | סוג | ברירת מחדל | תיאור |
-|-------|------|------------|--------|
-| allow_posts | boolean | true | חברים יכולים לפרסם |
-| allow_comments | boolean | true | חברים יכולים להגיב |
-| allow_polls | boolean | true | חברים יכולים ליצור סקרים |
-| allow_video | boolean | true | חברים יכולים להעלות וידאו |
-| allow_images | boolean | true | חברים יכולים להעלות תמונות |
-| allow_member_invite | boolean | true | חברים יכולים להזמין אחרים |
-
-### B. עדכון `CreateCommunityHub.tsx`
-- הסרת בחירת Template לחלוטין
-- הוספת סקשן "Community Settings" עם Switch toggles לכל הגדרה:
-  - "Allow members to post" / "אפשר לחברים לפרסם"
-  - "Allow comments" / "אפשר תגובות"
-  - "Allow polls" / "אפשר סקרים"
-  - "Allow video uploads" / "אפשר העלאת וידאו"
-  - "Allow image uploads" / "אפשר העלאת תמונות"
-  - "Allow member invites" / "אפשר הזמנת חברים"
-- ערוצי ברירת מחדל: תמיד `#general` (ניתן להוסיף עוד ידנית אח"כ)
-
-### C. עדכון `CommunityChannel.tsx`
-- בדיקת ההגדרות מה-hub לפני הצגת כפתורי "Post", "Poll", "Upload"
-- אם `allow_posts = false`: מסתיר את שדה ההודעה לחברים רגילים (admins תמיד יכולים)
-- אם `allow_comments = false`: מסתיר reply threads
-- וכן הלאה
-
-### D. הוספת מסך הגדרות קהילה למנהלים
-- כפתור Settings (Settings icon) ב-`ChannelSidebar.tsx` (גלוי רק ל-admins)
-- מסך/dialog שמציג את אותם toggles עם אפשרות עדכון
-- גם ניהול ערוצים: הוספה/מחיקה/שינוי שם
+**Gap:** The three separate task/reminder tables are not unified into a single calendar view. There's no hourly day view, no attendee/participant system, and no "create task from activity" flow.
 
 ---
 
-## פירוט טכני
+## Database Changes (Migration)
 
-### Migration SQL
-1. הוספת עמודות ל-`jobs`: `hybrid_office_days`, `salary_min`, `salary_max`, `salary_currency`, `salary_period`
-2. הוספת עמודות ל-`community_hubs`: `allow_posts`, `allow_comments`, `allow_polls`, `allow_video`, `allow_images`, `allow_member_invite`
+### 1. Extend `schedule_tasks` with new columns
 
-### קבצים מעודכנים
-| קובץ | שינוי |
-|-------|--------|
-| `src/components/jobs/PostJobForm.tsx` | Hybrid option + structured salary (min/max/currency/period) |
-| `src/components/jobs/JobCard.tsx` | Formatted salary display + hybrid badge + ILS footnote |
-| `src/components/jobs/JobDetailsSheet.tsx` | Full salary display + conversion footnote |
-| `src/components/communities/CreateCommunityHub.tsx` | הסרת templates, הוספת Switch toggles |
-| `src/components/communities/CommunityChannel.tsx` | בדיקת הרשאות hub לפני הצגת אפשרויות |
-| `src/components/communities/ChannelSidebar.tsx` | כפתור Settings למנהלים |
-
-### קבצים חדשים
-| קובץ | תיאור |
-|-------|--------|
-| `src/components/communities/HubSettingsDialog.tsx` | דיאלוג הגדרות קהילה למנהלים (toggles + ניהול ערוצים) |
-| `src/lib/salary-utils.ts` | פונקציות עזר: פורמט שכר, המרת מטבע, חישוב חודשי/שנתי |
-
-### לוגיקת המרת שכר (`salary-utils.ts`)
-```text
-EXCHANGE_RATES = { USD: 3.6, EUR: 3.9, ILS: 1 }
-
-formatSalary(min, max, currency, period) --> "$80K-$120K/yr"
-convertToILS(amount, currency) --> amount * rate
-monthlyEquivalent(amount, period) --> period === 'yearly' ? amount/12 : amount
+```sql
+ALTER TABLE schedule_tasks
+  ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual',
+  -- 'manual' | 'crm_activity' | 'crm_reminder' | 'interview'
+  ADD COLUMN IF NOT EXISTS source_id UUID,
+  -- FK to the originating record (client_timeline.id, client_reminders.id, etc.)
+  ADD COLUMN IF NOT EXISTS source_table TEXT,
+  -- 'client_timeline' | 'client_reminders' | 'applications'
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS meeting_link TEXT,
+  ADD COLUMN IF NOT EXISTS assigned_to UUID[] DEFAULT '{}',
+  -- Array of user_ids (internal users)
+  ADD COLUMN IF NOT EXISTS external_attendees JSONB DEFAULT '[]';
+  -- [{"name": "דנה כהן", "email": "dana@acme.com"}]
 ```
+
+### 2. Add `linked_task_id` to `client_timeline`
+
+```sql
+ALTER TABLE client_timeline
+  ADD COLUMN IF NOT EXISTS linked_task_id UUID REFERENCES schedule_tasks(id) ON DELETE SET NULL;
+```
+
+This creates a bidirectional link: activity → task and task → activity.
+
+---
+
+## Component Changes
+
+### A. Redesign `ScheduleCalendar.tsx` — Add Daily Hourly View
+
+Add a third view mode: **`'day'`** (in addition to existing `'calendar'` and `'list'`).
+
+**Daily View Layout (CRM style):**
+
+```text
++-------------------------------+
+| « Mon 18/02  [Day] [Week] [Month] [List] |
++----------+--------------------+
+|  08:00   |  [empty]           |
+|  09:00   |  🎤 ראיון — דנה כהן  |  ← colored block, height = duration
+|  10:00   |  ───               |
+|  11:00   |  👥 פגישה — Wix     |
+|  12:00   |  [empty]           |
+|  ...     |                    |
++----------+--------------------+
+```
+
+- Hours from 07:00 to 22:00 (scrollable)
+- Each task block: colored by type, shows title + linked entity (company/candidate)
+- Click a block → drawer/popover with full details + "Edit" / "Complete" / "Delete"
+- Click an empty slot → Quick-create task with that time pre-filled
+- Tasks **without a time** appear in an "All Day" row at the top
+- **Aggregate from all sources:** pulls from `schedule_tasks` (which now includes CRM-linked tasks and general tasks)
+
+### B. Update Add-Task Dialog in `ScheduleCalendar.tsx`
+
+Add new optional fields to the create dialog:
+- **מיקום** (location text input)
+- **לינק לפגישה** (meeting link)
+- **משתתפים פנימיים** (multi-select from profiles — internal users)
+- **משתתפים חיצוניים** (repeatable row: שם + מייל)
+
+When external attendees are added and the task is saved → option: **"שלח הזמנה במייל"** — sends a simple invitation email via the existing `process-reminders` edge function or a new one.
+
+### C. "Create Task from Activity" — Update `ContactDetailSheet.tsx`
+
+After successfully logging any activity (call, meeting, email) in the CRM, show a bottom action strip:
+
+```text
+✅ פגישה נוספה בהצלחה
+[ + צור משימה מהפגישה הזו ]   [ בסדר ]
+```
+
+Clicking **"+ צור משימה"** opens an inline mini-form (collapsed):
+- כותרת (auto-filled: `"פולואפ: {activity.title}"`)
+- תאריך + שעה (default: tomorrow 09:00)
+- עדיפות (default: high for meetings)
+- משתתפים חיצוניים (pre-filled from contact's email)
+- Submit → inserts into `schedule_tasks` with `source='crm_activity'` and `source_id=activity.id`
+
+Also: the existing `addActivityMutation` in `ContactDetailSheet.tsx` auto-creates a `client_tasks` follow-up for meetings — we'll keep that AND also insert into `schedule_tasks` so it appears in the unified calendar.
+
+### D. Update `ClientProfilePage.tsx` — "Add to Calendar" on Tasks
+
+In the existing task list (Timeline/Tasks tab), each `client_task` will show a small **"📅 הוסף ליומן"** button. Clicking it inserts the task into `schedule_tasks` with source linking.
+
+---
+
+## Data Flow Diagram
+
+```text
+ContactDetailSheet (log meeting/call)
+       │
+       ├─→ client_timeline (activity record)
+       │
+       └─→ [optional] schedule_tasks (linked task, source='crm_activity')
+                              │
+                              └─→ Appears in ScheduleCalendar Daily View
+                                  alongside ALL other tasks
+```
+
+---
+
+## Files to Create/Edit
+
+| File | Action | What Changes |
+|---|---|---|
+| `supabase/migrations/XXXX_calendar_upgrade.sql` | **Create** | Adds columns to `schedule_tasks` and `client_timeline` |
+| `src/components/dashboard/ScheduleCalendar.tsx` | **Edit** | Add daily hourly view, attendees fields in create dialog |
+| `src/components/clients/ContactDetailSheet.tsx` | **Edit** | Add "create task from activity" CTA after successful activity log |
+| `src/components/clients/ClientProfilePage.tsx` | **Edit** | "Add to calendar" button on client_tasks, sync to schedule_tasks |
+
+---
+
+## Implementation Details
+
+### Daily Hourly View — Key Logic
+
+```tsx
+// Hours grid: 07–22
+const hours = Array.from({ length: 16 }, (_, i) => i + 7); // [7, 8, ..., 22]
+
+// Place tasks in time slots
+const tasksByHour = tasks.reduce((acc, task) => {
+  const hour = task.due_time ? parseInt(task.due_time.split(':')[0]) : null;
+  if (hour !== null) {
+    acc[hour] = [...(acc[hour] || []), task];
+  }
+  return acc;
+}, {});
+
+// All-day tasks (no time set)
+const allDayTasks = tasks.filter(t => !t.due_time);
+```
+
+### Email Invitation for External Attendees
+
+When `external_attendees` array is non-empty on task save, call `supabase.functions.invoke('process-reminders', ...)` or a dedicated `send-calendar-invite` edge function that:
+- Sends a plain-text email via Resend (using existing `RESEND_API_KEY` if configured)
+- Email contains: event title, date/time, location/link, organizer name
+- Falls back gracefully if `RESEND_API_KEY` is not set (just saves the task, no email error)
+
+---
+
+## UX Details
+
+- **RTL support**: daily grid has times on the right, tasks on the left for Hebrew
+- **Colors**: same type-color system as current (meeting=orange, interview=purple, etc.)
+- **Scroll**: daily view scrolls to current hour automatically (or to first task of the day)
+- **Mobile**: daily view stacks nicely — hour labels above task blocks
+- **Empty state**: "לא נמצאו אירועים היום — לחץ על שעה כלשהי להוספת משימה"
+- **Navigation**: `[< יום קודם]` `[היום]` `[יום הבא >]` buttons in daily view header
+
+---
+
+## What Stays Unchanged
+
+- Existing monthly calendar grid view and list view — untouched
+- `client_tasks` table — continues to work as before
+- `client_reminders` — continues to work as before
+- All existing RLS policies remain intact

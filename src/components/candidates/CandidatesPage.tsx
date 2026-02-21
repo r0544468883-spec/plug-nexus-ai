@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,9 +18,11 @@ import {
 } from '@/components/ui/select';
 import { CandidateCard } from './CandidateCard';
 import { MatchingCandidatesTab } from './MatchingCandidatesTab';
+import { TopTalentPing } from './TopTalentPing';
+import { ImportLinkedIn } from './ImportLinkedIn';
 import { SendMessageDialog } from '@/components/messaging/SendMessageDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Filter, Sparkles, UserCheck, Globe, Heart, MessageSquare, ExternalLink } from 'lucide-react';
+import { Users, Search, Filter, Sparkles, UserCheck, Globe, Heart, MessageSquare, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Candidate {
@@ -57,6 +59,14 @@ export function CandidatesPage() {
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [jobFilter, setJobFilter] = useState<string>('all');
   const [globalSearch, setGlobalSearch] = useState('');
+  const [linkedInOpen, setLinkedInOpen] = useState(false);
+
+  // Listen for external event to open LinkedIn import dialog (from Tour Guide / System Guide)
+  useEffect(() => {
+    const handler = () => setLinkedInOpen(true);
+    window.addEventListener('plug:open-linkedin-import', handler);
+    return () => window.removeEventListener('plug:open-linkedin-import', handler);
+  }, []);
 
   // Fetch applications for jobs created by current user
   const { data: candidates = [], isLoading } = useQuery({
@@ -127,14 +137,72 @@ export function CandidatesPage() {
     return true;
   });
 
+  // Stats calculations
+  const statsData = {
+    total: candidates.length,
+    applied: candidates.filter(c => c.current_stage === 'applied').length,
+    interview: candidates.filter(c => ['screening', 'interview'].includes(c.current_stage)).length,
+    offer: candidates.filter(c => c.current_stage === 'offer').length,
+    hired: candidates.filter(c => c.current_stage === 'hired').length,
+    stagnant: candidates.filter(c => {
+      const ref = (c as any).last_stage_change_at || c.created_at;
+      const days = Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24));
+      const snoozed = (c as any).stagnation_snoozed_until;
+      return days >= 7 && (!snoozed || new Date(snoozed) <= new Date()) && !['rejected', 'withdrawn', 'hired'].includes(c.current_stage);
+    }).length,
+  };
+
+  // Check if no filters are active for the "search all" fallback
+  const noFiltersActive = !searchQuery && stageFilter === 'all' && jobFilter === 'all';
+
   return (
-    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'}>
+    <div className="space-y-6" dir={isHebrew ? 'rtl' : 'ltr'} data-tour="candidates-section">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold flex items-center gap-3">
           <Users className="w-6 h-6 text-primary" />
           {isHebrew ? 'מועמדים' : 'Candidates'}
         </h2>
+        <ImportLinkedIn open={linkedInOpen} onOpenChange={setLinkedInOpen} />
       </div>
+
+      {/* Statistics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: isHebrew ? 'סה"כ' : 'Total', value: statsData.total, color: 'text-foreground' },
+          { label: isHebrew ? 'ממתינים' : 'Applied', value: statsData.applied, color: 'text-blue-500' },
+          { label: isHebrew ? 'ראיון' : 'Interview', value: statsData.interview, color: 'text-amber-500' },
+          { label: isHebrew ? 'הצעה' : 'Offer', value: statsData.offer, color: 'text-purple-500' },
+          { label: isHebrew ? 'נשכרו' : 'Hired', value: statsData.hired, color: 'text-primary' },
+          { label: isHebrew ? 'סטגנטיים' : 'Stagnant', value: statsData.stagnant, color: 'text-destructive' },
+        ].map((stat) => (
+          <Card key={stat.label} className="bg-card border-border">
+            <CardContent className="p-3 text-center">
+              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Stagnation Banner */}
+      {(() => {
+        const stagnant = candidates.filter(c => {
+          const ref = (c as any).last_stage_change_at || c.created_at;
+          const days = Math.floor((Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60 * 24));
+          const snoozed = (c as any).stagnation_snoozed_until;
+          return days >= 7 && (!snoozed || new Date(snoozed) <= new Date()) && !['rejected', 'withdrawn', 'hired'].includes(c.current_stage);
+        });
+        return stagnant.length > 0 ? (
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+            <p className="text-sm text-destructive font-medium">
+              {isHebrew
+                ? `${stagnant.length} מועמדים לא פעילים כבר 7+ ימים`
+                : `${stagnant.length} candidates stagnant for 7+ days`}
+            </p>
+          </div>
+        ) : null;
+      })()}
 
       <Tabs defaultValue="applications" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -191,7 +259,25 @@ export function CandidatesPage() {
               ))}
             </div>
           ) : filteredCandidates.length === 0 ? (
-            <Card className="bg-card border-border"><CardContent className="p-12 text-center"><Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">{searchQuery || stageFilter !== 'all' || jobFilter !== 'all' ? (isHebrew ? 'לא נמצאו מועמדים התואמים לחיפוש' : 'No candidates match your filters') : (isHebrew ? 'אין מועמדים עדיין' : 'No candidates yet')}</p></CardContent></Card>
+            <Card className="bg-card border-border">
+              <CardContent className="p-12 text-center">
+                <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery || stageFilter !== 'all' || jobFilter !== 'all'
+                    ? (isHebrew ? 'לא נמצאו מועמדים התואמים לחיפוש' : 'No candidates match your filters')
+                    : (isHebrew ? 'אין מועמדים עדיין' : 'No candidates yet')}
+                </p>
+                {noFiltersActive && (
+                  <Button variant="outline" className="gap-2" onClick={() => {
+                    const tabsTrigger = document.querySelector('[value="search-all"]') as HTMLElement;
+                    tabsTrigger?.click();
+                  }}>
+                    <Globe className="w-4 h-4" />
+                    {isHebrew ? 'חפש מועמדים במערכת' : 'Search all candidates'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCandidates.map((candidate) => (<CandidateCard key={candidate.id} candidate={candidate} />))}
@@ -200,7 +286,12 @@ export function CandidatesPage() {
         </TabsContent>
 
         {/* Matching Candidates Tab */}
-        <TabsContent value="matching"><MatchingCandidatesTab /></TabsContent>
+        <TabsContent value="matching">
+          <div className="space-y-6">
+            <MatchingCandidatesTab />
+            <TopTalentPing />
+          </div>
+        </TabsContent>
 
         {/* Search All Candidates Tab */}
         <TabsContent value="search-all" className="space-y-4">

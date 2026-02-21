@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +8,7 @@ import { ApplicationsInsights } from './ApplicationsInsights';
 import VerticalApplicationCard from './VerticalApplicationCard';
 import AddApplicationForm from './AddApplicationForm';
 import { ApplicationDetailsSheet } from './ApplicationDetailsSheet';
-import PlugBubble from './PlugBubble';
+// PlugBubble removed - using inline Plug banner instead
 import { EmptyApplicationsState } from './EmptyApplicationsState';
 import { BulkImportDialog } from './BulkImportDialog';
 import { CompanyVouchModal } from '@/components/vouch/CompanyVouchModal';
@@ -16,7 +16,7 @@ import { CompanyVouchToast } from '@/components/vouch/CompanyVouchToast';
 import { useCompanyVouchPrompts } from '@/hooks/useCompanyVouchPrompts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, Loader2, Sparkles, BarChart3, X, FileSpreadsheet } from 'lucide-react';
+import { Briefcase, Loader2, Sparkles, BarChart3, X, FileSpreadsheet, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Application {
@@ -311,15 +311,6 @@ export function ApplicationsPage() {
     }
   }, [user?.id, isRTL, t]);
 
-  const handlePlugAction = useCallback((action: string) => {
-    if (action === 'interview_prep') {
-      toast.info(isRTL ? 'הכנה לראיון - בקרוב!' : 'Interview prep - Coming soon!');
-    } else if (action === 'update_resume') {
-      toast.info(isRTL ? 'עדכון קו"ח - בקרוב!' : 'Resume update - Coming soon!');
-    }
-  }, [isRTL]);
-
-  // Note: PlugBubble now generates suggestions internally based on applications
 
   if (isLoading) {
     return (
@@ -331,6 +322,25 @@ export function ApplicationsPage() {
 
   return (
     <div className="space-y-6 pb-24" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Plug reminder banner */}
+      <Card className="bg-gradient-to-r from-accent/10 to-primary/10 border-accent/20">
+        <CardContent className="p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent" />
+            <span className="text-sm font-medium text-foreground">
+              {isRTL ? 'Plug ממש כאן בשבילך!' : 'Plug is right here for you!'}
+            </span>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+            const el = document.getElementById('applications-plug-chat');
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}>
+            <ArrowDown className="w-3 h-3" />
+            {isRTL ? 'דבר עם Plug' : 'Chat with Plug'}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <Briefcase className="w-6 h-6 text-primary" />
@@ -456,11 +466,8 @@ export function ApplicationsPage() {
         onUpdate={fetchApplications}
       />
 
-      {/* Plug AI Bubble */}
-      <PlugBubble 
-        applications={applications}
-        onActionClick={handlePlugAction}
-      />
+      {/* Plug Chat scroll target */}
+      <div id="applications-plug-chat" />
       
       {/* Bulk Import Dialog */}
       <BulkImportDialog

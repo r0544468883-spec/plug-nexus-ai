@@ -9,7 +9,8 @@ import { useTourTips } from './useTourTips';
 import { 
   Sparkles, Search, FileText, 
   Zap, Share2, Brain, MessageSquare, Heart, FileEdit, FolderOpen, Settings,
-  Link, SlidersHorizontal, Building2, Lightbulb, CheckCircle, Target, Trash2
+  Link, SlidersHorizontal, Building2, Lightbulb, CheckCircle, Target, Trash2,
+  Mic, Newspaper, Globe, BarChart3, DollarSign
 } from 'lucide-react';
 import onboardingNotesImage from '@/assets/onboarding-notes-new.png';
 
@@ -126,7 +127,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Add links to your portfolio, LinkedIn, GitHub, and more. Recruiters can view your work!',
     icon: Link,
   },
-  // Step 8: Settings - Preferences - NEW!
+  // Step 8: Settings - Preferences
   {
     section: 'settings',
     targetSelector: '[data-tour="preferences"]',
@@ -136,7 +137,37 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Set preferred fields, job types, and desired locations. Plug will find the best matches for you!',
     icon: SlidersHorizontal,
   },
-  // Step 9: Overview - Quick Actions
+  // Step 9: Interview Prep
+  {
+    section: 'interview-prep',
+    targetSelector: '[data-tour="interview-prep"]',
+    titleHe: 'הכנה לראיון 🎙️',
+    titleEn: 'Interview Prep 🎙️',
+    descriptionHe: 'התכונן לראיונות עם AI! קבל שאלות מותאמות, תרגל בקול, ושפר את הביצועים שלך.',
+    descriptionEn: 'Prepare for interviews with AI! Get tailored questions, practice aloud, and improve your performance.',
+    icon: Mic,
+  },
+  // Step 10: PLUG Feed
+  {
+    section: 'feed',
+    targetSelector: '[data-tour="feed-content"]',
+    titleHe: 'PLUG Feed 📰',
+    titleEn: 'PLUG Feed 📰',
+    descriptionHe: 'פיד תוכן מותאם אישית! טיפים, סקרים, וידאו ותרבות ארגונית. הרוויחו דלק מכל אינטראקציה.',
+    descriptionEn: 'Personalized content feed! Tips, polls, video & culture. Earn fuel from every interaction.',
+    icon: Newspaper,
+  },
+  // Step 11: Communities
+  {
+    section: 'communities',
+    targetSelector: '[data-tour="communities-list"]',
+    titleHe: 'קהילות מקצועיות 🌍',
+    titleEn: 'Professional Communities 🌍',
+    descriptionHe: 'הצטרף לקהילות מקצועיות, שתף ידע, ובנה רשת קשרים. הקהילה עוזרת למצוא הזדמנויות!',
+    descriptionEn: 'Join professional communities, share knowledge, and build your network. Community helps find opportunities!',
+    icon: Globe,
+  },
+  // Step 12: Overview - Quick Actions
   {
     section: 'overview',
     targetSelector: '[data-tour="quick-actions"]',
@@ -146,7 +177,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Shortcuts to common actions! Upload your CV, search for jobs, or jump straight to your applications - all in one click.',
     icon: Zap,
   },
-  // Step 10: Overview - Stats
+  // Step 13: Overview - Stats
   {
     section: 'overview',
     targetSelector: '[data-tour="stats-row"]',
@@ -156,7 +187,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'See real-time stats here: how many applications you\'ve submitted, upcoming interviews, and active applications.',
     icon: FileText,
   },
-  // Step 11: Messages - Inbox
+  // Step 14: Messages - Inbox
   {
     section: 'messages',
     targetSelector: '[data-tour="message-inbox"]',
@@ -166,7 +197,7 @@ const TOUR_STEPS: TourStep[] = [
     descriptionEn: 'Receive messages from recruiters, send messages, and attach files. All your professional communication in one place!',
     icon: MessageSquare,
   },
-  // Step 12: Vouches
+  // Step 15: Vouches
   {
     section: 'overview',
     targetSelector: '[data-tour="vouch-widget"]',
