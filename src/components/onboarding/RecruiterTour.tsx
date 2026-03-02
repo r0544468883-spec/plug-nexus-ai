@@ -257,17 +257,11 @@ export function RecruiterTour({ currentSection, onNavigate }: RecruiterTourProps
     localStorage.removeItem(RECRUITER_TOUR_STORAGE_KEY);
   }, [isRecruiter]);
 
-  // Auto-start on first visit
+  // Auto-start disabled to prevent blocking overlays on initial load.
+  // Users can still start the tour from Tour Guide.
   useEffect(() => {
-    if (!user || !isRecruiter) return;
-    const hasCompleted = localStorage.getItem(RECRUITER_TOUR_STORAGE_KEY);
-    if (!hasCompleted) {
-      const timer = setTimeout(() => {
-        setCurrentStep(0);
-        setIsActive(true);
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
+    if (!user) return;
+    return;
   }, [user, isRecruiter]);
 
   // Navigate to correct section
