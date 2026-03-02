@@ -331,9 +331,15 @@ serve(async (req) => {
       });
 
       // Award credits to referrer
+      const { data: referrerCredits } = await supabase
+        .from('user_credits')
+        .select('permanent_fuel')
+        .eq('user_id', referrer.user_id)
+        .single();
+      
       await supabase
         .from('user_credits')
-        .update({ permanent_fuel: supabase.sql`permanent_fuel + 10` })
+        .update({ permanent_fuel: (referrerCredits?.permanent_fuel || 0) + 10 })
         .eq('user_id', referrer.user_id);
 
       await supabase.from('credit_transactions').insert({
