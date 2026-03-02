@@ -11,10 +11,22 @@ window.addEventListener('error', (event) => {
   console.error('[Global] Window error:', event.error || event.message);
 });
 
-// Register Service Worker for PWA
+// Register Service Worker for production only.
+// In preview/dev, unregister old workers + clear caches to prevent white-screen from stale shell.
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    if (import.meta.env.PROD) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      return;
+    }
+
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    if ('caches' in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    }
   });
 }
 
