@@ -241,22 +241,11 @@ export function JobSeekerTour({ currentSection, onNavigate }: JobSeekerTourProps
     localStorage.removeItem(TOUR_STORAGE_KEY);
   }, [role]);
 
-  // Check if tour should be shown automatically
+  // Auto-start disabled to prevent blocking overlays on initial load.
+  // Users can still start the tour from Tour Guide.
   useEffect(() => {
     if (!user) return;
-    if (role && role !== 'job_seeker') return;
-
-    const hasCompleted = localStorage.getItem(TOUR_STORAGE_KEY);
-    if (!hasCompleted) {
-      // Delay start to let dashboard render
-      const timer = setTimeout(() => {
-        setCurrentStep(0);
-        setIsActive(true);
-        setShowTransition(false);
-        setPendingStep(null);
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
+    return;
   }, [user, role]);
 
   // Navigate to correct section when step changes (after transition)
