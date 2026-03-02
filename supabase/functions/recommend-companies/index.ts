@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -25,16 +25,15 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's auth header for getClaims
+    // Create client with user's auth header
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Verify user using getClaims
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: authError } = await authClient.auth.getClaims(token);
+    // Verify user
+    const { data: { user: authUser }, error: authError } = await authClient.auth.getUser();
     
-    if (authError || !claimsData?.claims) {
+    if (authError || !authUser) {
       console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
@@ -42,7 +41,7 @@ serve(async (req) => {
       );
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = authUser.id;
     
     // Use service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
