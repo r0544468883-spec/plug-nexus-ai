@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plug-v2';
+const CACHE_NAME = 'plug-v3';
 const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -18,15 +18,42 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/rest/') || event.request.url.includes('/functions/')) {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  // Keep API calls network-first
+  if (request.url.includes('/rest/') || request.url.includes('/functions/')) {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    return;
+  }
+
+  // Always prefer network for app shell/navigation to avoid stale blank screens
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseClone)).catch(() => {});
+          return response;
+        })
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }
-  if (event.request.method !== 'GET') return;
+
+  // Static assets: cache-first fallback to network
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && request.url.startsWith(self.location.origin)) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone)).catch(() => {});
+          }
+          return response;
+        });
+    })
   );
 });
 
