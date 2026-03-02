@@ -201,18 +201,17 @@ serve(async (req) => {
     });
     
     // Verify the user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error('Auth error:', claimsError);
+    if (authError || !authUser) {
+      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized - invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const authenticatedUserId = claimsData.claims.sub as string;
+    const authenticatedUserId = authUser.id;
     console.log('Authenticated user:', authenticatedUserId);
 
     const body = await req.json();
